@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllRules, fmtDate } from "@/lib/rules";
-import { SectionHead, Panel } from "@/components/bits";
+import { SECTION, SectionHead, GroupHead } from "@/components/bits";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Every source",
@@ -32,7 +33,7 @@ export default async function Sources() {
   );
 
   return (
-    <div className="wrap wrap-narrow py-12 md:py-16">
+    <div className={cn(SECTION, "max-w-[820px] py-14")}>
       <SectionHead
         eyebrow="Receipts"
         title="Every source"
@@ -42,20 +43,18 @@ export default async function Sources() {
       <div className="space-y-10">
         {grouped.map(([actor, list]) => (
           <section key={actor}>
-            <h2 className="mb-3 text-[17px] font-semibold">
+            <GroupHead>
               {ACTOR_LABEL[actor] ?? actor}{" "}
-              <span className="tabular text-[13px] font-normal" style={{ color: "var(--muted-fg)" }}>
-                {list.length}
-              </span>
-            </h2>
-            <Panel>
+              <span className="font-semibold tracking-normal text-mute">{list.length}</span>
+            </GroupHead>
+            <ul className="mt-1 list-none p-0">
               {list.map((s) => (
-                <div key={`${s.rule.slug}-${s.url}`} className="px-5 py-4" style={{ borderTop: "1px solid var(--border)" }}>
-                  <div className="text-[14.5px] leading-snug">{s.name}</div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12.5px]" style={{ color: "var(--muted-fg)" }}>
-                    <span className="tabular">{fmtDate(s.published)}</span>
+                <li key={`${s.rule.slug}-${s.url}`} className="border-b border-rule-soft py-3 last:border-b-0">
+                  <div className="text-[0.94rem] leading-snug">{s.name}</div>
+                  <div className="m mt-1.5 flex flex-wrap items-center gap-2 text-[0.74rem] text-mute">
+                    <span>{fmtDate(s.published)}</span>
                     <span aria-hidden>·</span>
-                    <a href={s.url} target="_blank" rel="noopener nofollow" className="underline underline-offset-2" style={{ color: "var(--primary)" }}>
+                    <a href={s.url} target="_blank" rel="noopener nofollow" className="underline underline-offset-2 hover:text-ink" >
                       Source
                     </a>
                     <span aria-hidden>·</span>
@@ -63,9 +62,9 @@ export default async function Sources() {
                       {s.rule.title}
                     </Link>
                   </div>
-                </div>
+                </li>
               ))}
-            </Panel>
+            </ul>
           </section>
         ))}
       </div>

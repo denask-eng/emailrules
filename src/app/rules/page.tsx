@@ -3,61 +3,60 @@ import Link from "next/link";
 import { getAllRules, getStats } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
-import { RuleRow, Panel, SectionHead } from "@/components/bits";
+import { RuleRow, SECTION, SectionHead, GroupHead } from "@/components/bits";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Every rule",
   description:
-    "The complete index of email marketing rules: consent, tracking, authentication, provider requirements, content claims, AI disclosure and measurement. Each one dated and cited.",
+    "The complete index of marketing email rules: consent, tracking, authentication, provider requirements, content claims, AI disclosure and measurement. Each one dated and cited.",
   alternates: { canonical: "/rules" },
 };
 
 export default async function RulesIndex() {
   const [rules, stats] = await Promise.all([getAllRules(), getStats()]);
-  const byTopic = (Object.keys(TOPICS) as Topic[])
+  const groups = (Object.keys(TOPICS) as Topic[])
     .map((t) => ({ topic: t, rules: rules.filter((r) => r.topic === t) }))
     .filter((g) => g.rules.length);
 
   return (
-    <div className="wrap py-12 md:py-16">
+    <div className={cn(SECTION, "py-14")}>
       <SectionHead
         eyebrow="Index"
         title="Every rule"
-        lede={`${stats.total} rules. ${stats.inForce} in force today, ${stats.upcoming} dated and coming. Each one carries its source and the date it was last verified.`}
+        lede={`${stats.total} rules. ${stats.inForce} in force today, ${stats.upcoming} dated and coming. Each carries its primary source and the date it was last verified.`}
       />
 
-      <div className="mb-10 flex flex-wrap gap-2.5">
-        {byTopic.map((g) => (
+      <nav className="mb-12 flex flex-wrap gap-x-5 gap-y-2">
+        {groups.map((g) => (
           <a
             key={g.topic}
             href={`#${g.topic}`}
-            className="inline-flex items-baseline gap-2 rounded-full px-3.5 py-2 text-[13.5px]"
-            style={{ border: "1px solid var(--border)", background: "var(--card)" }}
+            className="m text-[0.72rem] tracking-[0.08em] text-mute uppercase no-underline hover:text-ink"
           >
-            {TOPICS[g.topic].label}
-            <span className="tabular text-[12px]" style={{ color: "var(--muted-fg)" }}>
-              {g.rules.length}
-            </span>
+            {TOPICS[g.topic].label}{" "}
+            <span className="text-ink-soft">{g.rules.length}</span>
           </a>
         ))}
-      </div>
+      </nav>
 
-      <div className="space-y-12">
-        {byTopic.map((g) => (
+      <div className="space-y-14">
+        {groups.map((g) => (
           <section key={g.topic} id={g.topic} className="scroll-mt-20">
-            <div className="mb-4">
-              <h2 className="text-[20px] font-semibold">
-                <Link href={`/topics/${g.topic}`}>{TOPICS[g.topic].label}</Link>
-              </h2>
-              <p className="mt-1 text-[14px]" style={{ color: "var(--muted-fg)", maxWidth: "62ch" }}>
-                {TOPICS[g.topic].blurb}
-              </p>
-            </div>
-            <Panel>
+            <GroupHead>
+              <Link href={`/topics/${g.topic}`} className="no-underline hover:underline">
+                {TOPICS[g.topic].label}
+              </Link>{" "}
+              <span className="font-semibold tracking-normal text-mute">{g.rules.length}</span>
+            </GroupHead>
+            <p className="mt-3 mb-1 max-w-[70ch] text-[0.9rem] leading-relaxed text-ink-soft">
+              {TOPICS[g.topic].blurb}
+            </p>
+            <ul className="list-none p-0">
               {g.rules.map((r) => (
                 <RuleRow key={r.slug} rule={r} />
               ))}
-            </Panel>
+            </ul>
           </section>
         ))}
       </div>

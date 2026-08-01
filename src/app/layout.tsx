@@ -1,18 +1,31 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Schibsted_Grotesk, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { SITE, NAV } from "@/lib/site";
+import { Byline, AuthorJsonLd } from "@/components/byline";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+/* Two families, no third face. Grotesk is prose, mono is anything measured. */
+const sans = Schibsted_Grotesk({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+export const viewport: Viewport = { themeColor: "#f9f7f3" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
-  title: {
-    default: `${SITE.name} — ${SITE.tagline}`,
-    template: `%s — ${SITE.name}`,
-  },
+  title: { default: `${SITE.name} — ${SITE.tagline}`, template: `%s — ${SITE.name}` },
   description: SITE.description,
   applicationName: SITE.name,
   alternates: {
@@ -27,29 +40,15 @@ export const metadata: Metadata = {
     description: SITE.description,
     locale: "en",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: SITE.name,
-    description: SITE.description,
-  },
+  twitter: { card: "summary_large_image", title: SITE.name, description: SITE.description },
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
   category: "reference",
 };
 
-/**
- * Site-wide structured data. WebSite + Organization is what lets an AI engine
- * attribute a claim to a named publisher, which is the whole point of being
- * the thing models cite rather than the thing they paraphrase.
- */
 function SiteJsonLd() {
   const json = {
     "@context": "https://schema.org",
@@ -64,10 +63,7 @@ function SiteJsonLd() {
         publisher: { "@id": `${SITE.url}/#org` },
         potentialAction: {
           "@type": "SearchAction",
-          target: {
-            "@type": "EntryPoint",
-            urlTemplate: `${SITE.url}/rules?q={search_term_string}`,
-          },
+          target: { "@type": "EntryPoint", urlTemplate: `${SITE.url}/rules?q={search_term_string}` },
           "query-input": "required name=search_term_string",
         },
       },
@@ -77,75 +73,74 @@ function SiteJsonLd() {
         name: SITE.name,
         url: SITE.url,
         description: SITE.maintainer,
+        founder: { "@id": `${SITE.url}/#author` },
       },
     ],
   };
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }} />;
+}
+
+function Wordmark() {
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }}
-    />
+    <Link
+      href="/"
+      className="m text-[1.02rem] font-bold tracking-[-0.04em] whitespace-nowrap no-underline"
+    >
+      emailrules<span className="text-alarm">.today</span>
+    </Link>
   );
 }
 
 function Nav() {
   return (
-    <header className="no-print" style={{ borderBottom: "1px solid var(--border)" }}>
-      <div className="wrap flex h-16 items-center justify-between gap-5">
-        <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
-          emailrules<span style={{ color: "var(--primary)" }}>.today</span>
-        </Link>
-        <nav className="flex items-center gap-1">
+    <header className="no-print border-b border-rule">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-5">
+        <Wordmark />
+        <div className="ml-auto flex items-center gap-5">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className="hidden rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:opacity-100 sm:block"
-              style={{ color: "var(--muted-fg)" }}
+              className="hidden text-[0.88rem] text-ink-soft no-underline hover:text-ink sm:block"
             >
               {n.label}
             </Link>
           ))}
-          <Link href="/check" className="btn btn-outline sm:ml-2">
+          <Link
+            href="/check"
+            className={cn(buttonVariants({ size: "sm" }), "h-8 px-3 font-semibold")}
+          >
             Check my sends
           </Link>
-        </nav>
-      </div>
+        </div>
+      </nav>
     </header>
   );
 }
 
 function Footer() {
   return (
-    <footer
-      className="mt-24 py-12 text-[13.5px]"
-      style={{ borderTop: "1px solid var(--border)", color: "var(--muted-fg)" }}
-    >
-      <div className="wrap flex flex-wrap justify-between gap-8">
-        <div style={{ maxWidth: "46ch" }}>
-          <div className="mb-2 font-mono text-[15px] font-semibold" style={{ color: "var(--fg)" }}>
-            emailrules<span style={{ color: "var(--primary)" }}>.today</span>
+    <footer className="mt-20 border-t border-rule py-10">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-[1.15fr_1fr]">
+        <div>
+          <div className="m mb-3 text-[1.02rem] font-bold tracking-[-0.04em]">
+            emailrules<span className="text-alarm">.today</span>
           </div>
-          {SITE.maintainer} Independent by design: we sell no tracking, no seed tests and no ESP.
+          <p className="mb-7 max-w-[46ch] text-[0.9rem] leading-relaxed text-ink-soft">
+            {SITE.maintainer} Independent by design: we sell no tracking, no seed tests and no ESP.
+          </p>
+          <Byline />
         </div>
-        <div className="tabular text-[12px] leading-loose">
-          <Link href="/methodology" className="underline underline-offset-2">
-            Methodology
-          </Link>
-          {" · "}
-          <Link href="/sources" className="underline underline-offset-2">
-            Every source
-          </Link>
-          {" · "}
-          <a href="/feed.xml" className="underline underline-offset-2">
-            RSS
-          </a>
-          <br />
-          <a href={`mailto:${SITE.contact}`} className="underline underline-offset-2">
-            {SITE.contact}
-          </a>
-          <br />
-          <span style={{ opacity: 0.7 }}>Not legal advice.</span>
+
+        <div className="m flex flex-col gap-1.5 text-[0.72rem] tracking-[0.02em] text-mute md:items-end">
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+            <Link href="/methodology" className="hover:text-ink">Methodology</Link>
+            <Link href="/sources" className="hover:text-ink">Every source</Link>
+            <a href="/feed.xml" className="hover:text-ink">RSS</a>
+            <a href="/llms.txt" className="hover:text-ink">llms.txt</a>
+          </div>
+          <a href={`mailto:${SITE.contact}`} className="hover:text-ink">{SITE.contact}</a>
+          <span className="opacity-80">Not legal advice. Not affiliated with any ESP.</span>
         </div>
       </div>
     </footer>
@@ -154,12 +149,10 @@ function Footer() {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col">
+    <html lang="en" className={cn(sans.variable, mono.variable, "font-sans")}>
+      <body className="flex min-h-dvh flex-col">
         <SiteJsonLd />
+        <AuthorJsonLd siteUrl={SITE.url} />
         <Nav />
         <main className="flex-1">{children}</main>
         <Footer />

@@ -4,7 +4,13 @@ import { notFound } from "next/navigation";
 import { getAllRules, getRule, fmtDate, daysSince } from "@/lib/rules";
 import { TOPICS, STATUS_LABEL } from "@/lib/types";
 import { SITE } from "@/lib/site";
-import { StatusBadge } from "@/components/bits";
+import { StatusTag } from "@/components/bits";
+
+/* One column, no app shell. These pages are read by strangers who arrived from
+   a search result: the finding first, the method at the bottom for the people
+   who will check it. */
+const SHELL =
+  "mx-auto max-w-[780px] px-[clamp(1.1rem,4vw,1.6rem)] pt-[clamp(1.1rem,4vw,2.4rem)] pb-16";
 
 export const dynamicParams = false;
 
@@ -21,13 +27,9 @@ export async function generateMetadata({
   const { slug } = await params;
   const rule = await getRule(slug);
   if (!rule) return {};
-
-  // The question is the search query; lead the title with it.
-  const title = rule.question;
   const description = `${rule.answer.slice(0, 155).trim()}…`;
-
   return {
-    title,
+    title: rule.question,
     description,
     alternates: { canonical: `/rules/${rule.slug}` },
     openGraph: {
@@ -40,9 +42,6 @@ export async function generateMetadata({
       tags: [...rule.jurisdictions, TOPICS[rule.topic].label],
     },
     twitter: { card: "summary_large_image", title: rule.title, description },
-    other: {
-      "article:modified_time": rule.updated,
-    },
   };
 }
 
@@ -56,15 +55,10 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
     .map((s) => all.find((r) => r.slug === s))
     .filter(Boolean) as typeof all;
 
-  const stale = daysSince(rule.lastVerified) > 90;
+  const age = daysSince(rule.lastVerified);
 
-  /**
-   * Structured data. Three graphs on purpose:
-   *  · FAQPage  — the single highest-value type here. It is what gets a rule
-   *               quoted directly in an AI answer or a rich result.
-   *  · Article  — gives the claim a publisher, a date and a modified date.
-   *  · Breadcrumb — topic hierarchy, cheap and reliably parsed.
-   */
+  /* FAQPage is what gets quoted directly in an AI answer; Article gives the
+     claim a publisher and a modified date; Breadcrumb is cheap and reliable. */
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -72,21 +66,9 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         "@type": "FAQPage",
         "@id": `${SITE.url}/rules/${rule.slug}#faq`,
         mainEntity: [
-          {
-            "@type": "Question",
-            name: rule.question,
-            acceptedAnswer: { "@type": "Answer", text: rule.answer },
-          },
-          {
-            "@type": "Question",
-            name: `Who does "${rule.title}" apply to?`,
-            acceptedAnswer: { "@type": "Answer", text: rule.appliesTo },
-          },
-          {
-            "@type": "Question",
-            name: `What happens if you do not comply with "${rule.title}"?`,
-            acceptedAnswer: { "@type": "Answer", text: rule.enforcement },
-          },
+          { "@type": "Question", name: rule.question, acceptedAnswer: { "@type": "Answer", text: rule.answer } },
+          { "@type": "Question", name: `Who does this apply to?`, acceptedAnswer: { "@type": "Answer", text: rule.appliesTo } },
+          { "@type": "Question", name: `What happens if you do not comply?`, acceptedAnswer: { "@type": "Answer", text: rule.enforcement } },
         ],
       },
       {
@@ -99,6 +81,7 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         inLanguage: "en",
         isAccessibleForFree: true,
         publisher: { "@id": `${SITE.url}/#org` },
+        author: { "@id": `${SITE.url}/#author` },
         mainEntityOfPage: `${SITE.url}/rules/${rule.slug}`,
         citation: rule.sources.map((s) => ({
           "@type": "CreativeWork",
@@ -111,12 +94,7 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Rules", item: `${SITE.url}/rules` },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: TOPICS[rule.topic].label,
-            item: `${SITE.url}/topics/${rule.topic}`,
-          },
+          { "@type": "ListItem", position: 2, name: TOPICS[rule.topic].label, item: `${SITE.url}/topics/${rule.topic}` },
           { "@type": "ListItem", position: 3, name: rule.title },
         ],
       },
@@ -124,110 +102,92 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
   };
 
   return (
-    <article className="wrap wrap-narrow py-12 md:py-16">
+    <article className={SHELL}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      {/* breadcrumb */}
-      <nav className="mb-6 text-[13px]" style={{ color: "var(--muted-fg)" }} aria-label="Breadcrumb">
-        <Link href="/rules" className="underline underline-offset-2">
-          Rules
-        </Link>
-        {" / "}
-        <Link href={`/topics/${rule.topic}`} className="underline underline-offset-2">
+      <nav className="m mb-6 text-[0.7rem] tracking-[0.08em] text-mute uppercase" aria-label="Breadcrumb">
+        <Link href="/rules" className="no-underline hover:text-ink">Rules</Link>
+        <span className="px-1.5">/</span>
+        <Link href={`/topics/${rule.topic}`} className="no-underline hover:text-ink">
           {TOPICS[rule.topic].label}
         </Link>
       </nav>
 
-      <div className="mb-5 flex flex-wrap items-center gap-2.5 text-[13px]" style={{ color: "var(--muted-fg)" }}>
-        <StatusBadge status={rule.status} />
-        <span className="tabular">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <StatusTag status={rule.status} />
+        <span className="m text-[0.74rem] text-mute">
           {rule.status === "upcoming" ? "from" : "since"} {fmtDate(rule.effectiveDate)}
+          {" · "}
+          {rule.jurisdictions.join(" · ")}
+          {rule.provider ? ` · ${rule.provider}` : ""}
         </span>
-        <span aria-hidden>·</span>
-        <span className="tabular">{rule.jurisdictions.join(" · ")}</span>
-        {rule.provider ? (
-          <>
-            <span aria-hidden>·</span>
-            <span className="tabular">{rule.provider}</span>
-          </>
-        ) : null}
       </div>
 
-      <h1 className="text-[clamp(28px,4.4vw,42px)] font-semibold leading-[1.1]">{rule.title}</h1>
+      <h1 className="mt-4 text-[clamp(1.9rem,5.2vw,2.9rem)]">{rule.title}</h1>
 
-      <p
-        className="mt-6 text-[20px] leading-[1.5]"
-        style={{ fontFamily: "var(--serif)", maxWidth: "58ch" }}
-      >
-        {rule.answer}
-      </p>
+      <p className="mt-6 max-w-[64ch] text-[1.12rem] leading-relaxed text-ink">{rule.answer}</p>
 
-      {stale ? (
-        <p
-          className="card mt-6 p-4 text-[13.5px]"
-          style={{ background: "var(--soon-bg)", color: "var(--soon)", borderColor: "transparent" }}
-        >
-          This page has not been re-verified in {daysSince(rule.lastVerified)} days. Treat it as
-          probably current, not certainly current.
+      {age > 90 ? (
+        <p className="m mt-6 border border-warn/40 bg-warn-bg px-4 py-3 text-[0.78rem] leading-relaxed text-warn">
+          Not re-verified in {age} days. Treat as probably current, not certainly current.
         </p>
       ) : null}
 
       <Block title="Who this applies to">
-        <p className="prose-rule m-0">{rule.appliesTo}</p>
+        <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.appliesTo}</p>
       </Block>
 
       <Block title="What to do">
-        <ul className="prose-rule m-0 list-disc space-y-2 pl-5">
+        <ul className="prose-rule m-0 list-none p-0 text-[0.96rem]">
           {rule.whatToDo.map((w) => (
-            <li key={w}>{w}</li>
+            <li key={w} className="border-b border-rule-soft py-2.5 leading-relaxed last:border-b-0">
+              {w}
+            </li>
           ))}
         </ul>
       </Block>
 
       {rule.exempt ? (
         <Block title="What is exempt">
-          <p className="prose-rule m-0">{rule.exempt}</p>
+          <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.exempt}</p>
         </Block>
       ) : null}
 
       <Block title="What happens if you do not">
-        <p className="prose-rule m-0">{rule.enforcement}</p>
+        <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.enforcement}</p>
       </Block>
 
       <Block title={rule.sources.length > 1 ? "Sources" : "Source"}>
-        <div className="space-y-3">
+        <ul className="list-none p-0">
           {rule.sources.map((s) => (
-            <div
-              key={s.url}
-              className="rounded-lg p-4 text-[13.5px] leading-relaxed"
-              style={{ background: "var(--muted)", color: "var(--muted-fg)" }}
-            >
-              <div style={{ color: "var(--fg)" }}>{s.name}</div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <span className="tabular text-[12px]">Published {fmtDate(s.published)}</span>
+            <li key={s.url} className="border-b border-rule-soft py-3 last:border-b-0">
+              <div className="text-[0.94rem] leading-snug">{s.name}</div>
+              <div className="m mt-1.5 flex flex-wrap items-center gap-2 text-[0.72rem] text-mute">
+                <span>Published {fmtDate(s.published)}</span>
                 <span aria-hidden>·</span>
                 <a
                   href={s.url}
-                  rel="noopener nofollow"
                   target="_blank"
-                  className="underline underline-offset-2"
-                  style={{ color: "var(--primary)" }}
+                  rel="noopener nofollow"
+                  className="underline underline-offset-2 hover:text-ink"
                 >
-                  Read the source
+                  Read it
                 </a>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </Block>
 
       {related.length ? (
         <Block title="Related">
-          <ul className="prose-rule m-0 list-disc space-y-2 pl-5">
+          <ul className="list-none p-0">
             {related.map((r) => (
-              <li key={r.slug}>
-                <Link href={`/rules/${r.slug}`}>{r.title}</Link>{" "}
-                <span className="text-[13px]">({STATUS_LABEL[r.status]})</span>
+              <li key={r.slug} className="border-b border-rule-soft py-2.5 last:border-b-0">
+                <Link href={`/rules/${r.slug}`} className="text-[0.94rem] no-underline hover:underline hover:underline-offset-2">
+                  {r.title}
+                </Link>
+                <span className="m ml-2 text-[0.7rem] text-mute">{STATUS_LABEL[r.status]}</span>
               </li>
             ))}
           </ul>
@@ -235,30 +195,26 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
       ) : null}
 
       <Block title="History of this page">
-        <ul className="m-0 list-none space-y-2 p-0">
+        <ul className="list-none p-0">
           {rule.changelog.map((c) => (
-            <li key={c.date} className="flex gap-4 text-[13.5px]">
-              <time className="tabular shrink-0" style={{ color: "var(--muted-fg)" }} dateTime={c.date}>
+            <li key={c.date} className="flex flex-wrap gap-x-3 border-b border-rule-soft py-2.5 last:border-b-0">
+              <time dateTime={c.date} className="m w-[5.6rem] shrink-0 text-[0.74rem] text-mute">
                 {fmtDate(c.date)}
               </time>
-              <span style={{ color: "var(--muted-fg)" }}>{c.note}</span>
+              <span className="flex-1 text-[0.9rem] leading-relaxed text-ink-soft">{c.note}</span>
             </li>
           ))}
         </ul>
       </Block>
 
-      <footer
-        className="tabular mt-8 pt-5 text-[12px] leading-loose"
-        style={{ borderTop: "1px solid var(--border)", color: "var(--muted-fg)" }}
-      >
+      <footer className="m mt-10 border-t border-rule pt-4 text-[0.68rem] leading-loose tracking-[0.04em] text-mute">
         Added {fmtDate(rule.added)} · Updated {fmtDate(rule.updated)} · Last verified{" "}
         {fmtDate(rule.lastVerified)}
         <br />
-        Something wrong or out of date?{" "}
+        Wrong or out of date?{" "}
         <a
           href={`mailto:${SITE.contact}?subject=Correction: ${rule.slug}`}
-          className="underline underline-offset-2"
-          style={{ color: "var(--primary)" }}
+          className="underline underline-offset-2 hover:text-ink"
         >
           Tell us
         </a>
@@ -270,9 +226,11 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="py-6" style={{ borderTop: "1px solid var(--border)", marginTop: 24 }}>
-      <h2 className="mb-3 text-[15px] font-semibold">{title}</h2>
-      {children}
+    <section className="mt-10">
+      <h2 className="m border-b border-ink pb-2.5 text-[0.7rem] font-bold tracking-[0.11em] text-ink uppercase">
+        {title}
+      </h2>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }

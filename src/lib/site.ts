@@ -11,6 +11,23 @@ export const SITE = {
   contact: "corrections@emailrules.today",
 } as const;
 
+/**
+ * A named human with a face is the strongest signal that this is not another
+ * auto-generated content farm — and it is the thing that turns organic search
+ * traffic into an audience. It appears in the footer and in the Person JSON-LD
+ * so the site has an identifiable author rather than an anonymous publisher.
+ */
+export const AUTHOR = {
+  name: "Denas Kulinicius",
+  role: "Head of email, Iteractive",
+  blurb:
+    "I run email programmes across seven brands and fifteen locales. I built this because I kept finding out about rule changes months late, from a lawyer.",
+  avatar: "/denas.jpg",
+  x: "https://x.com/denaskulinicius",
+  xHandle: "@denaskulinicius",
+  linkedin: "https://www.linkedin.com/in/denaskulinicius",
+} as const;
+
 export const NAV = [
   { href: "/rules", label: "Rules" },
   { href: "/changed", label: "What changed" },

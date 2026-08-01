@@ -4,7 +4,8 @@ import { getRulesByTopic } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
 import { SITE } from "@/lib/site";
-import { RuleRow, Panel, SectionHead } from "@/components/bits";
+import { RuleRow, SECTION, SectionHead } from "@/components/bits";
+import { cn } from "@/lib/utils";
 
 export const dynamicParams = false;
 
@@ -50,14 +51,14 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
   };
 
   return (
-    <div className="wrap wrap-narrow py-12 md:py-16">
+    <div className={cn(SECTION, "max-w-[820px] py-14")}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SectionHead eyebrow="Topic" title={meta.label} lede={meta.blurb} />
-      <Panel>
+      <ul className="list-none border-t border-ink p-0">
         {rules.map((r) => (
           <RuleRow key={r.slug} rule={r} />
         ))}
-      </Panel>
+      </ul>
     </div>
   );
 }
