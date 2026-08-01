@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllRules, fmtDate } from "@/lib/rules";
-import { SECTION, SectionHead, GroupHead } from "@/components/bits";
+import { Panel, SectionHead } from "@/components/bits";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -33,9 +33,9 @@ export default async function Sources() {
   );
 
   return (
-    <div className={cn(SECTION, "max-w-[820px] py-14")}>
+    <div className={"shell shell-tight py-12 sm:py-16"}>
       <SectionHead
-        eyebrow="Receipts"
+        label="Receipts"
         title="Every source"
         lede="If a claim on this site is not traceable to something on this page, it should not be here. Tell us and we will fix it."
       />
@@ -43,18 +43,18 @@ export default async function Sources() {
       <div className="space-y-10">
         {grouped.map(([actor, list]) => (
           <section key={actor}>
-            <GroupHead>
+            <h2 className="label border-b pb-2.5">
               {ACTOR_LABEL[actor] ?? actor}{" "}
-              <span className="font-semibold tracking-normal text-mute">{list.length}</span>
-            </GroupHead>
+              <span className="font-semibold tracking-normal text-dim">{list.length}</span>
+            </h2>
             <ul className="mt-1 list-none p-0">
               {list.map((s) => (
-                <li key={`${s.rule.slug}-${s.url}`} className="border-b border-rule-soft py-3 last:border-b-0">
+                <li key={`${s.rule.slug}-${s.url}`} className="border-b border-border-soft py-3 last:border-b-0">
                   <div className="text-[0.94rem] leading-snug">{s.name}</div>
-                  <div className="m mt-1.5 flex flex-wrap items-center gap-2 text-[0.74rem] text-mute">
+                  <div className="num mt-1.5 flex flex-wrap items-center gap-2 text-[0.74rem] text-dim">
                     <span>{fmtDate(s.published)}</span>
                     <span aria-hidden>·</span>
-                    <a href={s.url} target="_blank" rel="noopener nofollow" className="underline underline-offset-2 hover:text-ink" >
+                    <a href={s.url} target="_blank" rel="noopener nofollow" className="underline underline-offset-2 hover:text-fg" >
                       Source
                     </a>
                     <span aria-hidden>·</span>

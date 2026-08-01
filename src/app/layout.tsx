@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Schibsted_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { SITE, NAV } from "@/lib/site";
 import { Byline, AuthorJsonLd } from "@/components/byline";
@@ -7,21 +7,10 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import "./globals.css";
 
-/* Two families, no third face. Grotesk is prose, mono is anything measured. */
-const sans = Schibsted_Grotesk({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
-const mono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-export const viewport: Viewport = { themeColor: "#f9f7f3" };
+export const viewport: Viewport = { themeColor: "#fcfcfd" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -80,67 +69,58 @@ function SiteJsonLd() {
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }} />;
 }
 
-function Wordmark() {
-  return (
-    <Link
-      href="/"
-      className="m text-[1.02rem] font-bold tracking-[-0.04em] whitespace-nowrap no-underline"
-    >
-      emailrules<span className="text-alarm">.today</span>
-    </Link>
-  );
-}
-
 function Nav() {
   return (
-    <header className="no-print border-b border-rule">
-      <nav className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-5">
-        <Wordmark />
-        <div className="ml-auto flex items-center gap-5">
+    <header className="no-print sticky top-0 z-50 border-b border-border/80 bg-bg/85 backdrop-blur-md">
+      <div className="shell flex h-14 items-center gap-6">
+        <Link href="/" className="text-[15px] font-semibold tracking-[-0.03em] whitespace-nowrap">
+          emailrules<span className="text-accent">.today</span>
+        </Link>
+        <nav className="ml-auto flex items-center gap-1">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className="hidden text-[0.88rem] text-ink-soft no-underline hover:text-ink sm:block"
+              className="hidden rounded-md px-2.5 py-1.5 text-[13.5px] text-muted-fg transition-colors hover:text-fg sm:block"
             >
               {n.label}
             </Link>
           ))}
           <Link
             href="/check"
-            className={cn(buttonVariants({ size: "sm" }), "h-8 px-3 font-semibold")}
+            className={cn(buttonVariants({ size: "sm" }), "ml-1.5 h-8 rounded-lg px-3 text-[13px] font-medium")}
           >
-            Check my sends
+            Check my domain
           </Link>
-        </div>
-      </nav>
+        </nav>
+      </div>
     </header>
   );
 }
 
 function Footer() {
   return (
-    <footer className="mt-20 border-t border-rule py-10">
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-[1.15fr_1fr]">
+    <footer className="mt-4 border-t bg-bg-2 py-12">
+      <div className="shell grid gap-10 md:grid-cols-[1.15fr_1fr]">
         <div>
-          <div className="m mb-3 text-[1.02rem] font-bold tracking-[-0.04em]">
-            emailrules<span className="text-alarm">.today</span>
+          <div className="mb-3 text-[15px] font-semibold tracking-[-0.03em]">
+            emailrules<span className="text-accent">.today</span>
           </div>
-          <p className="mb-7 max-w-[46ch] text-[0.9rem] leading-relaxed text-ink-soft">
+          <p className="mb-7 max-w-[46ch] text-[13.5px] leading-relaxed text-muted-fg">
             {SITE.maintainer} Independent by design: we sell no tracking, no seed tests and no ESP.
           </p>
           <Byline />
         </div>
 
-        <div className="m flex flex-col gap-1.5 text-[0.72rem] tracking-[0.02em] text-mute md:items-end">
-          <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-            <Link href="/methodology" className="hover:text-ink">Methodology</Link>
-            <Link href="/sources" className="hover:text-ink">Every source</Link>
-            <a href="/feed.xml" className="hover:text-ink">RSS</a>
-            <a href="/llms.txt" className="hover:text-ink">llms.txt</a>
+        <div className="flex flex-col gap-2 text-[13px] text-muted-fg md:items-end">
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link href="/methodology" className="hover:text-fg">Methodology</Link>
+            <Link href="/sources" className="hover:text-fg">Sources</Link>
+            <a href="/feed.xml" className="hover:text-fg">RSS</a>
+            <a href="/llms.txt" className="hover:text-fg">llms.txt</a>
           </div>
-          <a href={`mailto:${SITE.contact}`} className="hover:text-ink">{SITE.contact}</a>
-          <span className="opacity-80">Not legal advice. Not affiliated with any ESP.</span>
+          <a href={`mailto:${SITE.contact}`} className="hover:text-fg">{SITE.contact}</a>
+          <span className="label mt-1">Not legal advice · not affiliated with any ESP</span>
         </div>
       </div>
     </footer>
@@ -149,7 +129,7 @@ function Footer() {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={cn(sans.variable, mono.variable, "font-sans")}>
+    <html lang="en" className={cn(geistSans.variable, geistMono.variable, "antialiased")}>
       <body className="flex min-h-dvh flex-col">
         <SiteJsonLd />
         <AuthorJsonLd siteUrl={SITE.url} />

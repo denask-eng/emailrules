@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getStats, fmtDate } from "@/lib/rules";
 import { SITE } from "@/lib/site";
-import { SECTION, SectionHead } from "@/components/bits";
+import { SectionHead } from "@/components/bits";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -14,16 +14,16 @@ export const metadata: Metadata = {
 export default async function Methodology() {
   const stats = await getStats();
   return (
-    <div className={cn(SECTION, "max-w-[780px] py-14")}>
+    <div className={"shell shell-tight py-12 sm:py-16"}>
       <SectionHead
-        eyebrow="How this works"
+        label="How this works"
         title="Methodology"
         lede="A reference is only worth citing if you can see how it was made. This page is the contract."
       />
 
       <div className="prose-rule space-y-9">
         <section>
-          <h2 className="m mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-ink uppercase">
+          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             What counts as a source
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
@@ -36,7 +36,7 @@ export default async function Methodology() {
         </section>
 
         <section>
-          <h2 className="m mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-ink uppercase">
+          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Why every page states enforcement honestly
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
@@ -48,13 +48,13 @@ export default async function Methodology() {
         </section>
 
         <section>
-          <h2 className="m mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-ink uppercase">
+          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Re-verification
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
             Every rule carries a last-verified date. Pages older than 90 days show a warning saying
             so rather than quietly pretending to be current. The last full review of the corpus was{" "}
-            <span className="m text-ink">
+            <span className="num text-fg">
               {fmtDate(stats.lastReview)}
             </span>
             .
@@ -62,7 +62,7 @@ export default async function Methodology() {
         </section>
 
         <section>
-          <h2 className="m mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-ink uppercase">
+          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Corrections
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
@@ -74,7 +74,7 @@ export default async function Methodology() {
         </section>
 
         <section>
-          <h2 className="m mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-ink uppercase">
+          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Conflicts of interest
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
@@ -86,7 +86,7 @@ export default async function Methodology() {
         </section>
 
         <section>
-          <h2 className="m mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-ink uppercase">
+          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Not legal advice
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">

@@ -2,13 +2,13 @@ import Link from "next/link";
 import { getChangelog, getStats, countsByTopic, fmtDate } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
-import { ChangeRow, SECTION, SectionHead, StatStrip, GroupHead } from "@/components/bits";
+import { ChangeRow, Panel, SectionHead, Figures, StatusDot } from "@/components/bits";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default async function Home() {
   const [changelog, stats, counts] = await Promise.all([
-    getChangelog(6),
+    getChangelog(7),
     getStats(),
     countsByTopic(),
   ]);
@@ -16,41 +16,38 @@ export default async function Home() {
   return (
     <>
       {/*
-        Above the fold answers three things before anyone scrolls: what this is,
-        why it matters, and whether it is real. The figures are computed, not
-        claimed, and the ledger starts immediately after so the substance is
-        visible rather than promised.
+        The idea: an airy, centred promise, then a dense left-aligned wall of
+        dated fact directly beneath it. The contrast is the argument. Everything
+        above the fold is computed, so the proof arrives with the claim.
       */}
-      <section className={cn(SECTION, "pt-14 pb-10 sm:pt-20")}>
-        <p className="eyebrow">Dated · cited · independent</p>
+      <section className="shell pt-14 pb-12 text-center sm:pt-24 sm:pb-16">
+        <Link
+          href="/changed"
+          className="inline-flex items-center gap-2.5 rounded-full border bg-card py-1.5 pr-4 pl-2.5 text-[13px] transition-colors hover:bg-muted"
+          style={{ boxShadow: "var(--lift)" }}
+        >
+          <StatusDot status="in_force" />
+          <span className="num font-medium">{stats.changed90}</span>
+          <span className="text-muted-fg">rules changed in the last 90 days</span>
+          <span className="text-dim">→</span>
+        </Link>
 
-        <h1 className="mt-5 max-w-4xl text-[clamp(2.2rem,6.2vw,3.9rem)]">
-          What&rsquo;s true about email. Right now.
+        <h1 className="mx-auto mt-7 max-w-4xl text-[clamp(2.4rem,7vw,4.4rem)]">
+          What&rsquo;s true about email.
+          <br className="hidden sm:block" />{" "}
+          Right{" "}
+          <span className="font-serif text-accent italic font-normal">now.</span>
         </h1>
 
-        <p className="mt-6 max-w-[62ch] text-[1.06rem] leading-relaxed text-ink-soft">
-          A reference for the rules that govern marketing email: consent, tracking,
-          authentication, provider thresholds, AI disclosure. Every rule carries the date it
-          changed and the primary source it came from.{" "}
-          <span className="text-ink">
-            When a regulator or a mailbox provider moves, the page moves.
-          </span>
+        <p className="mx-auto mt-6 max-w-[56ch] text-[1.06rem] leading-relaxed text-muted-fg sm:text-[1.14rem]">
+          A dated, cited reference for the rules that govern marketing email. When a regulator or a
+          mailbox provider moves, the page moves, and you get told.
         </p>
 
-        <div className="mt-9 max-w-3xl">
-          <StatStrip
-            items={[
-              { value: String(stats.total), label: "rules, each with its source" },
-              { value: String(stats.changed90), label: "changed in the last 90 days" },
-              { value: fmtDate(stats.lastReview), label: "last full review" },
-            ]}
-          />
-        </div>
-
-        <div className="mt-8 flex flex-wrap items-center gap-3">
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/rules"
-            className={cn(buttonVariants({ size: "lg" }), "h-10 px-5 font-semibold")}
+            className={cn(buttonVariants({ size: "lg" }), "h-11 rounded-[10px] px-6 text-[15px] font-medium")}
           >
             Browse the rules
           </Link>
@@ -58,76 +55,83 @@ export default async function Home() {
             href="/check"
             className={cn(
               buttonVariants({ variant: "outline", size: "lg" }),
-              "h-10 px-5 font-semibold",
+              "h-11 rounded-[10px] px-6 text-[15px] font-medium",
             )}
           >
-            Check my sending domain
+            Check my domain
           </Link>
         </div>
 
-        <p className="mt-4 max-w-[58ch] text-[0.88rem] leading-relaxed text-mute">
+        <div className="mt-9">
+          <Figures
+            items={[
+              { v: String(stats.total), k: "rules" },
+              { v: String(stats.inForce), k: "in force" },
+              { v: fmtDate(stats.lastReview), k: "last verified" },
+            ]}
+          />
+        </div>
+
+        <p className="mx-auto mt-7 max-w-[52ch] text-[13px] leading-relaxed text-dim">
           Free, no account. We sell no tracking pixels, no seed tests and no open-rate analytics,
           which is why this can tell you when they are a problem.
         </p>
       </section>
 
-      {/* The ledger. This is the product, so it sits as high as it goes. */}
-      <section className="border-y border-rule bg-paper-2 py-16">
-        <div className={SECTION}>
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
-            <div>
-              <p className="eyebrow">What changed</p>
-              <h2 className="mt-3 text-[clamp(1.4rem,3.2vw,2rem)]">The changelog is the product</h2>
-            </div>
+      {/* The ledger. Dense, left, and directly under the promise. */}
+      <section className="shell pb-16">
+        <Panel>
+          <div className="flex items-center justify-between gap-4 border-b bg-muted/50 px-5 py-2.5">
+            <span className="label">The ledger · newest first</span>
             <Link
               href="/changed"
-              className="m text-[0.74rem] tracking-[0.06em] text-mute uppercase no-underline hover:text-ink"
+              className="label transition-colors hover:text-fg"
+              style={{ letterSpacing: "0.08em" }}
             >
-              Every change →
+              All changes →
             </Link>
           </div>
-
-          <ul className="list-none border-t border-ink p-0">
-            {changelog.map((c) => (
-              <ChangeRow key={`${c.rule.slug}-${c.date}`} rule={c.rule} date={c.date} note={c.note} />
-            ))}
-          </ul>
-
-          <p className="m mt-4 text-[0.68rem] tracking-[0.1em] text-mute uppercase">
-            Newest first · every entry links to the full rule and its source
-          </p>
-        </div>
+          {changelog.map((c) => (
+            <ChangeRow key={`${c.rule.slug}-${c.date}`} rule={c.rule} date={c.date} note={c.note} />
+          ))}
+        </Panel>
       </section>
 
       {/* Browse */}
-      <section className={cn(SECTION, "py-16")}>
+      <section className="shell border-t py-16">
         <SectionHead
-          eyebrow="Browse"
+          label="Browse"
           title={`${stats.total} rules, seven ways to get bitten`}
           lede="Grouped by the thing that actually goes wrong, not by which regulator wrote it."
         />
-        <ul className="grid list-none grid-cols-1 gap-x-8 border-t border-ink p-0 sm:grid-cols-2">
+        <div className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-2 lg:grid-cols-3">
           {(Object.keys(TOPICS) as Topic[]).map((t) => (
-            <li key={t} className="border-b border-rule-soft">
-              <Link
-                href={`/topics/${t}`}
-                className="group flex items-baseline gap-x-3 py-3.5 no-underline"
-              >
-                <span className="text-[0.98rem] font-semibold group-hover:underline group-hover:underline-offset-2">
+            <Link
+              key={t}
+              href={`/topics/${t}`}
+              className="group flex flex-col justify-between gap-6 bg-card p-5 transition-colors hover:bg-muted/70"
+            >
+              <div>
+                <h3 className="text-[15px] decoration-1 underline-offset-4 group-hover:underline">
                   {TOPICS[t].label}
-                </span>
-                <span className="m ml-auto text-[0.74rem] text-mute">{counts[t] ?? 0}</span>
-              </Link>
-            </li>
+                </h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-muted-fg">
+                  {TOPICS[t].blurb}
+                </p>
+              </div>
+              <span className="num text-[12px] text-dim">
+                {counts[t] ?? 0} {counts[t] === 1 ? "rule" : "rules"}
+              </span>
+            </Link>
           ))}
-        </ul>
+        </div>
       </section>
 
       {/* What it is not */}
-      <section className="border-y border-rule bg-paper-2 py-16">
-        <div className={SECTION}>
-          <SectionHead eyebrow="What this is" title="Three things it is not." />
-          <div className="grid gap-8 md:grid-cols-3">
+      <section className="border-t bg-bg-2 py-16">
+        <div className="shell">
+          <SectionHead label="What this is" title="Three things it is not." center />
+          <div className="mx-auto grid max-w-4xl gap-10 sm:grid-cols-3">
             {[
               [
                 "Not a course.",
@@ -139,12 +143,12 @@ export default async function Home() {
               ],
               [
                 "Not opinion.",
-                "Every claim names its primary source and the date it was last verified. Where the evidence is thin, the page says the evidence is thin.",
+                "Every claim names its primary source and the date it was last verified. Where the evidence is thin, the page says so.",
               ],
             ].map(([h, p]) => (
-              <div key={h} className="border-t border-ink pt-4">
-                <h3 className="text-[1.05rem] leading-snug font-bold tracking-[-0.02em]">{h}</h3>
-                <p className="mt-2.5 text-[0.94rem] leading-relaxed text-ink-soft">{p}</p>
+              <div key={h}>
+                <h3 className="text-[15px]">{h}</h3>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-muted-fg">{p}</p>
               </div>
             ))}
           </div>
@@ -152,65 +156,64 @@ export default async function Home() {
       </section>
 
       {/* The check */}
-      <section className="on-ink py-16">
-        <div className={SECTION}>
-          <p className="eyebrow text-alarm">The check</p>
-          <h2 className="mt-3 max-w-3xl text-[clamp(1.5rem,3.6vw,2.2rem)]">
+      <section className="shell py-16">
+        <div
+          className="overflow-hidden rounded-2xl border px-6 py-14 text-center sm:px-12"
+          style={{ background: "var(--card)", boxShadow: "var(--lift-2)" }}
+        >
+          <p className="label">The check</p>
+          <h2 className="mx-auto mt-3 max-w-2xl text-[clamp(24px,3.6vw,36px)]">
             Does your own sending follow these rules?
           </h2>
-          <p className="mt-4 max-w-[62ch] text-[1.02rem] leading-relaxed text-[#b9bfca]">
+          <p className="mx-auto mt-4 max-w-[54ch] text-[16px] leading-relaxed text-muted-fg">
             Point it at your sending domain. It reads authentication, consent posture and content
             claims against every rule here, then names what is exposed and the date each rule
             started to apply.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/check"
-              className={cn(buttonVariants({ size: "lg" }), "h-10 px-5 font-semibold")}
+          <form className="mx-auto mt-8 flex max-w-md gap-2.5" action="/api/check" method="post">
+            <input
+              name="domain"
+              required
+              placeholder="yourbrand.com"
+              aria-label="Sending domain"
+              className="num h-11 flex-1 rounded-[10px] border bg-bg px-3.5 text-[14px] outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25"
+            />
+            <button
+              type="submit"
+              className={cn(buttonVariants({ size: "lg" }), "h-11 rounded-[10px] px-5 font-medium")}
             >
-              Check my sending domain
-            </Link>
-            <Link
-              href="/check#sample"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "h-10 border-[#3a4049] bg-transparent px-5 font-semibold text-paper hover:bg-[#2a2f3a] hover:text-paper",
-              )}
-            >
-              See a sample report
-            </Link>
-          </div>
-          <p className="m mt-5 text-[0.68rem] tracking-[0.1em] text-[#8b919e] uppercase">
-            Free · no account · findings with sources, never a score out of ten
-          </p>
+              Run check
+            </button>
+          </form>
+          <p className="label mt-5">Free · no account · findings with sources, never a score</p>
         </div>
       </section>
 
       {/* Return reason */}
-      <section id="subscribe" className={cn(SECTION, "py-16")}>
-        <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+      <section id="subscribe" className="shell border-t py-14">
+        <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <GroupHead>Get told when a rule moves</GroupHead>
-            <p className="mt-3 max-w-[58ch] text-[0.94rem] leading-relaxed text-ink-soft">
+            <h3 className="text-[15px]">Get told when a rule moves</h3>
+            <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
               One email per change, and nothing else, ever. Or take the{" "}
-              <a href="/feed.xml" className="underline underline-offset-2">
+              <a href="/feed.xml" className="text-fg underline decoration-1 underline-offset-3">
                 RSS feed
               </a>{" "}
               instead.
             </p>
           </div>
-          <form className="flex w-full gap-2 md:w-auto" action="/api/subscribe" method="post">
+          <form className="flex w-full gap-2.5 sm:w-auto" action="/api/subscribe" method="post">
             <input
               type="email"
               name="email"
               required
               placeholder="you@brand.com"
               aria-label="Email address"
-              className="m h-9 w-full rounded-lg border border-rule bg-paper px-2.5 text-[0.85rem] outline-none focus-visible:ring-3 focus-visible:ring-ink/20 md:w-[16rem]"
+              className="num h-10 w-full rounded-[10px] border bg-card px-3.5 text-[13.5px] outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25 sm:w-[17rem]"
             />
             <button
               type="submit"
-              className={cn(buttonVariants({ size: "lg" }), "h-9 px-4 font-semibold")}
+              className={cn(buttonVariants(), "h-10 rounded-[10px] px-4 font-medium")}
             >
               Subscribe
             </button>

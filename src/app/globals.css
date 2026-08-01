@@ -3,172 +3,195 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Declared but unused. This is a paper document on purpose: a reference someone
-   cites in a compliance meeting, not a dark-navy SaaS dashboard. The variant and
-   the token indirection exist so shipping dark later is a decision, not a rewrite. */
-
 :root {
-  color-scheme: light;
+  /* Cool, high-contrast, near-white. A precision instrument, not paper. */
+  --bg: #fcfcfd;
+  --bg-2: #f7f7f9;
+  --fg: #0e0f13;
+  --card: #ffffff;
+  --border: #e6e6ea;
+  --border-soft: #eeeef1;
+  --input: #d8d8de;
+  --muted: #f4f4f6;
+  --muted-fg: #71717f;
+  --dim: #9a9aa6;
 
-  --paper:     #f9f7f3;
-  --paper-2:   #f1eee8;
-  --paper-3:   #e8e4dc;
-  --ink:       #15181f;
-  --ink-soft:  #4f535b;
-  --mute:      #6b6e76;
-  --rule:      #dbd9d5;
-  --rule-soft: #e6e3de;
+  /* One accent. Deep, confident, editorial. */
+  --accent: #2347d9;
+  --accent-fg: #ffffff;
+  --accent-soft: #eef1fe;
 
-  /* One hue, monotone lightness. Magnitude only, never category. */
-  --tier-1: #1e327d;
-  --tier-2: #3c56ac;
-  --tier-3: #627ed1;
-  --tier-4: #90a9eb;
+  --live: #c0281f;
+  --live-bg: #fdf1f0;
+  --soon: #8a5a08;
+  --soon-bg: #fdf6e8;
+  --ok: #157347;
+  --ok-bg: #eef8f2;
 
-  /* The one accent. Reserved for the wordmark, eyebrows and anything live. */
-  --alarm:    #c92f25;
-  --alarm-bg: #fff3ef;
-  --warn:     #92610a;
-  --warn-bg:  #fdf6e7;
-  --good:     #1a7f4b;
+  --r: 10px;
+  --r-sm: 8px;
 
-  --background: var(--paper);   --foreground: var(--ink);
-  --card: var(--paper-2);       --card-foreground: var(--ink);
-  --popover: var(--paper);      --popover-foreground: var(--ink);
-  --primary: var(--ink);        --primary-foreground: var(--paper);
-  --secondary: var(--paper-2);  --secondary-foreground: var(--ink);
-  --muted: var(--paper-2);      --muted-foreground: var(--mute);
-  --accent: var(--paper-3);     --accent-foreground: var(--ink);
-  --destructive: var(--alarm);  --destructive-foreground: #ffffff;
-  --border: var(--rule);        --input: var(--rule);
-  --ring: var(--ink);
-  --radius: 0.5rem;
+  --sans: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, monospace;
 
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --lift: 0 1px 2px rgb(14 15 19 / 0.04), 0 1px 1px rgb(14 15 19 / 0.03);
+  --lift-2: 0 1px 2px rgb(14 15 19 / 0.05), 0 8px 24px -12px rgb(14 15 19 / 0.12);
+
+  color-scheme: light dark;
 }
 
-/* The inverted band. Flipping the semantic tokens once means every primitive
-   nested inside inverts for free, instead of each one needing an override. */
-.on-ink {
-  --background: var(--ink);   --foreground: var(--paper);
-  --card: #1c2029;            --card-foreground: var(--paper);
-  --popover: #1c2029;         --popover-foreground: var(--paper);
-  --primary: var(--paper);    --primary-foreground: var(--ink);
-  --secondary: #2a2f3a;       --secondary-foreground: var(--paper);
-  --muted: #2a2f3a;           --muted-foreground: #8b919e;
-  --accent: #2a2f3a;          --accent-foreground: var(--paper);
-  --border: #2a2f3a;          --input: #3a4049;  --ring: var(--paper);
-  background: var(--ink);     color: var(--paper);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0c;
+    --bg-2: #0f0f12;
+    --fg: #ececf0;
+    --card: #131317;
+    --border: #23232a;
+    --border-soft: #1c1c22;
+    --input: #303039;
+    --muted: #17171c;
+    --muted-fg: #94949f;
+    --dim: #6d6d78;
+
+    --accent: #7d9dff;
+    --accent-fg: #0a0a0c;
+    --accent-soft: #151a2e;
+
+    --live: #f08a83;
+    --live-bg: #241614;
+    --soon: #d9a856;
+    --soon-bg: #241d11;
+    --ok: #62bd8a;
+    --ok-bg: #10201a;
+
+    --lift: 0 1px 2px rgb(0 0 0 / 0.4);
+    --lift-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  }
 }
 
 @theme inline {
-  --color-paper: var(--paper);
-  --color-paper-2: var(--paper-2);
-  --color-paper-3: var(--paper-3);
-  --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
-  --color-mute: var(--mute);
-  --color-rule: var(--rule);
-  --color-rule-soft: var(--rule-soft);
-  --color-tier-1: var(--tier-1);
-  --color-tier-2: var(--tier-2);
-  --color-tier-3: var(--tier-3);
-  --color-tier-4: var(--tier-4);
-  --color-alarm: var(--alarm);
-  --color-alarm-bg: var(--alarm-bg);
-  --color-warn: var(--warn);
-  --color-warn-bg: var(--warn-bg);
-  --color-good: var(--good);
-
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-fg: var(--fg);
   --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
   --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
   --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-muted: var(--muted);
+  --color-muted-fg: var(--muted-fg);
+  --color-dim: var(--dim);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-live: var(--live);
+  --color-live-bg: var(--live-bg);
+  --color-soon: var(--soon);
+  --color-soon-bg: var(--soon-bg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
 
-  /* Literal names: @theme inline resolves at parse time and cannot read the
-     runtime next/font variable. */
-  --font-sans: "Schibsted Grotesk", "Schibsted Grotesk Fallback", ui-sans-serif,
-    system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "JetBrains Mono Fallback", ui-monospace,
-    SFMono-Regular, Menlo, monospace;
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-fg);
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--fg);
+  --color-destructive: var(--live);
+  --color-ring: var(--accent);
+  --color-card-foreground: var(--fg);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--fg);
+  --color-accent-foreground: var(--fg);
 
-  --radius-xs: calc(var(--radius) * 0.5);
-  --radius-sm: calc(var(--radius) * 0.75);
-  --radius-md: calc(var(--radius) * 0.875);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.5);
-  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
+  --font-serif: var(--serif);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r);
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 }
 
 @layer base {
-  * { border-color: var(--rule); }
+  * { border-color: var(--border); }
 
   body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: var(--font-sans);
-    font-size: 16px;
-    line-height: 1.55;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
     font-synthesis-weight: none;
   }
 
-  /* Set once, globally. Headings in JSX carry a size and nothing else. */
-  h1, h2, h3 {
-    letter-spacing: -0.033em;
-    line-height: 1.05;
-    font-weight: 800;
-    text-wrap: balance;
-    margin: 0;
-  }
-  h4 { margin: 0; }
+  h1, h2, h3, h4 { margin: 0; text-wrap: balance; }
+  h1 { letter-spacing: -0.038em; line-height: 1.02; font-weight: 600; }
+  h2 { letter-spacing: -0.028em; line-height: 1.1; font-weight: 600; }
+  h3 { letter-spacing: -0.015em; font-weight: 600; }
 
   a { color: inherit; }
-  hr { border: 0; border-top: 1px solid var(--rule); }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  ::selection { background: var(--ink); color: var(--paper); }
+  hr { border: 0; border-top: 1px solid var(--border); }
+  ::selection { background: var(--accent); color: var(--accent-fg); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 }
 
 @layer components {
-  /* Mono means "this is measured". Sans means "this is prose". Nothing crosses. */
-  .m { font-family: var(--font-mono); }
+  /* Dates and figures are the substance here, so they get their own face. */
+  .num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1, "ss03" 1;
+    letter-spacing: -0.02em;
+  }
 
-  /* The house label recipe. */
-  .eyebrow {
-    font-family: var(--font-mono);
+  .label {
+    font-family: var(--mono);
     font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
+    font-weight: 500;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--alarm);
+    color: var(--dim);
   }
 
-  .prose-rule { color: var(--ink-soft); max-width: 66ch; }
-  .prose-rule strong, .prose-rule b { color: var(--ink); font-weight: 600; }
+  .shell { width: 100%; max-width: 1080px; margin-inline: auto; padding-inline: 22px; }
+  .shell-tight { max-width: 760px; }
+  @media (min-width: 768px) { .shell { padding-inline: 32px; } }
+
+  .prose-rule { color: var(--muted-fg); max-width: 66ch; }
+  .prose-rule strong, .prose-rule b { color: var(--fg); font-weight: 600; }
   .prose-rule a {
-    color: var(--ink);
+    color: var(--fg);
     text-decoration: underline;
-    text-underline-offset: 2px;
-    text-decoration-color: var(--rule);
+    text-underline-offset: 3px;
+    text-decoration-color: var(--input);
+    text-decoration-thickness: 1px;
   }
-  .prose-rule a:hover { text-decoration-color: var(--ink); }
+  .prose-rule a:hover { text-decoration-color: var(--accent); color: var(--accent); }
+
+  /* A live obligation should feel live. One ring, once. */
+  .pulse::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 9999px;
+    border: 1px solid var(--live);
+    opacity: 0.35;
+    animation: ring 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+  @keyframes ring {
+    0% { transform: scale(0.9); opacity: 0.4; }
+    70%, 100% { transform: scale(1.9); opacity: 0; }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .pulse::before { animation: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;

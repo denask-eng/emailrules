@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getAllRules, getStats } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
-import { RuleRow, SECTION, SectionHead, GroupHead } from "@/components/bits";
+import { RuleRow, Panel, SectionHead } from "@/components/bits";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -20,9 +20,9 @@ export default async function RulesIndex() {
     .filter((g) => g.rules.length);
 
   return (
-    <div className={cn(SECTION, "py-14")}>
+    <div className={"shell py-12 sm:py-16"}>
       <SectionHead
-        eyebrow="Index"
+        label="Index"
         title="Every rule"
         lede={`${stats.total} rules. ${stats.inForce} in force today, ${stats.upcoming} dated and coming. Each carries its primary source and the date it was last verified.`}
       />
@@ -32,10 +32,10 @@ export default async function RulesIndex() {
           <a
             key={g.topic}
             href={`#${g.topic}`}
-            className="m text-[0.72rem] tracking-[0.08em] text-mute uppercase no-underline hover:text-ink"
+            className="num text-[0.72rem] tracking-[0.08em] text-dim uppercase no-underline hover:text-fg"
           >
             {TOPICS[g.topic].label}{" "}
-            <span className="text-ink-soft">{g.rules.length}</span>
+            <span className="text-dimd-fg">{g.rules.length}</span>
           </a>
         ))}
       </nav>
@@ -43,13 +43,13 @@ export default async function RulesIndex() {
       <div className="space-y-14">
         {groups.map((g) => (
           <section key={g.topic} id={g.topic} className="scroll-mt-20">
-            <GroupHead>
+            <h2 className="label border-b pb-2.5">
               <Link href={`/topics/${g.topic}`} className="no-underline hover:underline">
                 {TOPICS[g.topic].label}
               </Link>{" "}
-              <span className="font-semibold tracking-normal text-mute">{g.rules.length}</span>
-            </GroupHead>
-            <p className="mt-3 mb-1 max-w-[70ch] text-[0.9rem] leading-relaxed text-ink-soft">
+              <span className="font-semibold tracking-normal text-dim">{g.rules.length}</span>
+            </h2>
+            <p className="mt-3 mb-1 max-w-[70ch] text-[0.9rem] leading-relaxed text-dimd-fg">
               {TOPICS[g.topic].blurb}
             </p>
             <ul className="list-none p-0">
