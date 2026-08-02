@@ -134,6 +134,10 @@ export default async function Home() {
             Awkward FAQ
           </Link>
           {" · "}
+          <Link href="/#why" className="underline underline-offset-3 hover:text-fg">
+            Why care
+          </Link>
+          {" · "}
           <Link href="/coverage" className="underline underline-offset-3 hover:text-fg">
             What we skip on purpose
           </Link>
@@ -211,56 +215,71 @@ export default async function Home() {
       </section>
 
       {/*
-        Value after proof, before the catalog.
-        One strip, three short lines — not a second sales page and not a twin
-        of “three things it is not.”
+        Value after proof (ledger), before the catalog.
+        Full “why care” restored — placement stays proof-first.
       */}
-      <section id="why" className="shell py-14 sm:py-16">
-        <div className="mx-auto max-w-2xl">
-          <p className="label">Why this exists</p>
-          <h2 className="mt-3 text-[clamp(1.55rem,3.4vw,2.1rem)] tracking-tight text-balance">
-            Three answers. That is the product.
-          </h2>
-          <p className="mt-3 max-w-[40rem] text-[15.5px] leading-relaxed text-muted-fg">
-            Not a course, not a score out of 100, not an ESP blog. You open this when you need to
-            know if something is real, if it is your desk, and what to do first.
-          </p>
+      <section id="why" className="border-t bg-bg-2 py-16 sm:py-20">
+        <div className="shell">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="label">Why care</p>
+            <h2 className="mt-4 text-[clamp(1.75rem,4.2vw,2.65rem)] tracking-tight text-balance">
+              Why should you care?
+            </h2>
+            <p className="mx-auto mt-4 max-w-[36rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.1rem]">
+              You are busy. This is not another compliance library. The whole product is three
+              answers you cannot get from your ESP blog or a seed-score shop.
+            </p>
+          </div>
 
-          <dl className="mt-9 list-none border-t border-fg/12 p-0">
+          <ol className="mx-auto mt-12 max-w-2xl list-none border-t border-fg/12 p-0">
             {[
               {
-                t: "Whose job",
-                d: `Roughly ${yours} of ${stats.total} rules still need a human. The rest your tool already owns, or are context. We say which, so you stop re-doing platform work.`,
+                t: "Whose job is this, really?",
+                d: `Of ${stats.total} rules on the shelf, about ${stats.notYours} are already handled by a mainstream email tool, shared with ops, or pure context. Roughly ${yours} still need a human. We name that so you stop re-implementing platform work and still catch what lands on your desk.`,
               },
               {
-                t: "What moved",
-                d: "The ledger above is market only. Re-verifies and “we wrote a page” never ship as alerts. Optional email matches the setup you pick on Rules.",
+                t: "What actually moved?",
+                d: "Gmail bulk rules, CASL clocks, ePrivacy, DMARC ladders. You usually hear months late, from legal. The ledger above is market moves only. Re-checks and “we wrote a page” never leave the building. Optional alerts match the setup you pick on Rules.",
               },
               {
-                t: "Monday step",
-                d: "Every page: primary source, last verified date, first action. Paste to Slack or a lawyer. Defend it in a meeting without inventing a placement score.",
+                t: "What do I do Monday?",
+                d: "Every rule has a primary source, a verification date, and a first step you can run this week. No placement score theatre. No fake encyclopedia. A small shelf you can paste into Slack or defend in a meeting.",
               },
             ].map((row, i) => (
-              <div
-                key={row.t}
-                className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-4 border-b border-border-soft py-5 sm:grid-cols-[3rem_7.5rem_minmax(0,1fr)] sm:gap-x-5 sm:py-6"
-              >
-                <dt className="num pt-0.5 text-[11px] font-medium tracking-[0.12em] text-accent">
-                  {String(i + 1).padStart(2, "0")}
-                </dt>
-                <dt className="col-start-2 text-[15px] font-semibold tracking-tight sm:col-start-auto">
-                  {row.t}
-                </dt>
-                <dd className="col-start-2 mt-1.5 max-w-[48ch] text-[14.5px] leading-relaxed text-muted-fg sm:col-start-auto sm:mt-0">
-                  {row.d}
-                </dd>
-              </div>
+              <Reveal key={row.t} as="li" delay={i} className="border-b border-border-soft">
+                <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 py-7 sm:gap-x-6 sm:py-8">
+                  <span className="num pt-1 text-[12px] font-medium tracking-[0.12em] text-accent">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-[1.15rem] font-semibold tracking-tight sm:text-[1.25rem]">
+                      {row.t}
+                    </h3>
+                    <p className="mt-2.5 max-w-[52ch] text-[15px] leading-relaxed text-muted-fg sm:text-[15.5px]">
+                      {row.d}
+                    </p>
+                  </div>
+                </div>
+              </Reveal>
             ))}
-          </dl>
+          </ol>
 
-          <p className="mt-7 text-[13.5px] leading-relaxed text-dim">
-            If that is not useful this week, leave. Quiet is the point.
-          </p>
+          <div className="mx-auto mt-10 max-w-2xl text-center">
+            <p className="text-[14.5px] leading-relaxed text-dim">
+              If that is not useful this week, leave. Quiet is allowed here.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[14px]">
+              <Link
+                href="/rules"
+                className="font-medium text-accent underline-offset-3 hover:underline"
+              >
+                Show me what applies to me →
+              </Link>
+              <Link href="/changed" className="text-muted-fg underline-offset-3 hover:text-fg hover:underline">
+                See what moved
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -330,8 +349,39 @@ export default async function Home() {
         </ol>
       </section>
 
+      {/* What it is not — different job from “why care”: boundaries, not value */}
+      <section className="border-t bg-bg-2 py-16">
+        <div className="shell">
+          <SectionHead label="What this is" title="Three things it is not." center />
+          <div className="mx-auto grid max-w-5xl gap-px overflow-hidden border-y bg-border sm:grid-cols-3">
+            {[
+              [
+                "Not a course.",
+                "No modules, no certificate, no drip sequence. One page per rule, readable in forty seconds, then you get back to work.",
+              ],
+              [
+                "Not a forum.",
+                "No login, no invite, no unsearchable Slack history. Every rule is a public URL you can paste to your boss or your lawyer.",
+              ],
+              [
+                "Not opinion.",
+                "Every claim names its primary source and the date it was last verified. Where the evidence is thin, the page says so.",
+              ],
+            ].map(([h, p], i) => (
+              <div key={h} className="bg-bg-2 px-6 py-9 sm:px-7">
+                <span className="num text-[13px] font-semibold text-accent">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="mt-4 text-[19px]">{h}</h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-muted-fg">{p}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* The check */}
-      <section className="shell border-t py-16">
+      <section className="shell py-16">
         <div
           className="overflow-hidden rounded-2xl border px-6 py-14 text-center sm:px-12"
           style={{ background: "var(--card)", boxShadow: "var(--lift-2)" }}
