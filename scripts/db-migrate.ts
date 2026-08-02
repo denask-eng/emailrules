@@ -22,11 +22,21 @@ async function main() {
 
   const sql = neon(url);
 
-  // neon-http cannot run multiple statements in one call, so split the schema.
-  for (const statement of SCHEMA.split(";").map((s) => s.trim()).filter(Boolean)) {
+  /* neon-http cannot run multiple statements in one call, so the schema is
+     split on semicolons. Comments are stripped FIRST: the schema is heavily
+     commented, and a single semicolon inside one of those comments would
+     otherwise split a statement in half and take the migration down with a
+     syntax error that reads nothing like its cause. */
+  const statements = SCHEMA.replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/--[^\n]*/g, "")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  for (const statement of statements) {
     await sql.query(`${statement};`);
   }
-  console.log("schema ready");
+  console.log(`schema ready (${statements.length} statements)`);
 
   let n = 0;
   for (const rule of RULES) {

@@ -49,7 +49,11 @@ export type HeaderAnalysis =
 
 export type Alignment = "strict" | "relaxed" | "none";
 
-const MAX_HEADER_BYTES = 400 * 1024;
+/* The whole message now, not only its headers: the body is where the postal
+   address, the pixel and the text Apple summarises all live. A real campaign
+   with base64 images inline runs to a megabyte or two, and everything past
+   this ceiling is untrusted input we have no reason to hold. */
+export const MAX_MESSAGE_BYTES = 2 * 1024 * 1024;
 const RECEIVER_GROUND_TRUTH = "A receiver's Authentication-Results is the ground truth.";
 
 const RULE = {
@@ -306,7 +310,7 @@ function bestAlignment(values: Alignment[]): Alignment {
 }
 
 export function analyzeHeaders(raw: string): HeaderAnalysis {
-  if (new TextEncoder().encode(raw).byteLength > MAX_HEADER_BYTES) {
+  if (new TextEncoder().encode(raw).byteLength > MAX_MESSAGE_BYTES) {
     return { ok: false, error: "too-large" };
   }
   if (detectGmailSummaryTable(raw)) return { ok: false, error: "gmail-summary" };
@@ -594,6 +598,19 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       title: "List-Unsubscribe is not one-click",
       detail:
         "List-Unsubscribe is present without List-Unsubscribe-Post, so this is not RFC 8058 one-click unsubscribe.",
+      rule: RULE.oneClick,
+      evidence: unsubscribeEvidence,
+    });
+  } else if (hasPost && !hasUnsubscribe) {
+    /* The mirror of the case above, and the one every checker forgets. A
+       List-Unsubscribe-Post header on its own points at nothing: there is no
+       URI for the receiver to POST to, so the pair is no more satisfied than
+       it is by List-Unsubscribe alone. */
+    findings.push({
+      severity: "fail",
+      title: "List-Unsubscribe-Post has no List-Unsubscribe to act on",
+      detail:
+        "List-Unsubscribe-Post is present without a List-Unsubscribe header, so there is no URI for a receiver to POST to. RFC 8058 needs both headers; either one alone does nothing.",
       rule: RULE.oneClick,
       evidence: unsubscribeEvidence,
     });

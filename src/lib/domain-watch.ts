@@ -6,8 +6,9 @@
 import "server-only";
 
 import { sql, hasDatabase } from "@/lib/db";
+import { recordDomainObservation } from "@/lib/domain-history";
 import {
-  captureDomainSnapshot,
+  captureDomainObservation,
   describeDomainChanges,
   parseStoredSnapshot,
   snapshotChangeKey,
@@ -20,6 +21,9 @@ import { SITE } from "@/lib/site";
 export type DomainWatchRun = {
   domainsChecked: number;
   domainsChanged: number;
+  /** Domains a resolver could not answer for. No diff, no email, no history. */
+  domainsUnresolved: number;
+  historyRows: number;
   emailsSent: number;
   emailsFailed: number;
   errors: string[];
@@ -29,6 +33,8 @@ export async function runDomainWatchChecks(): Promise<DomainWatchRun> {
   const result: DomainWatchRun = {
     domainsChecked: 0,
     domainsChanged: 0,
+    domainsUnresolved: 0,
+    historyRows: 0,
     emailsSent: 0,
     emailsFailed: 0,
     errors: [],
@@ -65,20 +71,48 @@ export async function runDomainWatchChecks(): Promise<DomainWatchRun> {
 /**
  * First watch: store baseline, no email.
  * Later runs: diff, alert watchers once per change_key, update snapshot.
+ *
+ * Null when the resolver could not answer. A baseline built from a half-read
+ * of DNS is worse than no baseline: the next clean read diffs against it and
+ * emails somebody about a change that never happened.
  */
-export async function ensureDomainBaseline(domain: string): Promise<DomainSnapshot> {
-  const next = await captureDomainSnapshot(domain);
+export async function ensureDomainBaseline(domain: string): Promise<DomainSnapshot | null> {
+  const observation = await captureDomainObservation(domain);
+  if (!observation.reliable) return null;
+
+  const next = observation.snapshot;
   await sql().query(
     `insert into domain_snapshots (domain, snapshot, checked_at)
      values ($1, $2::jsonb, now())
      on conflict (domain) do nothing`,
     [domain, JSON.stringify(next)],
   );
+  /* Somebody asking us to watch a domain is itself an observation of it. */
+  await recordDomainObservation(domain, observation);
   return next;
 }
 
 async function processDomain(domain: string, result: DomainWatchRun) {
-  const next = await captureDomainSnapshot(domain);
+  const observation = await captureDomainObservation(domain);
+
+  /* A timeout is not a record disappearing. Skipping the whole domain for one
+     pass costs a day of series; alerting on it costs the subscriber's trust
+     and leaves a false move in the history behind. */
+  if (!observation.reliable) {
+    result.domainsUnresolved += 1;
+    console.warn(
+      `[domain-watch] ${domain}: skipped, unanswered lookups:`,
+      observation.unresolved.join(", "),
+    );
+    return;
+  }
+
+  const next = observation.snapshot;
+
+  /* Unconditional, and before any alerting: the series is the asset, and it
+     should not depend on whether an email went out. */
+  const written = await recordDomainObservation(domain, observation);
+  if (written.status === "recorded") result.historyRows += 1;
 
   const rows = (await sql().query(
     `select snapshot from domain_snapshots where domain = $1`,

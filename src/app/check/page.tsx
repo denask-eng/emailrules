@@ -89,11 +89,13 @@ export default async function Check({
             Shareable result URL. The box above.
           </li>
           <li>
-            <b className="text-fg">Headers (a real message)</b> —{" "}
-            <Link href="/check/headers" className="text-fg underline decoration-1 underline-offset-3">
-              Paste received headers
+            <b className="text-fg">A whole message</b> —{" "}
+            <Link href="/check/message" className="text-fg underline decoration-1 underline-offset-3">
+              give us a real campaign
             </Link>{" "}
-            for alignment and List-Unsubscribe. That is the finding DNS cannot give you.
+            and you get DKIM alignment, the RFC 8058 unsubscribe pair, your postal address, whether
+            Apple has any text to summarise, and the consent rules a pixel puts you under. Everyone
+            checks a message against authentication; nobody checks one against consent.
           </li>
         </ul>
         <p className="mt-5 max-w-[58ch] text-[0.95rem] leading-relaxed text-muted-fg">

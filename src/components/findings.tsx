@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Finding, Severity } from "@/lib/dns-check";
+import { OWNERSHIP, type Ownership } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Explained } from "@/components/explained";
 
@@ -17,13 +18,47 @@ const TONE: Record<Severity, { dot: string; plain: string }> = {
   info: { dot: "bg-dim", plain: "Context" },
 };
 
+const OWN_TONE: Record<Ownership, string> = {
+  esp: "text-ok",
+  shared: "text-soon",
+  yours: "text-accent",
+  context: "text-muted-fg",
+};
+
+/**
+ * The half of a finding no other checker prints.
+ *
+ * Everyone can tell you DKIM is not aligned. Whether that is a screen in your
+ * ESP or an afternoon of your own is the question the reader actually has, and
+ * it comes from the cited rule rather than from an opinion formed here.
+ */
+export interface FindingOwnership {
+  ownership: Ownership;
+  mondayMorning: string;
+}
+
 export function FindingList({
   findings,
   ruleTitles,
+  ownership,
 }: {
   findings: Finding[];
   ruleTitles: Record<string, string>;
+  /** Optional: callers that can resolve the whole rule pass it, and each
+      finding gains its ownership verdict and its first move. */
+  ownership?: Record<string, FindingOwnership>;
 }) {
+  /* One rule can produce four findings on a single message. The ownership
+     verdict and the Monday move belong to the rule, not to each finding, so
+     they print once — against the most severe occurrence, which is the first,
+     because the caller sorted by severity. */
+  const claimed = new Set<string>();
+  const showsOwnership = findings.map((finding) => {
+    if (!finding.rule || !ownership?.[finding.rule] || claimed.has(finding.rule)) return false;
+    claimed.add(finding.rule);
+    return true;
+  });
+
   return (
     <ul className="mt-8 list-none border-t p-0">
       {findings.map((finding, index) => (
@@ -59,6 +94,23 @@ export function FindingList({
                   {ruleTitles[finding.rule] ?? "the rule this comes from"}
                 </Link>
               </p>
+            ) : null}
+            {showsOwnership[index] && finding.rule && ownership?.[finding.rule] ? (
+              <div className="mt-2.5 border-l pl-3.5">
+                <p
+                  className={cn(
+                    "text-[0.78rem] font-medium",
+                    OWN_TONE[ownership[finding.rule].ownership],
+                  )}
+                >
+                  {OWNERSHIP[ownership[finding.rule].ownership].label}
+                </p>
+                <Explained
+                  as="p"
+                  className="mt-1 max-w-[62ch] text-[0.86rem] leading-relaxed text-muted-fg"
+                  text={ownership[finding.rule].mondayMorning}
+                />
+              </div>
             ) : null}
           </div>
         </li>

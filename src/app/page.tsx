@@ -61,11 +61,14 @@ export default async function Home() {
           <span className="font-serif font-normal text-accent italic">now.</span>
         </h1>
 
+        {/* Opens on the reader, not on the shelf. The old line ended on how many
+            rules are not yours; ending on how few actually need a person says the
+            same thing and is the surprising half. */}
         <p className="mx-auto mt-5 max-w-[34rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.12rem]">
-          Most of it is not your job. Of {stats.total} rules on this shelf, {stats.notYours} are
-          already handled by your sending tool, shared with ops, or pure context. Pick your desk
-          below and the ones that are genuinely yours appear{" "}
-          <b className="font-medium text-fg">on this page</b> — dated, sourced, first move named.
+          You ship campaigns. You do not have a free afternoon for folklore PDFs. Pick your desk
+          below and the five that matter appear{" "}
+          <b className="font-medium text-fg">on this page</b> — whose job each one is, and what to
+          do first. Of {stats.total} rules, only {yours} actually need a person.
         </p>
 
         <TrustStrip className="mt-10" />

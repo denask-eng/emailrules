@@ -1,8 +1,15 @@
 /**
- * Structured DNS auth state for domain-watch.
+ * Structured DNS auth state for domain-watch and domain history.
  *
  * Findings on /check are human prose. Snapshots are machine-diffable:
  * only real record changes should wake a subscriber — not rephrasing.
+ *
+ * The hard part is not reading DNS, it is knowing when we did not. A resolver
+ * that times out returns the same empty list as a domain that genuinely
+ * publishes nothing, and writing that difference down as "DKIM disappeared"
+ * would poison a history nobody can re-derive. So every lookup here reports
+ * whether it was answered, and an observation with an unanswered lookup in it
+ * is thrown away rather than recorded.
  */
 
 import { promises as dns } from "node:dns";
@@ -15,6 +22,14 @@ export type DomainSnapshot = {
   bimi: string | null;
   /** Sorted MX hosts (lowercased). */
   mx: string[];
+};
+
+export type DomainObservation = {
+  snapshot: DomainSnapshot;
+  /** Every lookup either answered or authoritatively said "no such record". */
+  reliable: boolean;
+  /** The names the resolver could not answer for. Empty when reliable. */
+  unresolved: string[];
 };
 
 const SELECTORS: [string, string][] = [
@@ -34,47 +49,112 @@ const SELECTORS: [string, string][] = [
   ["mail._domainkey", "generic"],
 ];
 
-async function txt(name: string): Promise<string[]> {
+/* Stored verbatim in snapshots, so it must never be reworded: a new string
+   would diff against every row already written and read as a change. */
+const WILDCARD_LABEL = "(wildcard _domainkey — selectors not enumerable)";
+
+const PROBE = "zz-no-such-selector-probe._domainkey";
+
+/** A lookup that came back with something we can write down. */
+type Lookup<T> = { value: T; resolved: boolean };
+
+/* NXDOMAIN and NODATA are answers, not failures: the name exists in the
+   hierarchy or it does not, and either way the record is absent. Every other
+   code — SERVFAIL, timeout, refused — means our resolver fell over, and the
+   only honest response is to admit we did not look. */
+const ANSWERED_ABSENT = new Set(["ENOTFOUND", "ENODATA"]);
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function attempt<T>(run: () => Promise<T>, empty: T): Promise<Lookup<T> | null> {
   try {
-    const records = await dns.resolveTxt(name);
-    return records.map((chunks) => chunks.join(""));
-  } catch {
-    return [];
+    return { value: await run(), resolved: true };
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code ?? "";
+    if (ANSWERED_ABSENT.has(code)) return { value: empty, resolved: true };
+    return null;
   }
 }
 
+/* One retry before giving up. A single flaky answer should cost a domain one
+   day of series, not turn into a permanent gap on a busy resolver. */
+async function lookup<T>(run: () => Promise<T>, empty: T): Promise<Lookup<T>> {
+  const first = await attempt(run, empty);
+  if (first) return first;
+  await sleep(250);
+  return (await attempt(run, empty)) ?? { value: empty, resolved: false };
+}
+
+function txt(name: string): Promise<Lookup<string[]>> {
+  return lookup(
+    async () => (await dns.resolveTxt(name)).map((chunks) => chunks.join("")),
+    [] as string[],
+  );
+}
+
+/* An empty p= is a revoked key under RFC 6376, not a working one. Requiring
+   real base64 after p= is the difference between reading the record and
+   merely finding it. */
 const hasRealKey = (records: string[]) =>
   records.some((r) => /p=\s*[A-Za-z0-9+/]{40,}/.test(r));
 
 /** Live capture — same selectors and real-key bar as the public check. */
-export async function captureDomainSnapshot(domain: string): Promise<DomainSnapshot> {
-  const [spfRecords, dmarcRecords, bimiRecords, mxRaw, wildcardProbe] = await Promise.all([
+export async function captureDomainObservation(domain: string): Promise<DomainObservation> {
+  const unresolved: string[] = [];
+  const note = (name: string, l: Lookup<unknown>) => {
+    if (!l.resolved) unresolved.push(name);
+    return l;
+  };
+
+  /* Probe a selector that cannot exist first. Some domains publish a wildcard
+     under _domainkey, which makes every selector "resolve" and would turn the
+     DKIM list into a fiction. example.com does exactly this. */
+  const [spfL, dmarcL, bimiL, mxL, probeL] = await Promise.all([
     txt(domain),
     txt(`_dmarc.${domain}`),
     txt(`default._bimi.${domain}`),
-    dns.resolveMx(domain).catch(() => [] as { exchange: string; priority: number }[]),
-    txt(`zz-no-such-selector-probe._domainkey.${domain}`),
+    lookup(() => dns.resolveMx(domain), [] as { exchange: string; priority: number }[]),
+    txt(`${PROBE}.${domain}`),
   ]);
 
-  const spf = spfRecords.find((r) => r.toLowerCase().startsWith("v=spf1")) ?? null;
-  const dmarc = dmarcRecords.find((r) => r.toLowerCase().startsWith("v=dmarc1")) ?? null;
-  const bimi = bimiRecords.find((r) => r.toLowerCase().startsWith("v=bimi1")) ?? null;
-  const mx = mxRaw.map((m) => m.exchange.toLowerCase()).sort();
+  note(domain, spfL);
+  note(`_dmarc.${domain}`, dmarcL);
+  note(`default._bimi.${domain}`, bimiL);
+  note(`MX ${domain}`, mxL);
+  note(`${PROBE}.${domain}`, probeL);
 
-  const hasWildcard = wildcardProbe.some((r) => r.toLowerCase().includes("v=dkim1"));
+  const spf = spfL.value.find((r) => r.toLowerCase().startsWith("v=spf1")) ?? null;
+  const dmarc = dmarcL.value.find((r) => r.toLowerCase().startsWith("v=dmarc1")) ?? null;
+  const bimi = bimiL.value.find((r) => r.toLowerCase().startsWith("v=bimi1")) ?? null;
+  const mx = mxL.value.map((m) => m.exchange.toLowerCase()).sort();
+
+  const hasWildcard = probeL.value.some((r) => r.toLowerCase().includes("v=dkim1"));
   const dkim: string[] = [];
-  if (!hasWildcard) {
-    await Promise.all(
-      SELECTORS.map(async ([sel, vendor]) => {
-        if (hasRealKey(await txt(`${sel}.${domain}`))) dkim.push(`${sel} (${vendor})`);
-      }),
+  if (hasWildcard) {
+    dkim.push(WILDCARD_LABEL);
+  } else if (probeL.resolved) {
+    /* Only worth 14 more lookups once we know the probe itself was answered.
+       If it was not, this observation is already unusable. */
+    const probes = await Promise.all(
+      SELECTORS.map(async ([sel, vendor]) => ({
+        name: `${sel}.${domain}`,
+        vendor,
+        sel,
+        result: await txt(`${sel}.${domain}`),
+      })),
     );
+    for (const p of probes) {
+      note(p.name, p.result);
+      if (p.result.resolved && hasRealKey(p.result.value)) dkim.push(`${p.sel} (${p.vendor})`);
+    }
     dkim.sort();
-  } else {
-    dkim.push("(wildcard _domainkey — selectors not enumerable)");
   }
 
-  return { spf, dmarc, dkim, bimi, mx };
+  return {
+    snapshot: { spf, dmarc, dkim, bimi, mx },
+    reliable: unresolved.length === 0,
+    unresolved,
+  };
 }
 
 /** Stable key for dedupe of the same transition. */
@@ -96,45 +176,128 @@ function stableStringify(s: DomainSnapshot): string {
   });
 }
 
-/** Human lines for the alert body — what actually moved. */
-export function describeDomainChanges(prev: DomainSnapshot, next: DomainSnapshot): string[] {
-  const lines: string[] = [];
+export type SnapshotField = "spf" | "dmarc" | "dkim" | "bimi" | "mx";
 
-  if (prev.spf !== next.spf) {
-    if (!prev.spf && next.spf) lines.push(`SPF appeared: ${truncate(next.spf)}`);
-    else if (prev.spf && !next.spf) lines.push("SPF record removed.");
-    else lines.push(`SPF changed.\n  was: ${truncate(prev.spf)}\n  now: ${truncate(next.spf)}`);
-  }
+export type ChangeEntry = {
+  field: SnapshotField;
+  /** What moved, in one line. */
+  statement: string;
+  /** The records behind it, verbatim, so the reader can check our work. */
+  evidence?: string;
+};
 
-  if (prev.dmarc !== next.dmarc) {
-    if (!prev.dmarc && next.dmarc) lines.push(`DMARC appeared: ${truncate(next.dmarc)}`);
-    else if (prev.dmarc && !next.dmarc) lines.push("DMARC record removed.");
-    else
-      lines.push(`DMARC changed.\n  was: ${truncate(prev.dmarc)}\n  now: ${truncate(next.dmarc)}`);
-  }
+/**
+ * The dated rule each record answers to.
+ *
+ * A timeline entry that says "DMARC appeared" and stops is our opinion about
+ * why that matters. Pointing at a cited page instead is the whole premise of
+ * the site, so the mapping lives next to the fields rather than in a view.
+ * MX is deliberately absent: where you receive mail is context, not an
+ * obligation anyone has published.
+ */
+export const RULE_FOR_FIELD: Partial<Record<SnapshotField, string>> = {
+  spf: "gmail-bulk-sender-requirements",
+  dmarc: "dmarc-policy-none-is-not-enforcement",
+  dkim: "dkim-alignment-vs-dkim-passing",
+  bimi: "bimi-is-optional-brand-display-not-a-bulk-mandate",
+};
+
+/** Typed moves, so both the alert body and the timeline read one diff. */
+export function classifyChanges(prev: DomainSnapshot, next: DomainSnapshot): ChangeEntry[] {
+  const entries: ChangeEntry[] = [];
+
+  entries.push(...record("spf", "SPF record", prev.spf, next.spf));
+  entries.push(...record("dmarc", "DMARC record", prev.dmarc, next.dmarc));
 
   const prevDkim = prev.dkim.join(", ") || "(none found)";
   const nextDkim = next.dkim.join(", ") || "(none found)";
   if (prevDkim !== nextDkim) {
-    lines.push(`DKIM selectors changed.\n  was: ${prevDkim}\n  now: ${nextDkim}`);
+    entries.push({
+      field: "dkim",
+      statement: "DKIM selectors changed.",
+      evidence: `was: ${prevDkim}\nnow: ${nextDkim}`,
+    });
   }
 
-  if (prev.bimi !== next.bimi) {
-    if (!prev.bimi && next.bimi) lines.push(`BIMI appeared: ${truncate(next.bimi)}`);
-    else if (prev.bimi && !next.bimi) lines.push("BIMI record removed.");
-    else lines.push("BIMI record changed.");
-  }
+  entries.push(...record("bimi", "BIMI record", prev.bimi, next.bimi));
 
   const prevMx = prev.mx.join(", ") || "(none)";
   const nextMx = next.mx.join(", ") || "(none)";
   if (prevMx !== nextMx) {
-    lines.push(`MX hosts changed.\n  was: ${prevMx}\n  now: ${nextMx}`);
+    entries.push({
+      field: "mx",
+      statement: "MX hosts changed.",
+      evidence: `was: ${prevMx}\nnow: ${nextMx}`,
+    });
   }
 
-  return lines;
+  return entries;
 }
 
-function truncate(s: string | null, n = 180): string {
+/** The three shapes a single-record move takes, said the same way each time. */
+function record(
+  field: SnapshotField,
+  label: string,
+  prev: string | null,
+  next: string | null,
+): ChangeEntry[] {
+  if (prev === next) return [];
+  if (!prev) return [{ field, statement: `${label} appeared.`, evidence: truncate(next) }];
+  if (!next) return [{ field, statement: `${label} removed.`, evidence: `was: ${truncate(prev)}` }];
+  return [
+    {
+      field,
+      statement: `${label} changed.`,
+      evidence: `was: ${truncate(prev)}\nnow: ${truncate(next)}`,
+    },
+  ];
+}
+
+/** Human lines for the alert body — what actually moved. */
+export function describeDomainChanges(prev: DomainSnapshot, next: DomainSnapshot): string[] {
+  return classifyChanges(prev, next).map((c) =>
+    c.evidence ? `${c.statement}\n  ${c.evidence.split("\n").join("\n  ")}` : c.statement,
+  );
+}
+
+/**
+ * What a single snapshot held, for the row that opens a timeline.
+ *
+ * Quotes the record rather than grading it. A verdict here would date the
+ * moment the corpus moves; the record itself never does.
+ */
+export function describeSnapshot(s: DomainSnapshot): ChangeEntry[] {
+  return [
+    {
+      field: "spf" as const,
+      statement: s.spf ? "SPF published." : "No SPF record.",
+      evidence: s.spf ? truncate(s.spf) : undefined,
+    },
+    {
+      field: "dmarc" as const,
+      statement: s.dmarc ? "DMARC published." : "No DMARC record.",
+      evidence: s.dmarc ? truncate(s.dmarc) : undefined,
+    },
+    {
+      field: "dkim" as const,
+      statement: s.dkim.length
+        ? "DKIM keys on selectors we probe."
+        : "No DKIM key on the selectors we probe.",
+      evidence: s.dkim.length ? s.dkim.join(", ") : undefined,
+    },
+    ...(s.bimi
+      ? [{ field: "bimi" as const, statement: "BIMI published.", evidence: truncate(s.bimi) }]
+      : []),
+    ...(s.mx.length
+      ? [{ field: "mx" as const, statement: "MX records present.", evidence: s.mx.join(", ") }]
+      : []),
+  ];
+}
+
+/* Records are the substance here. Truncating one at the width of a sentence
+   would leave a reader unable to check our work, which is the only reason the
+   evidence is shown at all. */
+function truncate(s: string | null, n = 400): string {
   if (!s) return "(empty)";
   return s.length <= n ? s : `${s.slice(0, n)}…`;
 }
@@ -144,7 +307,7 @@ export function parseStoredSnapshot(raw: unknown): DomainSnapshot | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   return {
-    spf: typeof o.spf === "string" ? o.spf : o.spf === null ? null : null,
+    spf: typeof o.spf === "string" ? o.spf : null,
     dmarc: typeof o.dmarc === "string" ? o.dmarc : null,
     dkim: Array.isArray(o.dkim) ? o.dkim.map(String) : [],
     bimi: typeof o.bimi === "string" ? o.bimi : null,

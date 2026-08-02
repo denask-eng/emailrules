@@ -25,7 +25,11 @@ export default function robots(): MetadataRoute.Robots {
 
   return {
     rules: [
-      { userAgent: "*", allow: "/", disallow: ["/api/", "/admin"] },
+      /* /domain is belt-and-braces. Those pages already serve noindex and are
+         absent from the sitemap; publishing a record of somebody else's domain
+         is a decision to take deliberately, not one to arrive at because a
+         crawler found a page nobody meant to expose. */
+      { userAgent: "*", allow: "/", disallow: ["/api/", "/admin", "/domain"] },
       ...aiAgents.map((ua) => ({ userAgent: ua, allow: "/" })),
     ],
     sitemap: `${SITE.url}/sitemap.xml`,

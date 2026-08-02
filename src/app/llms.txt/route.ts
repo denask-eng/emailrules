@@ -63,6 +63,9 @@ ${t.rules
 - [Published corrections](${SITE.url}/corrections)
 - [Check a domain's authentication](${SITE.url}/check)
 - [Check a received header for alignment](${SITE.url}/check/headers)
+- [Check a whole message against the rules](${SITE.url}/check/message)
+- [Dated changes at Klaviyo, Mailchimp and Braze](${SITE.url}/esp)
+- [Embed a live authentication badge](${SITE.url}/embed)
 `;
 
   return new Response(body, {

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { checkDomain, normaliseDomain } from "@/lib/dns-check";
+import { observeDomain, observedDayCount } from "@/lib/domain-history";
 import { getRule, fmtDate } from "@/lib/rules";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
@@ -53,7 +55,13 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
   const d = normaliseDomain(decodeURIComponent(domain));
   if (!d) notFound();
 
-  const result = await checkDomain(d);
+  /* Every check is also an observation. It runs after the response so the
+     visitor never waits on it, and it is a no-op if this domain was already
+     observed today. History is the one thing here that cannot be back-filled,
+     so this is unconditional — not a feature anyone opts into. */
+  after(() => observeDomain(d));
+
+  const [result, daysObserved] = await Promise.all([checkDomain(d), observedDayCount(d)]);
   const fails = result.findings.filter((f) => f.severity === "fail").length;
   const warns = result.findings.filter((f) => f.severity === "warn").length;
 
@@ -95,6 +103,20 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
         and we read the alignment off the message itself.
       </div>
 
+      {daysObserved > 0 ? (
+        <p className="mt-5 text-[0.92rem] leading-relaxed text-muted-fg">
+          We have observed this domain on <span className="num">{daysObserved}</span>{" "}
+          {daysObserved === 1 ? "day" : "days"}.{" "}
+          <Link
+            href={`/domain/${result.domain}`}
+            className="text-fg underline decoration-1 underline-offset-3 hover:text-accent"
+          >
+            See what has moved since
+          </Link>
+          .
+        </p>
+      ) : null}
+
       <div className="mt-8 flex flex-wrap gap-3">
         <Link href="/check" className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-[10px] px-5")}>
           Check another domain
@@ -103,6 +125,20 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
           See which rules are yours
         </Link>
       </div>
+
+      {/* Offered here and nowhere earlier: the moment somebody has a result they
+          want in front of a client is the only moment an embed is worth reading
+          about. */}
+      <p className="mt-4 text-[13px] text-muted-fg">
+        Putting this in a client report?{" "}
+        <Link
+          href={`/embed/${result.domain}`}
+          className="text-fg underline decoration-1 underline-offset-3 hover:decoration-accent"
+        >
+          Embed a live, dated badge
+        </Link>{" "}
+        that re-checks itself.
+      </p>
 
       <section className="mt-12 rounded-xl border bg-card p-5 sm:p-6" style={{ boxShadow: "var(--lift)" }}>
         <h2 className="text-[15px] font-semibold">Watch this domain</h2>

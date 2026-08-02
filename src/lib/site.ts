@@ -57,7 +57,9 @@ export const FOOTER_NAV = [
       { href: "/changed", label: "What changed" },
       { href: "/sources", label: "Sources" },
       { href: "/glossary", label: "Glossary" },
+      { href: "/esp", label: "Your platform" },
       { href: "/coverage", label: "Coverage map" },
+      { href: "/embed", label: "Embed the check" },
     ],
   },
   {

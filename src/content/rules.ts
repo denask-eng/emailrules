@@ -29,12 +29,12 @@ const RULES_CORE: Rule[] = [
     ownership: "yours",
     handled: {
       already:
-        "Nothing, and this is the uncomfortable one. No mainstream ESP ships a per-recipient pixel-free send path, so there is no setting to switch on and no vendor to blame.",
+        "Part of it, on Klaviyo, since July 2026: you can mark named recipients as unsubscribed from open tracking, and their opens are then discarded rather than logged. Read what it does carefully — the pixel is still in the email and is still requested by the recipient's device. Klaviyo stops recording the open; it does not stop the read.",
       stillYours:
-        "All of it: capturing tracking consent separately from list consent, and being able to send the same campaign without a pixel to everyone who said no.",
+        "The consent itself, and the harder half of the obligation. Article 5(3) attaches to reading the recipient's terminal equipment, so a pixel that still loads is still the regulated act even when nobody writes the result down. Capturing tracking consent separately from list consent is yours, and so is deciding whether discard-on-receipt is enough for your risk appetite or whether you need the image gone.",
     },
     mondayMorning:
-      "Ask your ESP account manager, in writing, whether you can suppress the open pixel for a segment. Their answer tells you whether this is a settings change or a six-month project.",
+      "If you are on Klaviyo, open the open-tracking settings and check whether anyone has ever used the per-recipient control. If you are on anything else, ask your account manager in writing whether you can suppress the open pixel for a segment — their answer tells you whether this is a settings change or a six-month project.",
     ignoreIf: "Nobody on your list is in France.",
     whatToDo: [
       "Ask for tracking consent separately from email consent, ideally in the signup form at the moment you capture the address.",
@@ -59,12 +59,24 @@ const RULES_CORE: Rule[] = [
         published: "2024-10-07",
         actor: "regulator",
       },
+      {
+        /* No date on the page, so none is claimed here. Cited because it is the
+           vendor documenting its own control, and because it is candid about
+           the two limits that keep this rule on your desk. */
+        name: "Klaviyo, Email tracking pixel regulations (CNIL, Garante, and beyond): managing your open tracking settings",
+        url: "https://help.klaviyo.com/hc/en-us/articles/53113350637083-Email-tracking-pixel-regulations-CNIL-Garante-and-beyond-Managing-your-open-tracking-settings",
+        actor: "esp",
+      },
     ],
     related: ["italy-email-tracking-pixel-consent", "eprivacy-email-consent-soft-optin"],
     added: "2026-04-16",
-    updated: "2026-07-15",
-    lastVerified: "2026-08-01",
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
     changelog: [
+      {
+        date: "2026-08-02",
+        note: "Correction: this page said no mainstream ESP ships a per-recipient pixel-free send path. Klaviyo shipped per-recipient open-tracking control in July 2026 — you can mark named recipients as unsubscribed from open tracking. Read the help page and corrected the claim, but kept the distinction it turns on: Klaviyo discards the open server-side, the pixel is still requested by the device, and there is still no recipient-facing way to object.",
+      },
       { date: "2026-07-15", note: "Transition period ended. Status moved from Upcoming to In force." },
       { date: "2026-04-16", note: "Added after CNIL published the recommendation." },
     ],
@@ -88,16 +100,16 @@ const RULES_CORE: Rule[] = [
     ownership: "yours",
     handled: {
       already:
-        "Nothing yet. Same gap as France: the per-recipient pixel switch does not exist in the tools most people are on.",
+        "More than when this page was written. Klaviyo shipped per-recipient open-tracking control in July 2026, and it names this deadline in its own help page. It stops the open being recorded; it does not take the pixel out of the email.",
       stillYours:
-        "Deciding, before October, whether you build a pixel-free path for Italy or simply stop tracking individual opens there.",
+        "Deciding, before October, whether discarding the open is enough for you or whether you need the image gone — Article 122 bites on reading the device, not on writing the result down. And if you rely on the aggregate exemption instead, making sure nothing downstream ties an open back to a named person.",
     },
     mondayMorning:
       "Put 29 October 2026 in the calendar with a two-month run-up. This is a build, not a checkbox, and the deadline will not move.",
     ignoreIf: "Nobody on your list is in Italy.",
     whatToDo: [
       "Separate the tracking choice from the subscription choice, and let people revoke tracking alone.",
-      "Build a pixel-free send path now. This is the part most ESP setups cannot do today.",
+      "Decide now what your pixel-free path is. On Klaviyo you can mark recipients as unsubscribed from open tracking, which discards the open but still requests the image; on most other setups there is no control at all. Neither is the same as not loading a pixel, so establish which you can live with before October rather than in it.",
       "If you rely on the aggregate exemption, use one undifferentiated pixel across all recipients and do not tie opens back to individuals.",
       "Generate any tracking identifier as unintelligible and non-sequential.",
     ],
@@ -115,9 +127,15 @@ const RULES_CORE: Rule[] = [
     ],
     related: ["france-email-open-tracking-consent"],
     added: "2026-04-30",
-    updated: "2026-04-30",
-    lastVerified: "2026-08-01",
-    changelog: [{ date: "2026-04-30", note: "Added after publication in the Gazzetta Ufficiale." }],
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
+    changelog: [
+      {
+        date: "2026-08-02",
+        note: "Correction: this page said the per-recipient pixel switch does not exist in the tools most people are on. Klaviyo shipped one in July 2026 and cites this deadline itself. Corrected, and kept the part that still lands on you: the pixel is still requested by the device, which is what Article 122 regulates.",
+      },
+      { date: "2026-04-30", note: "Added after publication in the Gazzetta Ufficiale." },
+    ],
   },
 
   {

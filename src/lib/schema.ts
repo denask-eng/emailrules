@@ -68,4 +68,47 @@ export const SCHEMA = `
     recipients  int  not null default 0,
     primary key (domain, change_key)
   );
+
+  /* Append-only history, one row per domain per day it was observed.
+     domain_snapshots above holds only the latest, because that is all a diff
+     needs. This is the other thing: a record of how a domain's authentication
+     posture moved over time.
+
+     It exists because history is the one asset that cannot be bought or
+     back-filled. Every day this table is not being written is a day of it that
+     no longer exists. Capture is therefore unconditional and starts now.
+     Whether any of it is ever published is a separate decision, taken later,
+     and nothing here assumes the answer is yes. */
+  create table if not exists domain_history (
+    domain      text not null,
+    observed_on date not null,
+    snapshot    jsonb not null,
+    /* Set when this row differs from the previous one, so a timeline can show
+       moves without re-diffing every row it renders. */
+    changed     boolean not null default false,
+    change_note text,
+    primary key (domain, observed_on)
+  );
+  create index if not exists domain_history_changed_idx
+    on domain_history (domain, observed_on desc)
+    where changed;
+
+  /* A message someone sent us to be checked.
+
+     We keep the findings and a handful of derived facts. We do not keep the
+     message: no body, no subject, no recipient, no raw headers. Findings are
+     what the share URL renders, and storing the mail itself would make this a
+     place worth breaking into for no product gain.
+
+     expires_at exists so a share link is honest about being temporary rather
+     than quietly permanent. */
+  create table if not exists message_checks (
+    id          text primary key,
+    created_at  timestamptz not null default now(),
+    expires_at  timestamptz not null,
+    from_domain text,
+    findings    jsonb not null,
+    verdict     text not null
+  );
+  create index if not exists message_checks_expires_idx on message_checks (expires_at);
 `;

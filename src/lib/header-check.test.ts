@@ -1,13 +1,29 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import test from "node:test";
 import {
   alignment,
   analyzeHeaders,
   detectGmailSummaryTable,
+  extractFacts,
   orgDomainGuess,
   unfoldHeaders,
 } from "./header-check";
+import {
+  composeMessage,
+  countTrackingPixels,
+  extractContent,
+  hasPostalAddress,
+  htmlToText,
+  messageFindings,
+  rebuildHeaderBlock,
+  unmatchedOffers,
+  verdictSentence,
+} from "./message-rules";
 import type { Finding, Severity } from "./dns-check";
+/* Relative on purpose: this suite runs under plain Node, which does not read
+   the bundler's path aliases. */
+import { verifyWebhookSignature } from "../app/api/inbound/signature";
 
 const GMAIL_DELIVERED = `Delivered-To: reader@gmail.com
 Received: by 2002:a05:example with SMTP id abc123;
@@ -303,6 +319,13 @@ List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
     severity: "fail",
   },
   {
+    /* The mirror case. RFC 8058 needs the pair; a Post header with no URI to
+       post to is exactly as unsatisfied as a URI with no Post header. */
+    name: "List-Unsubscribe-Post without List-Unsubscribe fails",
+    headers: `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
+    severity: "fail",
+  },
+  {
     name: "mailto-only plus List-Unsubscribe-Post warns",
     headers: `List-Unsubscribe: <mailto:leave@brand.com>
 List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
@@ -326,6 +349,18 @@ ${fixture.headers}`;
     assertPair(result.findings, fixture.severity, "one-click-unsubscribe-rfc-8058");
   });
 }
+
+test("exactly one RFC 8058 finding is emitted per message", () => {
+  for (const fixture of unsubscribeCases) {
+    const result = checked(`From: hello@brand.com
+DKIM-Signature: v=1; d=brand.com; s=main
+${fixture.headers}`);
+    const oneClick = result.findings.filter(
+      (finding) => finding.rule === "one-click-unsubscribe-rfc-8058",
+    );
+    assert.equal(oneClick.length, 1, `${fixture.name} produced ${oneClick.length} findings`);
+  }
+});
 
 test("no DKIM-Signature is a Gmail requirement failure", () => {
   const raw = `From: hello@brand.com
@@ -409,8 +444,425 @@ test("an empty paste has no headers", () => {
   assert.deepEqual(analyzeHeaders(""), { ok: false, error: "no-headers" });
 });
 
-test("pastes over roughly 400 KB are rejected", () => {
+test("pastes over roughly 2 MB are rejected", () => {
   const raw = `Subject: large fixture
-X-Fill: ${"x".repeat(400 * 1024)}`;
+X-Fill: ${"x".repeat(2 * 1024 * 1024)}`;
   assert.deepEqual(analyzeHeaders(raw), { ok: false, error: "too-large" });
+});
+
+/* ─────────────────────── The message, not only its headers ────────────────── */
+
+const CAMPAIGN = `Authentication-Results: mx.google.com;
+       dkim=pass header.d=brand.com header.s=news;
+       spf=pass smtp.mailfrom=bounce.brand.com;
+       dmarc=pass header.from=brand.com
+Return-Path: <campaign@bounce.brand.com>
+From: Brand <hello@brand.com>
+DKIM-Signature: v=1; a=rsa-sha256; d=brand.com; s=news; b=abcdef
+List-Unsubscribe: <https://brand.com/u/1>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+Subject: The August edit is here
+Content-Type: text/html; charset=utf-8
+
+<html><body>
+<p>Three new coats landed this morning, and the wool one is the reason we made this edit.</p>
+<img src="https://cdn.brand.com/coat.jpg" width="600" height="400" alt="A wool coat">
+<img src="https://track.brand.com/o/abc123.gif" width="1" height="1">
+<p>Brand Ltd, 125 Summer Street, Boston, MA 02110</p>
+<p><a href="https://brand.com/u/1">Unsubscribe</a></p>
+</body></html>`;
+
+function messageOf(raw: string) {
+  const content = extractContent(raw);
+  const headers = unfoldHeaders(raw);
+  return messageFindings({ headers, facts: extractFacts(headers), content });
+}
+
+function titlesFor(findings: Finding[], rule: string): string[] {
+  return findings.filter((finding) => finding.rule === rule).map((finding) => finding.title);
+}
+
+test("a whole campaign yields content and consent findings, each citing a rule", () => {
+  const findings = messageOf(CAMPAIGN);
+
+  assert.equal(findings.every((finding) => Boolean(finding.rule)), true);
+  assertPair(findings, "pass", "can-spam-penalty-per-email");
+  assertPair(findings, "pass", "apple-intelligence-email-summaries");
+  assertPair(findings, "info", "france-email-open-tracking-consent");
+  assertPair(findings, "info", "italy-email-tracking-pixel-consent");
+});
+
+test("nothing derived from the body or the subject is carried as evidence", () => {
+  for (const finding of messageOf(CAMPAIGN)) {
+    assert.equal(finding.evidence, undefined, `${finding.title} carried evidence`);
+    assert.equal(/wool|Summer Street|August edit/.test(finding.detail), false);
+  }
+});
+
+test("headers alone produce no body findings at all", () => {
+  const headersOnly = `From: Brand <hello@brand.com>
+DKIM-Signature: v=1; d=brand.com; s=news
+Subject: No body here
+
+`;
+  assert.deepEqual(messageOf(headersOnly), []);
+});
+
+test("a missing postal address fails when the message declares itself bulk", () => {
+  const raw = `From: Brand <hello@brand.com>
+List-Unsubscribe: <https://brand.com/u/1>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+Subject: No address
+Content-Type: text/plain
+
+Three new coats landed this morning and the wool one is the reason we made this.
+Unsubscribe: https://brand.com/u/1`;
+  assertPair(messageOf(raw), "fail", "can-spam-penalty-per-email");
+});
+
+test("a missing postal address only warns when nothing says the mail is bulk", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: Your order shipped
+Content-Type: text/plain
+
+Your order shipped this morning and should arrive on Thursday. Track it any time.`;
+  const findings = messageOf(raw);
+  assertPair(findings, "warn", "can-spam-penalty-per-email");
+  assert.equal(hasPair(findings, "fail", "can-spam-penalty-per-email"), false);
+});
+
+const addressCases: Array<[string, boolean]> = [
+  ["Brand Ltd, 125 Summer Street, Boston, MA 02110", true],
+  ["PO Box 4120, Portland OR", true],
+  ["Brand Ltd, 12 Old Street, London EC1V 9BE", true],
+  ["emailrules.today, Verkiu g. 39, Vilnius 09109, Lithuania", true],
+  ["Musterfirma GmbH, Hauptstraße 12, 10115 Berlin", true],
+  ["© 2026 Brand. All rights reserved. Sent because you signed up.", false],
+  ["Save 30% today only. 24 hours left on everything in the sale.", false],
+  ["Questions? Reply to this email or call us on 0800 100 200.", false],
+];
+
+for (const [line, expected] of addressCases) {
+  test(`hasPostalAddress(${JSON.stringify(line.slice(0, 34))}…) is ${expected}`, () => {
+    assert.equal(hasPostalAddress(line), expected);
+  });
+}
+
+test("an image-only campaign fails the Apple summary rule", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: Image only
+Content-Type: text/html
+
+<html><body><img src="https://cdn.brand.com/whole-email.jpg" alt="Everything is in this image"></body></html>`;
+  assertPair(messageOf(raw), "fail", "apple-intelligence-email-summaries");
+});
+
+test("view-in-browser boilerplate at the top is what Apple would summarise", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: Boilerplate lead
+Content-Type: text/html
+
+<html><body><p>View this email in your browser</p><img src="https://cdn.brand.com/hero.jpg"><p>Three new coats landed this morning and the wool one is why.</p></body></html>`;
+  assertPair(messageOf(raw), "warn", "apple-intelligence-email-summaries");
+});
+
+test("the HTML part is what Apple reads, not a stub plain-text fallback", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: Multipart
+Content-Type: multipart/alternative; boundary="sep"
+
+--sep
+Content-Type: text/plain
+
+View in browser
+--sep
+Content-Type: text/html
+
+<html><body><p>Three new coats landed this morning, and the wool one is the reason we made this edit at all.</p></body></html>
+--sep--`;
+  const findings = messageOf(raw);
+  assertPair(findings, "pass", "apple-intelligence-email-summaries");
+  assert.equal(hasPair(findings, "warn", "apple-intelligence-email-summaries"), false);
+});
+
+const pixelCases: Array<[string, number]> = [
+  ['<img src="https://cdn.brand.com/hero.jpg" width="600" height="400">', 0],
+  ['<img src="https://t.brand.com/o/abc.gif" width="1" height="1">', 1],
+  ['<img src="https://x.example/img" style="width:1px;height:1px">', 1],
+  ['<img src="https://x.example/open?id=9">', 1],
+  ['<img src="https://x.example/wf/open?upn=9">', 1],
+  ['<img src="https://x.example/spacer.gif" width="20" height="1">', 0],
+];
+
+for (const [tag, expected] of pixelCases) {
+  test(`countTrackingPixels finds ${expected} in ${tag.slice(0, 44)}…`, () => {
+    assert.equal(countTrackingPixels(tag), expected);
+  });
+}
+
+test("no detected pixel is reported as an observation, not as a clean bill", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: No pixel
+Content-Type: text/html
+
+<html><body><p>Three new coats landed this morning, and the wool one is the reason for the edit.</p><p>Brand Ltd, 125 Summer Street, Boston, MA 02110</p></body></html>`;
+  const titles = titlesFor(messageOf(raw), "france-email-open-tracking-consent");
+  assert.deepEqual(titles, ["No open-tracking pixel was detected"]);
+});
+
+test("a manufactured Re: on a message that is not a reply is a Washington finding", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: Re: your order
+Content-Type: text/plain
+
+Three new coats landed this morning and the wool one is the reason we made this edit.
+Brand Ltd, 125 Summer Street, Boston, MA 02110`;
+  assertPair(messageOf(raw), "warn", "washington-misleading-subject-lines");
+});
+
+test("a genuine reply carrying In-Reply-To is not flagged", () => {
+  const raw = `From: Brand <hello@brand.com>
+In-Reply-To: <abc@mail.example>
+Subject: Re: your order
+Content-Type: text/plain
+
+Thanks for writing in. Your order shipped this morning and arrives Thursday.
+Brand Ltd, 125 Summer Street, Boston, MA 02110`;
+  assert.deepEqual(titlesFor(messageOf(raw), "washington-misleading-subject-lines"), []);
+});
+
+const offerCases: Array<[string, string, number]> = [
+  ["30% off everything", "Take 30% off every coat we make.", 0],
+  ["30% off everything", "Take 20% off every coat we make.", 1],
+  ["£40 off, this week", "Forty pounds off, this week only.", 1],
+  ["The August edit", "Three new coats landed this morning.", 0],
+];
+
+for (const [subject, body, expected] of offerCases) {
+  test(`unmatchedOffers(${JSON.stringify(subject)}) is ${expected}`, () => {
+    assert.equal(unmatchedOffers(subject, body), expected);
+  });
+}
+
+test("an offer in the subject that is nowhere in the body is worth a look", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: 30% off everything
+Content-Type: text/plain
+
+Take 20 percent off every coat we make, this week only.
+Brand Ltd, 125 Summer Street, Boston, MA 02110`;
+  assertPair(messageOf(raw), "warn", "washington-misleading-subject-lines");
+});
+
+test("marketing sent without unsubscribe headers is a classification finding", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: Your receipt
+Content-Type: text/plain
+
+Take 30% off your next order with this code. Shop the new coats now.
+Unsubscribe: https://brand.com/u/1
+Brand Ltd, 125 Summer Street, Boston, MA 02110`;
+  assertPair(
+    messageOf(raw),
+    "warn",
+    "transactional-vs-commercial-email-is-not-a-subject-line-trick",
+  );
+});
+
+test("a genuine receipt is not reclassified as marketing", () => {
+  const raw = `From: Brand <hello@brand.com>
+Subject: Your order shipped
+Content-Type: text/plain
+
+Order 4821 shipped this morning. It should reach you on Thursday.
+Brand Ltd, 125 Summer Street, Boston, MA 02110`;
+  assert.deepEqual(
+    titlesFor(messageOf(raw), "transactional-vs-commercial-email-is-not-a-subject-line-trick"),
+    [],
+  );
+});
+
+/* ─────────────────────────── Reading a real message ───────────────────────── */
+
+test("quoted-printable and base64 parts are decoded before they are read", () => {
+  const quoted = extractContent(`From: a@b.example
+Content-Type: text/plain
+Content-Transfer-Encoding: quoted-printable
+
+Caf=C3=A9 = the place, 30=25 off, wrapped =
+across a soft break`);
+  assert.equal(quoted.text, "Café = the place, 30% off, wrapped across a soft break");
+
+  const encoded = extractContent(`From: a@b.example
+Content-Type: text/html
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGJvZHk+PHA+SGVsbG8gY2Fmw6k8L3A+PC9ib2R5PjwvaHRtbD4=`);
+  assert.equal(encoded.html, "<html><body><p>Hello café</p></body></html>");
+});
+
+test("an RFC 2047 subject is decoded", () => {
+  const content = extractContent(`From: a@b.example
+Subject: =?utf-8?B?TGUgY2Fmw6kgZHUgbWF0aW4=?=
+Content-Type: text/plain
+
+Body`);
+  assert.equal(content.subject, "Le café du matin");
+});
+
+test("attachments are never decoded or read", () => {
+  const content = extractContent(`From: a@b.example
+Content-Type: multipart/mixed; boundary="sep"
+
+--sep
+Content-Type: text/plain
+
+The readable part.
+--sep
+Content-Type: text/plain
+Content-Disposition: attachment; filename="notes.txt"
+
+This attachment must not become the body.
+--sep--`);
+  assert.equal(content.text, "The readable part.");
+});
+
+test("htmlToText strips scripts and never returns markup", () => {
+  const text = htmlToText(
+    `<html><head><style>p{color:red}</style></head><body><script>alert(1)</script><p>Hello &amp; welcome</p><div>Second line</div></body></html>`,
+  );
+  assert.equal(/[<>]/.test(text), false);
+  assert.equal(text.includes("alert"), false);
+  assert.equal(text, "Hello & welcome\nSecond line");
+});
+
+test("composeMessage rebuilds a message the parser can read back", () => {
+  const raw = composeMessage({
+    headers: {
+      From: "Brand <hello@brand.com>",
+      Subject: "Rebuilt",
+      "Content-Type": 'multipart/alternative; boundary="gone"',
+      "List-Unsubscribe": "<https://brand.com/u/1>",
+    },
+    text: "Plain body.",
+    html: "<p>HTML body.</p>",
+  });
+  const content = extractContent(raw);
+  const facts = extractFacts(unfoldHeaders(raw));
+
+  assert.equal(content.subject, "Rebuilt");
+  assert.equal(content.text?.trim(), "Plain body.");
+  assert.equal(content.html?.trim(), "<p>HTML body.</p>");
+  assert.equal(facts.fromDomain, "brand.com");
+  assert.deepEqual(facts.listUnsubscribe.uris, ["https://brand.com/u/1"]);
+});
+
+test("a newline smuggled into a webhook header value cannot forge a header", () => {
+  const raw = rebuildHeaderBlock({
+    From: "Brand <hello@brand.com>",
+    "X-Note": "harmless\nDKIM-Signature: v=1; d=attacker.example; s=forged",
+  });
+  const facts = extractFacts(unfoldHeaders(raw));
+
+  assert.equal(facts.fromDomain, "brand.com");
+  assert.deepEqual(facts.dkim, []);
+});
+
+test("header shapes other than an object are all accepted", () => {
+  const fromArray = rebuildHeaderBlock([
+    { name: "From", value: "Brand <hello@brand.com>" },
+    { name: "Subject", value: "Array shape" },
+  ]);
+  assert.equal(extractFacts(unfoldHeaders(fromArray)).fromDomain, "brand.com");
+  assert.equal(rebuildHeaderBlock("From: hello@brand.com"), "From: hello@brand.com");
+});
+
+test("the verdict is a sentence about counts and never a score", () => {
+  const of = (severities: Severity[]): Finding[] =>
+    severities.map((severity) => ({ severity, title: "t", detail: "d" }));
+
+  assert.equal(verdictSentence(of(["pass", "info"])), "Nothing to fix in this message.");
+  assert.equal(verdictSentence(of(["fail"])), "1 thing to fix.");
+  assert.equal(verdictSentence(of(["fail", "fail", "warn"])), "2 things to fix, 1 worth a look.");
+  assert.equal(verdictSentence(of(["warn"])), "Nothing broken, 1 worth a look.");
+  for (const findings of [of(["fail"]), of(["pass"]), of(["warn", "info"])]) {
+    assert.equal(/\d+\s*(?:%|percent|\/\s*\d|out of)/.test(verdictSentence(findings)), false);
+  }
+});
+
+/* ────────────────────────── The webhook's front door ──────────────────────── */
+
+const SECRET = "whsec_dGhpc2lzYXRlc3RzZWNyZXRmb3JzaWduaW5n";
+
+function sign(payload: string, id: string, timestamp: string, secret = SECRET): string {
+  const key = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
+  return `v1,${createHmac("sha256", key).update(`${id}.${timestamp}.${payload}`).digest("base64")}`;
+}
+
+test("a correctly signed delivery verifies", () => {
+  const payload = JSON.stringify({ type: "email.received" });
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  assert.equal(
+    verifyWebhookSignature({
+      payload,
+      id: "msg_1",
+      timestamp,
+      signature: sign(payload, "msg_1", timestamp),
+      secret: SECRET,
+    }),
+    null,
+  );
+});
+
+test("a tampered payload, a stale timestamp and a missing secret are all refused", () => {
+  const payload = JSON.stringify({ type: "email.received" });
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const signature = sign(payload, "msg_1", timestamp);
+
+  assert.equal(
+    verifyWebhookSignature({
+      payload: `${payload} `,
+      id: "msg_1",
+      timestamp,
+      signature,
+      secret: SECRET,
+    }),
+    "bad-signature",
+  );
+  assert.equal(
+    verifyWebhookSignature({
+      payload,
+      id: "msg_1",
+      timestamp: String(Number(timestamp) - 3600),
+      signature,
+      secret: SECRET,
+    }),
+    "stale-timestamp",
+  );
+  assert.equal(
+    verifyWebhookSignature({ payload, id: "msg_1", timestamp, signature, secret: undefined }),
+    "no-secret",
+  );
+  assert.equal(
+    verifyWebhookSignature({ payload, id: null, timestamp, signature, secret: SECRET }),
+    "missing-headers",
+  );
+});
+
+test("a rotated secret is accepted while both signatures are sent", () => {
+  const payload = JSON.stringify({ type: "email.received" });
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const old = sign(payload, "msg_1", timestamp, "whsec_b2xkc2VjcmV0dmFsdWVoZXJlMTIzNDU2");
+  const current = sign(payload, "msg_1", timestamp);
+
+  assert.equal(
+    verifyWebhookSignature({
+      payload,
+      id: "msg_1",
+      timestamp,
+      signature: `${old} ${current}`,
+      secret: SECRET,
+    }),
+    null,
+  );
 });

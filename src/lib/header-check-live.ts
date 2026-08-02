@@ -8,6 +8,7 @@ import {
   orgDomainGuess,
   type Alignment,
   type HeaderCheckError,
+  type HeaderFacts,
 } from "./header-check";
 import { getRule } from "@/lib/rules";
 
@@ -18,6 +19,9 @@ export type HeaderCheckResult =
       fromDomain: string | null;
       findings: Finding[];
       ruleTitles: Record<string, string>;
+      /** Handed back so a caller can add message-level findings without
+          re-parsing the same headers a second time. */
+      facts: HeaderFacts;
     }
   | { ok: false; error: HeaderCheckError };
 
@@ -29,6 +33,16 @@ interface TxtResult {
 const ORDER: Record<Severity, number> = { fail: 0, warn: 1, pass: 2, info: 3 };
 const TIMEOUT_MS = 3_000;
 const DKIM_RULE = "dkim-alignment-vs-dkim-passing";
+
+/**
+ * A ceiling on how much DNS one message can make us do.
+ *
+ * Selectors come out of headers, and since the inbound address exists those
+ * headers are written by whoever wants to write them. Real mail double-signs
+ * at most; a message carrying two hundred DKIM-Signature lines is someone
+ * using this checker as a resolver.
+ */
+const MAX_SELECTOR_PROBES = 6;
 
 /** Kept local so the pure header parser never acquires a Node dependency. */
 async function txt(name: string): Promise<TxtResult> {
@@ -213,7 +227,7 @@ export async function checkHeaders(raw: string): Promise<HeaderCheckResult> {
     ...new Map(
       completeSignatures.map((signature) => [`${signature.s}\u0000${signature.d}`, signature]),
     ).values(),
-  ];
+  ].slice(0, MAX_SELECTOR_PROBES);
   const signingDomains = completeSignatures.map((signature) => signature.d);
 
   const liveGroups = await Promise.all([
@@ -237,5 +251,6 @@ export async function checkHeaders(raw: string): Promise<HeaderCheckResult> {
     fromDomain: analysed.facts.fromDomain,
     findings,
     ruleTitles: await ruleTitles(findings),
+    facts: analysed.facts,
   };
 }
