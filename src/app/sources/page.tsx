@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllRules, fmtDate } from "@/lib/rules";
-import { Panel, SectionHead } from "@/components/bits";
-import { cn } from "@/lib/utils";
+import { SectionHead } from "@/components/bits";
 
 export const metadata: Metadata = {
   title: "Every source",
@@ -23,7 +22,7 @@ export default async function Sources() {
   const rules = await getAllRules();
   const all = rules
     .flatMap((r) => r.sources.map((s) => ({ ...s, rule: r })))
-    .sort((a, b) => b.published.localeCompare(a.published));
+    .sort((a, b) => (b.published ?? "").localeCompare(a.published ?? ""));
 
   const grouped = Object.entries(
     all.reduce<Record<string, typeof all>>((acc, s) => {
@@ -52,7 +51,7 @@ export default async function Sources() {
                 <li key={`${s.rule.slug}-${s.url}`} className="border-b border-border-soft py-3 last:border-b-0">
                   <div className="text-[0.94rem] leading-snug">{s.name}</div>
                   <div className="num mt-1.5 flex flex-wrap items-center gap-2 text-[0.74rem] text-dim">
-                    <span>{fmtDate(s.published)}</span>
+                    <span>{s.published ? fmtDate(s.published) : "no date given"}</span>
                     <span aria-hidden>·</span>
                     <a href={s.url} target="_blank" rel="noopener nofollow" className="underline underline-offset-2 hover:text-fg" >
                       Source

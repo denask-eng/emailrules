@@ -56,11 +56,13 @@ ${t.rules
   )
   .join("\n\n")}
 
-## Feeds
+## Index
 
-- [Rule changes (RSS)](${SITE.url}/feed.xml): every change, newest first.
 - [Full index](${SITE.url}/rules)
 - [Changelog](${SITE.url}/changed)
+- [Published corrections](${SITE.url}/corrections)
+- [Check a domain's authentication](${SITE.url}/check)
+- [Check a received header for alignment](${SITE.url}/check/headers)
 `;
 
   return new Response(body, {

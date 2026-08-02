@@ -1,63 +1,109 @@
-import { RULES, RULES_BY_SLUG } from "@/content/rules";
-import type { Rule, RuleStatus, Topic, Jurisdiction } from "@/lib/types";
+import { cache } from "react";
+import { RULES as SEED } from "@/content/rules";
+import { sql, hasDatabase } from "@/lib/db";
+import type { Rule, RuleStatus, Topic, Jurisdiction, Ownership } from "@/lib/types";
 
 /**
  * The single data-access seam.
  *
- * Today this reads the typed corpus in src/content/rules.ts. When the admin
- * lands, only the bodies of these functions change to hit Postgres; nothing
- * that imports them needs to know. Keep every read in this file.
+ * Reads now come from Postgres. Every page in the app goes through these
+ * functions and none of them changed when the storage did, which is the whole
+ * reason this file was written as a seam in the first place.
+ *
+ * `src/content/rules.ts` stays in the repo as the git-tracked origin of the
+ * corpus and as the fallback: if DATABASE_URL is absent, on a fresh clone or a
+ * preview without env, the site still builds and serves the seeded array
+ * rather than erroring. The database is authoritative whenever it is present.
+ *
+ * `cache()` dedupes within a single request, so a page that calls getStats()
+ * and getAllRules() hits Postgres once, not twice.
  */
 
+const loadAll = cache(async (): Promise<Rule[]> => {
+  if (!hasDatabase()) return SEED;
+  try {
+    const rows = (await sql()`select data from rules`) as { data: Rule }[];
+    /* An empty table means the migration has not run yet. Falling back beats
+       showing a visitor an empty reference. */
+    return rows.length ? rows.map((r) => r.data) : SEED;
+  } catch (err) {
+    console.error("[rules] database read failed, serving the seeded corpus:", err);
+    return SEED;
+  }
+});
+
 export async function getAllRules(): Promise<Rule[]> {
-  return RULES;
+  return loadAll();
 }
 
 export async function getRule(slug: string): Promise<Rule | null> {
-  return RULES_BY_SLUG.get(slug) ?? null;
+  const all = await loadAll();
+  return all.find((r) => r.slug === slug) ?? null;
 }
 
 export async function getRulesByTopic(topic: Topic): Promise<Rule[]> {
-  return RULES.filter((r) => r.topic === topic);
+  return (await loadAll()).filter((r) => r.topic === topic);
 }
 
 export async function getRulesByJurisdiction(j: Jurisdiction): Promise<Rule[]> {
-  return RULES.filter((r) => r.jurisdictions.includes(j));
+  return (await loadAll()).filter((r) => r.jurisdictions.includes(j));
 }
 
-/** Newest change first. This drives the homepage and the RSS feed. */
+/** Newest change first. This drives the homepage and the changelog. */
 export async function getChangelog(limit?: number): Promise<
   Array<{ rule: Rule; date: string; note: string }>
 > {
-  const entries = RULES.flatMap((rule) =>
-    rule.changelog.map((c) => ({ rule, date: c.date, note: c.note })),
-  ).sort((a, b) => b.date.localeCompare(a.date));
+  const all = await loadAll();
+  const entries = all
+    .flatMap((rule) => rule.changelog.map((c) => ({ rule, date: c.date, note: c.note })))
+    .sort((a, b) => b.date.localeCompare(a.date));
   return limit ? entries.slice(0, limit) : entries;
 }
 
 /** Rules whose status changed, or that were added, inside the window. */
 export async function getRecentlyChanged(days = 90): Promise<Rule[]> {
   const cutoff = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
-  return RULES.filter((r) => r.updated >= cutoff).sort((a, b) =>
-    b.updated.localeCompare(a.updated),
-  );
+  return (await loadAll())
+    .filter((r) => r.updated >= cutoff)
+    .sort((a, b) => b.updated.localeCompare(a.updated));
 }
 
 export async function countsByTopic(): Promise<Record<string, number>> {
-  return RULES.reduce<Record<string, number>>((acc, r) => {
+  return (await loadAll()).reduce<Record<string, number>>((acc, r) => {
     acc[r.topic] = (acc[r.topic] ?? 0) + 1;
     return acc;
   }, {});
 }
 
+export async function countsByOwnership(): Promise<Record<Ownership, number>> {
+  return (await loadAll()).reduce(
+    (acc, r) => {
+      acc[r.ownership] += 1;
+      return acc;
+    },
+    { esp: 0, shared: 0, yours: 0, context: 0 } as Record<Ownership, number>,
+  );
+}
+
+export async function getRulesByOwnership(o: Ownership): Promise<Rule[]> {
+  return (await loadAll()).filter((r) => r.ownership === o);
+}
+
 export async function getStats() {
+  const all = await loadAll();
   const changed = await getRecentlyChanged(90);
+  const own = await countsByOwnership();
   return {
-    total: RULES.length,
+    total: all.length,
     changed90: changed.length,
-    inForce: RULES.filter((r) => r.status === "in_force").length,
-    upcoming: RULES.filter((r) => r.status === "upcoming").length,
-    lastReview: RULES.reduce((max, r) => (r.lastVerified > max ? r.lastVerified : max), ""),
+    inForce: all.filter((r) => r.status === "in_force").length,
+    upcoming: all.filter((r) => r.status === "upcoming").length,
+    lastReview: all.reduce((max, r) => (r.lastVerified > max ? r.lastVerified : max), ""),
+    /** The numbers that make this a reference rather than a compliance scare sheet. */
+    yours: own.yours,
+    notYours: own.esp + own.shared + own.context,
+    espHandled: own.esp + own.shared,
+    nothingToDo: own.context,
   };
 }
 
@@ -65,13 +111,6 @@ export function statusOf(rule: Rule): RuleStatus {
   return rule.status;
 }
 
-/** en-GB, unambiguous, matches the mono tabular treatment in the UI. */
-export function fmtDate(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  return `${d} ${months[m - 1]} ${y}`;
-}
-
-export function daysSince(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-}
+/* Re-exported so server callers keep one import site. Client components must
+   import these from @/lib/format directly, never through this file. */
+export { fmtDate, daysSince } from "@/lib/format";

@@ -4,17 +4,20 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Cool, high-contrast, near-white. A precision instrument, not paper. */
-  --bg: #fcfcfd;
-  --bg-2: #f7f7f9;
-  --fg: #0e0f13;
+  /* Light only, and deliberately a hair warm. The stock cold blue-white
+     (#fcfcfd and friends) is the default every generated site ships with;
+     a faint paper warmth reads as a considered surface and makes the blue
+     accent sit better against it. */
+  --bg: #fdfdfb;
+  --bg-2: #f5f5f1;
+  --fg: #17171a;
   --card: #ffffff;
-  --border: #e6e6ea;
-  --border-soft: #eeeef1;
-  --input: #d8d8de;
-  --muted: #f4f4f6;
-  --muted-fg: #71717f;
-  --dim: #9a9aa6;
+  --border: #e7e7e1;
+  --border-soft: #efefea;
+  --input: #d9d9d2;
+  --muted: #f5f5f1;
+  --muted-fg: #6c6c68;
+  --dim: #97978f;
 
   /* One accent. Deep, confident, editorial. */
   --accent: #2347d9;
@@ -37,39 +40,12 @@
   --mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo,
     Consolas, monospace;
 
-  --lift: 0 1px 2px rgb(14 15 19 / 0.04), 0 1px 1px rgb(14 15 19 / 0.03);
-  --lift-2: 0 1px 2px rgb(14 15 19 / 0.05), 0 8px 24px -12px rgb(14 15 19 / 0.12);
+  --lift: 0 1px 2px rgb(20 20 16 / 0.04), 0 1px 1px rgb(20 20 16 / 0.03);
+  --lift-2: 0 1px 2px rgb(20 20 16 / 0.05), 0 8px 24px -12px rgb(20 20 16 / 0.12);
 
-  color-scheme: light dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0a0a0c;
-    --bg-2: #0f0f12;
-    --fg: #ececf0;
-    --card: #131317;
-    --border: #23232a;
-    --border-soft: #1c1c22;
-    --input: #303039;
-    --muted: #17171c;
-    --muted-fg: #94949f;
-    --dim: #6d6d78;
-
-    --accent: #7d9dff;
-    --accent-fg: #0a0a0c;
-    --accent-soft: #151a2e;
-
-    --live: #f08a83;
-    --live-bg: #241614;
-    --soon: #d9a856;
-    --soon-bg: #241d11;
-    --ok: #62bd8a;
-    --ok-bg: #10201a;
-
-    --lift: 0 1px 2px rgb(0 0 0 / 0.4);
-    --lift-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
-  }
+  /* Light only. No dark variant on purpose: a dark reference site reads as
+     a developer tool, and this one is read by marketers in daylight. */
+  color-scheme: light;
 }
 
 @theme inline {
@@ -123,7 +99,7 @@
     background: var(--bg);
     color: var(--fg);
     font-family: var(--sans);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;

@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { SITE, NAV } from "@/lib/site";
 import { Byline, AuthorJsonLd } from "@/components/byline";
+import { Search } from "@/components/search";
+import { getAllRules } from "@/lib/rules";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import "./globals.css";
@@ -10,17 +12,14 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-export const viewport: Viewport = { themeColor: "#fcfcfd" };
+export const viewport: Viewport = { themeColor: "#fdfdfb", colorScheme: "light" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: { default: `${SITE.name} — ${SITE.tagline}`, template: `%s — ${SITE.name}` },
   description: SITE.description,
   applicationName: SITE.name,
-  alternates: {
-    canonical: "/",
-    types: { "application/rss+xml": [{ url: "/feed.xml", title: "Rule changes" }] },
-  },
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: SITE.name,
@@ -69,7 +68,15 @@ function SiteJsonLd() {
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }} />;
 }
 
-function Nav() {
+async function Nav() {
+  const rules = await getAllRules();
+  const index = rules.map((r) => ({
+    slug: r.slug,
+    title: r.title,
+    question: r.question,
+    ownership: r.ownership,
+    jurisdictions: r.jurisdictions.join(" "),
+  }));
   return (
     <header className="no-print sticky top-0 z-50 border-b border-border/80 bg-bg/85 backdrop-blur-md">
       <div className="shell flex h-14 items-center gap-6">
@@ -77,6 +84,9 @@ function Nav() {
           emailrules<span className="text-accent">.today</span>
         </Link>
         <nav className="ml-auto flex items-center gap-1">
+          <div className="mr-1.5">
+            <Search items={index} />
+          </div>
           {NAV.map((n) => (
             <Link
               key={n.href}
@@ -116,7 +126,6 @@ function Footer() {
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             <Link href="/methodology" className="hover:text-fg">Methodology</Link>
             <Link href="/sources" className="hover:text-fg">Sources</Link>
-            <a href="/feed.xml" className="hover:text-fg">RSS</a>
             <a href="/llms.txt" className="hover:text-fg">llms.txt</a>
           </div>
           <a href={`mailto:${SITE.contact}`} className="hover:text-fg">{SITE.contact}</a>

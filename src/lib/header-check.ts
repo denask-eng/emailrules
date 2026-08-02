@@ -1,0 +1,620 @@
+import type { Finding, Severity } from "./dns-check";
+
+export interface HeaderField {
+  name: string;
+  lower: string;
+  value: string;
+}
+
+export interface DkimSignatureFact {
+  d: string | null;
+  s: string | null;
+  raw: string;
+}
+
+export interface AuthenticationMethodFact {
+  result: string;
+  headerD: string | null;
+  headerFrom: string | null;
+  smtpMailfrom: string | null;
+  raw: string;
+}
+
+export interface AuthenticationFacts {
+  authservId: string;
+  spf: AuthenticationMethodFact | null;
+  dkim: AuthenticationMethodFact[];
+  dmarc: AuthenticationMethodFact | null;
+  raw: string;
+}
+
+export interface HeaderFacts {
+  fromDomain: string | null;
+  dkim: DkimSignatureFact[];
+  auth: AuthenticationFacts | null;
+  returnPathDomain: string | null;
+  receivedSpf: string | null;
+  listUnsubscribe: {
+    uris: string[];
+    hasHttps: boolean;
+  };
+  listUnsubscribePost: string | null;
+}
+
+export type HeaderCheckError = "gmail-summary" | "no-headers" | "too-large";
+
+export type HeaderAnalysis =
+  | { ok: true; facts: HeaderFacts; findings: Finding[] }
+  | { ok: false; error: HeaderCheckError };
+
+export type Alignment = "strict" | "relaxed" | "none";
+
+const MAX_HEADER_BYTES = 400 * 1024;
+const RECEIVER_GROUND_TRUTH = "A receiver's Authentication-Results is the ground truth.";
+
+const RULE = {
+  gmail: "gmail-bulk-sender-requirements",
+  dkimAlignment: "dkim-alignment-vs-dkim-passing",
+  outlook: "outlook-high-volume-sender-authentication",
+  oneClick: "one-click-unsubscribe-rfc-8058",
+} as const;
+
+const MULTI_LABEL_SUFFIXES = new Set([
+  "co.uk",
+  "org.uk",
+  "ac.uk",
+  "com.au",
+  "net.au",
+  "co.jp",
+  "co.nz",
+  "com.br",
+  "co.in",
+  "com.mx",
+  "co.za",
+  "com.sg",
+  "com.tr",
+  "co.kr",
+  "com.cn",
+]);
+
+const SEVERITY_ORDER: Record<Severity, number> = {
+  fail: 0,
+  warn: 1,
+  pass: 2,
+  info: 3,
+};
+
+/** Parse an RFC 5322 header block without touching the message body. */
+export function unfoldHeaders(raw: string): HeaderField[] {
+  const lines = raw.replace(/\r\n?/g, "\n").split("\n");
+  const headers: HeaderField[] = [];
+  let current: HeaderField | null = null;
+
+  for (const line of lines) {
+    if (line === "") break;
+
+    if (/^[ \t]/.test(line)) {
+      if (current) current.value += ` ${line.trim()}`;
+      continue;
+    }
+
+    const colon = line.indexOf(":");
+    if (colon < 1) {
+      current = null;
+      continue;
+    }
+
+    const name = line.slice(0, colon).trim();
+    if (!name) {
+      current = null;
+      continue;
+    }
+
+    current = {
+      name,
+      lower: name.toLowerCase(),
+      value: line.slice(colon + 1).trim(),
+    };
+    headers.push(current);
+  }
+
+  return headers;
+}
+
+/**
+ * Gmail's copied summary looks header-like, but omits the signed message. It
+ * must not be analysed as though its PASS labels were raw headers.
+ */
+export function detectGmailSummaryTable(raw: string): boolean {
+  const normalised = raw.replace(/\r\n?/g, "\n");
+  const hasRawTransitOrSignature = /^(?:received|dkim-signature)\s*:/im.test(normalised);
+  if (hasRawTransitOrSignature) return false;
+
+  const hasMessageId = /^message id(?:\s*:|\s+|$)/im.test(normalised);
+  const hasCreatedAt = /^created at\s*:/im.test(normalised);
+  const hasVerdict = /^(?:spf|dkim|dmarc)\s*:\s*["']?(?:pass|fail|neutral|softfail|none)/im.test(
+    normalised,
+  );
+
+  return hasMessageId && hasCreatedAt && hasVerdict;
+}
+
+function normaliseDomain(domain: string): string | null {
+  const value = domain.trim().toLowerCase().replace(/^\.+|\.+$/g, "");
+  if (!value || /\s/.test(value)) return null;
+  return /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(value) ? value : null;
+}
+
+/** Prefer the final angle-bracket mailbox, then the first visible addr-spec. */
+function addressDomain(value: string): string | null {
+  const bracketed = [...value.matchAll(/<([^<>]*)>/g)];
+  let address: string | null = null;
+
+  if (bracketed.length) {
+    address = bracketed[bracketed.length - 1][1].trim();
+  } else {
+    const match = value.match(/[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?/i);
+    address = match?.[0] ?? null;
+  }
+
+  if (!address) return null;
+  const at = address.lastIndexOf("@");
+  if (at < 0 || at === address.length - 1) return null;
+  return normaliseDomain(address.slice(at + 1));
+}
+
+function dkimTag(value: string, tag: "d" | "s"): string | null {
+  const match = new RegExp(`(?:^|;)\\s*${tag}\\s*=\\s*([^;\\s]+)`, "i").exec(value);
+  return match ? match[1].trim().toLowerCase() : null;
+}
+
+function authProperty(value: string, property: "header.d" | "header.from" | "smtp.mailfrom") {
+  const escaped = property.replace(".", "\\.");
+  const match = new RegExp(
+    `(?:^|[\\s;(])${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s;()]+))`,
+    "i",
+  ).exec(value);
+  const result = match?.[1] ?? match?.[2] ?? match?.[3];
+  return result ? result.trim().toLowerCase() : null;
+}
+
+function parseAuthenticationResults(value: string): AuthenticationFacts {
+  const segments = value.split(";");
+  const authservId = segments.shift()?.trim().match(/^[^\s;(]+/)?.[0] ?? "unknown receiver";
+  const methods: Array<AuthenticationMethodFact & { method: "spf" | "dkim" | "dmarc" }> = [];
+
+  for (const segment of segments) {
+    const match = /^\s*(spf|dkim|dmarc)\s*=\s*([^\s;(]+)/i.exec(segment);
+    if (!match) continue;
+
+    methods.push({
+      method: match[1].toLowerCase() as "spf" | "dkim" | "dmarc",
+      result: match[2].toLowerCase(),
+      headerD: authProperty(segment, "header.d"),
+      headerFrom: authProperty(segment, "header.from"),
+      smtpMailfrom: authProperty(segment, "smtp.mailfrom"),
+      raw: segment.trim(),
+    });
+  }
+
+  const withoutMethod = (
+    method: AuthenticationMethodFact & { method: "spf" | "dkim" | "dmarc" },
+  ): AuthenticationMethodFact => ({
+    result: method.result,
+    headerD: method.headerD,
+    headerFrom: method.headerFrom,
+    smtpMailfrom: method.smtpMailfrom,
+    raw: method.raw,
+  });
+
+  return {
+    authservId,
+    spf: methods.find((method) => method.method === "spf")
+      ? withoutMethod(methods.find((method) => method.method === "spf")!)
+      : null,
+    dkim: methods.filter((method) => method.method === "dkim").map(withoutMethod),
+    dmarc: methods.find((method) => method.method === "dmarc")
+      ? withoutMethod(methods.find((method) => method.method === "dmarc")!)
+      : null,
+    raw: value,
+  };
+}
+
+function unsubscribeUris(headers: HeaderField[]): string[] {
+  const uris: string[] = [];
+
+  for (const header of headers.filter((candidate) => candidate.lower === "list-unsubscribe")) {
+    const bracketed = [...header.value.matchAll(/<([^<>]+)>/g)].map((match) => match[1].trim());
+    const candidates = bracketed.length
+      ? bracketed
+      : header.value.split(",").map((part) => part.trim());
+    uris.push(...candidates.filter(Boolean));
+  }
+
+  return uris;
+}
+
+export function extractFacts(headers: HeaderField[]): HeaderFacts {
+  const from = headers.find((header) => header.lower === "from");
+  const returnPath = headers.find((header) => header.lower === "return-path");
+  const authentication = headers.find((header) => header.lower === "authentication-results");
+  const uris = unsubscribeUris(headers);
+
+  return {
+    fromDomain: from ? addressDomain(from.value) : null,
+    dkim: headers
+      .filter((header) => header.lower === "dkim-signature")
+      .map((header) => ({
+        d: dkimTag(header.value, "d"),
+        s: dkimTag(header.value, "s"),
+        raw: header.value,
+      })),
+    auth: authentication ? parseAuthenticationResults(authentication.value) : null,
+    returnPathDomain: returnPath ? addressDomain(returnPath.value) : null,
+    receivedSpf:
+      headers.find((header) => header.lower === "received-spf")?.value ?? null,
+    listUnsubscribe: {
+      uris,
+      hasHttps: uris.some((uri) => /^https:\/\//i.test(uri)),
+    },
+    listUnsubscribePost:
+      headers.find((header) => header.lower === "list-unsubscribe-post")?.value ?? null,
+  };
+}
+
+export function orgDomainGuess(domain: string): string {
+  const labels = domain
+    .trim()
+    .toLowerCase()
+    .replace(/^\.+|\.+$/g, "")
+    .split(".")
+    .filter(Boolean);
+  if (labels.length <= 2) return labels.join(".");
+
+  const lastTwo = labels.slice(-2).join(".");
+  return MULTI_LABEL_SUFFIXES.has(lastTwo)
+    ? labels.slice(-3).join(".")
+    : lastTwo;
+}
+
+export function alignment(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): Alignment {
+  if (!a || !b) return "none";
+  const left = a.trim().toLowerCase().replace(/\.$/, "");
+  const right = b.trim().toLowerCase().replace(/\.$/, "");
+  if (!left || !right) return "none";
+  if (left === right) return "strict";
+  return orgDomainGuess(left) === orgDomainGuess(right) ? "relaxed" : "none";
+}
+
+function inferred(detail: string): string {
+  return `${detail} ${RECEIVER_GROUND_TRUTH}`;
+}
+
+function authSeverity(result: string): Severity {
+  if (result === "pass") return "pass";
+  if (result === "fail") return "fail";
+  return "warn";
+}
+
+function bestAlignment(values: Alignment[]): Alignment {
+  if (values.includes("strict")) return "strict";
+  if (values.includes("relaxed")) return "relaxed";
+  return "none";
+}
+
+export function analyzeHeaders(raw: string): HeaderAnalysis {
+  if (new TextEncoder().encode(raw).byteLength > MAX_HEADER_BYTES) {
+    return { ok: false, error: "too-large" };
+  }
+  if (detectGmailSummaryTable(raw)) return { ok: false, error: "gmail-summary" };
+
+  const headers = unfoldHeaders(raw);
+  if (!headers.length) return { ok: false, error: "no-headers" };
+
+  const facts = extractFacts(headers);
+  const findings: Finding[] = [];
+  const fromHeaders = headers.filter((header) => header.lower === "from");
+  const returnPathHeader = headers.find((header) => header.lower === "return-path");
+  const dkimEvidence = facts.dkim.map((signature) => `DKIM-Signature: ${signature.raw}`).join("\n");
+
+  if (facts.auth) {
+    findings.push({
+      severity: "info",
+      title: `${facts.auth.authservId} supplied the receiver verdict`,
+      detail:
+        "Authentication-Results is the receiving system's recorded result and the ground truth, so it takes precedence over the alignment inference below.",
+      rule: RULE.outlook,
+      evidence: `Authentication-Results: ${facts.auth.raw}`,
+    });
+
+    const addAuthenticationFinding = (
+      label: "SPF" | "DKIM" | "DMARC",
+      method: AuthenticationMethodFact,
+      rule: string,
+    ) => {
+      findings.push({
+        severity: authSeverity(method.result),
+        title: `${label}=${method.result} at ${facts.auth!.authservId}`,
+        detail: `This is ${facts.auth!.authservId}'s recorded ${label} result, not our inference.`,
+        rule,
+        evidence: method.raw,
+      });
+    };
+
+    if (facts.auth.spf) addAuthenticationFinding("SPF", facts.auth.spf, RULE.gmail);
+    for (const result of facts.auth.dkim) {
+      addAuthenticationFinding("DKIM", result, RULE.dkimAlignment);
+    }
+    if (facts.auth.dmarc) {
+      addAuthenticationFinding("DMARC", facts.auth.dmarc, RULE.outlook);
+    }
+  } else {
+    findings.push({
+      severity: "info",
+      title: "No receiver verdict was pasted",
+      detail: inferred(
+        "There is no Authentication-Results header, so everything below is inferred, not a receiver's verdict.",
+      ),
+      rule: RULE.dkimAlignment,
+    });
+  }
+
+  if (facts.receivedSpf && !facts.auth) {
+    findings.push({
+      severity: "info",
+      title: "Received-SPF is present, but it is not a DMARC verdict",
+      detail: inferred("This header records an SPF result only; it cannot prove DMARC alignment."),
+      rule: RULE.gmail,
+      evidence: `Received-SPF: ${facts.receivedSpf}`,
+    });
+  }
+
+  if (fromHeaders.length > 1) {
+    findings.push({
+      severity: "warn",
+      title: `${fromHeaders.length} From headers were pasted`,
+      detail: inferred("The first From header is used. Multiple From headers make alignment ambiguous."),
+      rule: RULE.dkimAlignment,
+      evidence: fromHeaders.map((header) => `From: ${header.value}`).join("\n"),
+    });
+  }
+
+  if (!facts.fromDomain) {
+    findings.push({
+      severity: "info",
+      title: "From-domain alignment is inconclusive",
+      detail: inferred("No usable domain could be extracted from the first From header."),
+      rule: RULE.dkimAlignment,
+      evidence: fromHeaders[0] ? `From: ${fromHeaders[0].value}` : undefined,
+    });
+  }
+
+  let dkimAlignment: Alignment | null = null;
+  if (!facts.dkim.length) {
+    dkimAlignment = "none";
+    findings.push({
+      severity: "fail",
+      title: "No DKIM-Signature header is present",
+      detail: inferred(
+        "This pasted message carries no DKIM signature, so DKIM contributes nothing to DMARC.",
+      ),
+      rule: RULE.gmail,
+    });
+  } else {
+    const completeSignatures = facts.dkim.filter(
+      (signature): signature is DkimSignatureFact & { d: string; s: string } =>
+        Boolean(signature.d && signature.s),
+    );
+
+    if (facts.dkim.length >= 2) {
+      findings.push({
+        severity: "info",
+        title: `${facts.dkim.length} DKIM signatures are present`,
+        detail: facts.dkim
+          .map((signature) => `d=${signature.d ?? "(missing)"} / s=${signature.s ?? "(missing)"}`)
+          .join("; "),
+        rule: RULE.dkimAlignment,
+        evidence: dkimEvidence,
+      });
+    }
+
+    if (completeSignatures.length !== facts.dkim.length) {
+      findings.push({
+        severity: "info",
+        title: "A DKIM signature is missing d= or s=",
+        detail: inferred("That signature cannot be checked for alignment or looked up in DNS."),
+        rule: RULE.dkimAlignment,
+        evidence: dkimEvidence,
+      });
+    }
+
+    const signingDomains = facts.dkim
+      .map((signature) => signature.d)
+      .filter((domain): domain is string => Boolean(domain));
+
+    if (!facts.fromDomain) {
+      dkimAlignment = null;
+    } else if (!signingDomains.length) {
+      dkimAlignment = null;
+      findings.push({
+        severity: "info",
+        title: "DKIM alignment is inconclusive",
+        detail: inferred("No usable d= domain could be extracted from the DKIM signature."),
+        rule: RULE.dkimAlignment,
+        evidence: dkimEvidence,
+      });
+    } else {
+      dkimAlignment = bestAlignment(
+        signingDomains.map((domain) => alignment(facts.fromDomain, domain)),
+      );
+
+      if (dkimAlignment === "strict") {
+        findings.push({
+          severity: "pass",
+          title: "DKIM is strictly aligned",
+          detail: inferred("At least one DKIM d= domain exactly matches the From domain."),
+          rule: RULE.dkimAlignment,
+          evidence: dkimEvidence,
+        });
+      } else if (dkimAlignment === "relaxed") {
+        findings.push({
+          severity: "pass",
+          title: "DKIM is aligned in relaxed mode",
+          detail: inferred(
+            "Relaxed is the DMARC default; it fails if your record sets adkim=s. Our org-domain match is a heuristic without the full public-suffix list.",
+          ),
+          rule: RULE.dkimAlignment,
+          evidence: dkimEvidence,
+        });
+      } else {
+        const signedBy = [...new Set(signingDomains)].join(", ");
+        findings.push({
+          severity: "fail",
+          title: "DKIM is not aligned",
+          detail: inferred(
+            `DKIM is present but signed by ${signedBy}, not ${facts.fromDomain}; DMARC gets nothing from it.`,
+          ),
+          rule: RULE.dkimAlignment,
+          evidence: dkimEvidence,
+        });
+      }
+    }
+  }
+
+  let returnPathAlignment: Alignment | null = null;
+  const nullReturnPath = returnPathHeader ? /^\s*<>\s*$/.test(returnPathHeader.value) : false;
+
+  if (!facts.fromDomain) {
+    returnPathAlignment = null;
+    findings.push({
+      severity: "info",
+      title: "Return-Path alignment is inconclusive",
+      detail: inferred(
+        facts.returnPathDomain
+          ? "Return-Path has a domain, but there is no usable From domain to compare it with."
+          : "No usable From and Return-Path domain pair could be extracted.",
+      ),
+      rule: RULE.outlook,
+      evidence: returnPathHeader ? `Return-Path: ${returnPathHeader.value}` : undefined,
+    });
+  } else if (facts.returnPathDomain) {
+    returnPathAlignment = alignment(facts.fromDomain, facts.returnPathDomain);
+    if (returnPathAlignment === "strict" || returnPathAlignment === "relaxed") {
+      findings.push({
+        severity: "pass",
+        title:
+          returnPathAlignment === "strict"
+            ? "Return-Path is strictly aligned"
+            : "Return-Path is aligned in relaxed mode",
+        detail: inferred(
+          "The envelope sender represented by Return-Path aligns with the visible From domain for SPF-based DMARC.",
+        ),
+        rule: RULE.outlook,
+        evidence: `Return-Path: ${returnPathHeader!.value}`,
+      });
+    }
+  } else {
+    returnPathAlignment = nullReturnPath ? "none" : null;
+    findings.push({
+      severity: "info",
+      title: "Return-Path alignment is inconclusive",
+      detail: inferred(
+        nullReturnPath
+          ? "Return-Path uses the null sender, so it supplies no SPF-aligned domain for this message."
+          : "No usable domain could be extracted from Return-Path.",
+      ),
+      rule: RULE.outlook,
+      evidence: returnPathHeader ? `Return-Path: ${returnPathHeader.value}` : undefined,
+    });
+  }
+
+  const dmarcPassedAtReceiver = facts.auth?.dmarc?.result === "pass";
+  const dkimContributes = dkimAlignment === "strict" || dkimAlignment === "relaxed";
+
+  if (returnPathAlignment === "none" && dkimContributes) {
+    findings.push({
+      severity: "info",
+      title: "DMARC is relying on DKIM alone",
+      detail: inferred(
+        "SPF cannot align; DMARC rides on DKIM alone. That is normal for ESP sends, and it is a single point of failure.",
+      ),
+      rule: RULE.outlook,
+      evidence: returnPathHeader ? `Return-Path: ${returnPathHeader.value}` : undefined,
+    });
+  } else if (
+    returnPathAlignment === "none" &&
+    dkimAlignment === "none" &&
+    !dmarcPassedAtReceiver
+  ) {
+    findings.push({
+      severity: "fail",
+      title: "Neither SPF nor DKIM aligns with From",
+      detail: inferred("The message has no aligned identifier for DMARC to use."),
+      rule: RULE.outlook,
+    });
+  } else if (
+    returnPathAlignment === "none" &&
+    dkimAlignment === "none" &&
+    dmarcPassedAtReceiver
+  ) {
+    findings.push({
+      severity: "info",
+      title: "The receiver's DMARC pass overrides this local inference",
+      detail:
+        "The visible signature and Return-Path do not align by this parser's heuristic, but the receiver recorded DMARC=pass and that is the ground truth.",
+      rule: RULE.outlook,
+    });
+  }
+
+  const unsubscribeEvidence = headers
+    .filter(
+      (header) =>
+        header.lower === "list-unsubscribe" || header.lower === "list-unsubscribe-post",
+    )
+    .map((header) => `${header.name}: ${header.value}`)
+    .join("\n");
+  const hasUnsubscribe = facts.listUnsubscribe.uris.length > 0;
+  const hasPost = Boolean(facts.listUnsubscribePost);
+
+  if (facts.listUnsubscribe.hasHttps && hasPost) {
+    findings.push({
+      severity: "pass",
+      title: "One-click unsubscribe headers are present",
+      detail:
+        "List-Unsubscribe includes HTTPS and List-Unsubscribe-Post asks for one-click processing.",
+      rule: RULE.oneClick,
+      evidence: unsubscribeEvidence,
+    });
+  } else if (hasUnsubscribe && !hasPost) {
+    findings.push({
+      severity: "fail",
+      title: "List-Unsubscribe is not one-click",
+      detail:
+        "List-Unsubscribe is present without List-Unsubscribe-Post, so this is not RFC 8058 one-click unsubscribe.",
+      rule: RULE.oneClick,
+      evidence: unsubscribeEvidence,
+    });
+  } else if (hasPost && !facts.listUnsubscribe.hasHttps) {
+    findings.push({
+      severity: "warn",
+      title: "One-click unsubscribe has no HTTPS URI",
+      detail: "RFC 8058 requires an HTTPS URI; mailto alone is not one-click unsubscribe.",
+      rule: RULE.oneClick,
+      evidence: unsubscribeEvidence,
+    });
+  } else {
+    findings.push({
+      severity: "warn",
+      title: "No one-click unsubscribe headers are present",
+      detail:
+        "They are required for bulk mail. Transactional mail is exempt, and headers alone cannot tell us which this is.",
+      rule: RULE.oneClick,
+    });
+  }
+
+  findings.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+  return { ok: true, facts, findings };
+}

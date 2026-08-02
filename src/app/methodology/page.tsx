@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getStats, fmtDate } from "@/lib/rules";
 import { SITE } from "@/lib/site";
 import { SectionHead } from "@/components/bits";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Methodology",
@@ -23,7 +23,7 @@ export default async function Methodology() {
 
       <div className="prose-rule space-y-9">
         <section>
-          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
+          <h2 className="num mb-2.5 border-b border-fg pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             What counts as a source
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
@@ -36,7 +36,7 @@ export default async function Methodology() {
         </section>
 
         <section>
-          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
+          <h2 className="num mb-2.5 border-b border-fg pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Why every page states enforcement honestly
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
@@ -48,7 +48,7 @@ export default async function Methodology() {
         </section>
 
         <section>
-          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
+          <h2 className="num mb-2.5 border-b border-fg pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Re-verification
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
@@ -62,36 +62,37 @@ export default async function Methodology() {
         </section>
 
         <section>
-          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
+          <h2 className="num mb-2.5 border-b border-fg pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Corrections
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
             Send them to{" "}
             <a href={`mailto:${SITE.contact}`}>{SITE.contact}</a>. Corrections are published in the
             page history with a date and a credit to whoever caught it. If we got something wrong,
-            the record of being wrong stays visible.
+            the record of being wrong stays visible. Published corrections are collected at{" "}
+            <Link href="/corrections">/corrections</Link>.
           </p>
         </section>
 
         <section>
-          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
+          <h2 className="num mb-2.5 border-b border-fg pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Conflicts of interest
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
             We sell no tracking pixels, no seed-list testing, no inbox-placement scores and no ESP.
-            We do sell continuous monitoring against these rules, which is disclosed on every page
-            that mentions it. That is the only commercial relationship this site has, and it is why
-            it can tell you when a tracking pixel is a liability.
+            We intend to sell continuous monitoring against these rules, and it is disclosed on
+            every page that mentions it. It is not built yet, so today this site sells nothing at
+            all. That is why it can afford to tell you when a tracking pixel is a liability.
           </p>
         </section>
 
         <section>
-          <h2 className="num mb-2.5 border-b border-ink pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
+          <h2 className="num mb-2.5 border-b border-fg pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             Not legal advice
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
             This is a reference for practitioners, written by practitioners. It is not legal advice
-            and no lawyer reviewed it. Confirm anything load-bearing with your own counsel before
+            and no lawyer reviewed it. Confirm anything that matters with your own counsel before
             you rely on it.
           </p>
         </section>
