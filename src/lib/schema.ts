@@ -28,6 +28,18 @@ export const SCHEMA = `
   alter table subscribers add column if not exists token text;
   create unique index if not exists subscribers_token_idx on subscribers (token);
 
+  /* Rules setup at subscribe time (geo / ESP / role). Null or empty =
+     send every market-move alert. When set, notify only if the rule
+     matches this audience — habit without inbox noise. */
+  alter table subscribers add column if not exists audience jsonb;
+
+  /* Optional sending domain to re-check. When SPF/DKIM/DMARC actually
+     change in DNS, one email — same "only real moves" bar as rules. */
+  alter table subscribers add column if not exists watch_domain text;
+  create index if not exists subscribers_watch_domain_idx
+    on subscribers (watch_domain)
+    where watch_domain is not null and unsubscribed_at is null;
+
   /* One row per change actually announced. The unique constraint is the
      safeguard: pressing "notify" twice for the same changelog entry cannot
      send the same alert to the same people again. */
@@ -38,5 +50,22 @@ export const SCHEMA = `
     sent_at     timestamptz not null default now(),
     recipients  int  not null default 0,
     primary key (slug, change_date, note)
+  );
+
+  /* Last-known auth DNS for watched domains. Diff against a fresh capture
+     is what triggers a domain-watch email. */
+  create table if not exists domain_snapshots (
+    domain      text primary key,
+    snapshot    jsonb not null,
+    checked_at  timestamptz not null default now()
+  );
+
+  /* Dedupe domain-watch sends the same way rule_alerts does. */
+  create table if not exists domain_alerts (
+    domain      text not null,
+    change_key  text not null,
+    sent_at     timestamptz not null default now(),
+    recipients  int  not null default 0,
+    primary key (domain, change_key)
   );
 `;

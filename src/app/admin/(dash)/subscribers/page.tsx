@@ -10,6 +10,8 @@ interface Row {
   email: string;
   created_at: string;
   unsubscribed_at: string | null;
+  watch_domain: string | null;
+  has_audience: boolean;
 }
 
 export default async function Subscribers() {
@@ -20,7 +22,8 @@ export default async function Subscribers() {
   if (hasDatabase()) {
     try {
       rows = (await sql()`
-        select email, created_at, unsubscribed_at
+        select email, created_at, unsubscribed_at, watch_domain,
+               (audience is not null) as has_audience
         from subscribers order by created_at desc limit 500
       `) as unknown as Row[];
     } catch {
@@ -29,6 +32,8 @@ export default async function Subscribers() {
   }
 
   const active = rows.filter((r) => !r.unsubscribed_at);
+  const watching = active.filter((r) => r.watch_domain).length;
+  const filtered = active.filter((r) => r.has_audience).length;
 
   return (
     <div className="shell shell-tight py-10">
@@ -40,7 +45,9 @@ export default async function Subscribers() {
         {active.length} subscriber{active.length === 1 ? "" : "s"}
       </h1>
       <p className="mt-2 text-[15px] text-muted-fg">
-        People who asked to be told when a rule moves. One email per change, and nothing else, ever.
+        Market-move alerts filtered to each person&rsquo;s setup.{" "}
+        {filtered > 0 ? `${filtered} with audience prefs · ` : null}
+        {watching > 0 ? `${watching} watching a domain.` : "Optional domain watch on check pages."}
       </p>
 
       {failed ? (
@@ -59,6 +66,7 @@ export default async function Subscribers() {
             <thead>
               <tr className="border-b bg-bg-2">
                 <th className="label px-4 py-2.5 font-medium">Email</th>
+                <th className="label px-4 py-2.5 font-medium">Prefs</th>
                 <th className="label px-4 py-2.5 text-right font-medium">Joined</th>
               </tr>
             </thead>
@@ -69,6 +77,12 @@ export default async function Subscribers() {
                     {r.email}
                     {r.unsubscribed_at ? (
                       <span className="ml-2 text-[12px] text-dim">unsubscribed</span>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-2.5 text-[12.5px] text-dim">
+                    {r.has_audience ? "filtered" : "all rules"}
+                    {r.watch_domain ? (
+                      <span className="num ml-2 text-fg">· {r.watch_domain}</span>
                     ) : null}
                   </td>
                   <td className="num px-4 py-2.5 text-right text-[12.5px] text-dim">
@@ -85,7 +99,7 @@ export default async function Subscribers() {
         <p className="mt-5 text-[13px] text-dim">
           Export with{" "}
           <span className="num">
-            select email from subscribers where unsubscribed_at is null;
+            select email, watch_domain from subscribers where unsubscribed_at is null;
           </span>
         </p>
       ) : null}

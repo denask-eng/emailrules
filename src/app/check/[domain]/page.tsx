@@ -6,6 +6,7 @@ import type { Severity } from "@/lib/dns-check";
 import { getRule, fmtDate } from "@/lib/rules";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { SubscribeForm } from "@/components/subscribe-form";
 
 /* A live DNS lookup per request. Cached briefly so a shared link does not
    hammer the resolver, but short enough that a fix shows up while you are
@@ -112,6 +113,17 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
           See which rules are yours
         </Link>
       </div>
+
+      <section className="mt-12 rounded-xl border bg-card p-5 sm:p-6" style={{ boxShadow: "var(--lift)" }}>
+        <h2 className="text-[15px] font-semibold">Watch this domain</h2>
+        <p className="mt-1.5 max-w-[54ch] text-[13.5px] leading-relaxed text-muted-fg">
+          One email if authentication DNS for {result.domain} actually changes. Same list as rule
+          alerts — one inbox, one promise.
+        </p>
+        <div className="mt-4">
+          <SubscribeForm defaultDomain={result.domain} compact />
+        </div>
+      </section>
     </div>
   );
 }

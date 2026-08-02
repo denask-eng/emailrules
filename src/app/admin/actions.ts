@@ -6,7 +6,9 @@ import { requireAdmin } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { getRule } from "@/lib/rules";
 import { sendAlert } from "@/lib/mail";
+import { isMarketChange } from "@/lib/rule-signals";
 import { SITE } from "@/lib/site";
+import { subscriberWantsRule } from "@/lib/subscriber-prefs";
 import type { Rule, Ownership, RuleStatus, Topic, Jurisdiction } from "@/lib/types";
 
 /**
@@ -80,6 +82,12 @@ export async function notifySubscribers(slug: string, changeDate: string, note: 
   const rule = await getRule(slug);
   if (!rule) return;
 
+  /* Homepage ledger and product promise: only real market/correction moves.
+     Re-verifies and "we documented it" notes never leave the building. */
+  if (!isMarketChange(note)) {
+    redirect(`/admin/rules/${slug}?alert=not-market`);
+  }
+
   const already = (await sql().query(
     `select 1 from rule_alerts where slug = $1 and change_date = $2 and note = $3`,
     [slug, changeDate, note],
@@ -87,14 +95,20 @@ export async function notifySubscribers(slug: string, changeDate: string, note: 
   if (already.length) redirect(`/admin/rules/${slug}?alert=already`);
 
   const recipients = (await sql().query(
-    `select email, token from subscribers where unsubscribed_at is null and token is not null`,
-  )) as unknown as { email: string; token: string }[];
+    `select email, token, audience from subscribers
+     where unsubscribed_at is null and token is not null`,
+  )) as unknown as { email: string; token: string; audience: unknown }[];
+
+  /* Filter to people whose rules setup includes this rule. Empty audience =
+     full list (same as pre-filter behaviour for early subscribers). */
+  const matched = recipients.filter((r) => subscriberWantsRule(rule, r.audience));
 
   if (recipients.length === 0) redirect(`/admin/rules/${slug}?alert=nobody`);
+  if (matched.length === 0) redirect(`/admin/rules/${slug}?alert=filtered`);
 
   let sent = 0;
   let failed = 0;
-  for (const r of recipients) {
+  for (const r of matched) {
     const res = await sendAlert(r.email, {
       rule,
       changeDate,
@@ -116,7 +130,12 @@ export async function notifySubscribers(slug: string, changeDate: string, note: 
     [slug, changeDate, note, sent],
   );
 
-  redirect(`/admin/rules/${slug}?alert=sent&n=${sent}${failed ? `&f=${failed}` : ""}`);
+  const skipped = recipients.length - matched.length;
+  redirect(
+    `/admin/rules/${slug}?alert=sent&n=${sent}${failed ? `&f=${failed}` : ""}${
+      skipped ? `&skip=${skipped}` : ""
+    }`,
+  );
 }
 
 /** Kebab-case, ASCII, no trailing junk. The slug is a permanent URL, so it is

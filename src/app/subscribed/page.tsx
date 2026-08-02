@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 export default async function Subscribed({
   searchParams,
 }: {
-  searchParams: Promise<{ e?: string }>;
+  searchParams: Promise<{ e?: string; watch?: string }>;
 }) {
-  const { e } = await searchParams;
+  const { e, watch } = await searchParams;
 
   return (
     <div className="shell shell-tight py-24">
@@ -30,10 +30,15 @@ export default async function Subscribed({
         <>
           <h1 className="text-[clamp(1.6rem,4vw,2.2rem)]">Done.</h1>
           <p className="mt-4 max-w-[52ch] text-[1.02rem] leading-relaxed text-muted-fg">
-            One email when a rule moves, and nothing else, ever. No welcome sequence, no onboarding
-            drip, no &ldquo;we thought you&rsquo;d like&rdquo;. If that promise is broken, reply and
-            tell us.
+            One email when a rule that matches your setup moves — not re-checks, not documentation
+            notes. No welcome sequence, no drip. If that promise is broken, reply and tell us.
           </p>
+          {watch ? (
+            <p className="mt-4 max-w-[52ch] text-[1.02rem] leading-relaxed text-muted-fg">
+              Watching <span className="num text-fg">{watch}</span> for SPF, DKIM, DMARC, BIMI and MX
+              changes. Baseline stored now; you only hear if DNS actually moves.
+            </p>
+          ) : null}
         </>
       )}
       <Link

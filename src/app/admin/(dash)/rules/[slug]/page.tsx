@@ -67,10 +67,16 @@ export default async function EditRule({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ saved?: string; alert?: string; n?: string; f?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    alert?: string;
+    n?: string;
+    f?: string;
+    skip?: string;
+  }>;
 }) {
   const { slug } = await params;
-  const { saved, alert, n, f } = await searchParams;
+  const { saved, alert, n, f, skip } = await searchParams;
   const rule = await getRule(slug);
   if (!rule) notFound();
 
@@ -131,7 +137,8 @@ export default async function EditRule({
       {alert === "sent" ? (
         <p role="status" className="mt-5 rounded-lg border border-ok/35 bg-ok-bg px-4 py-2.5 text-[14px] text-ok">
           Alert sent to {n} subscriber{n === "1" ? "" : "s"}
-          {f ? `, ${f} failed (see the server log)` : ""}.
+          {f ? `, ${f} failed (see the server log)` : ""}
+          {skip ? ` (${skip} skipped — rule outside their setup)` : ""}.
         </p>
       ) : null}
       {alert === "already" ? (
@@ -144,6 +151,17 @@ export default async function EditRule({
           Nobody is subscribed yet, so there was nobody to tell.
         </p>
       ) : null}
+      {alert === "filtered" ? (
+        <p className="mt-5 rounded-lg border bg-bg-2 px-4 py-2.5 text-[14px] text-muted-fg">
+          Everyone on the list has a setup that excludes this rule. Nothing was sent.
+        </p>
+      ) : null}
+      {alert === "not-market" ? (
+        <p className="mt-5 rounded-lg border border-soon/40 bg-soon-bg px-4 py-2.5 text-[14px] text-soon">
+          Alerts only go out for market moves and corrections — not re-verifies or documentation
+          notes. Edit the changelog note so it reads as a real move, or leave it quiet.
+        </p>
+      ) : null}
 
       {/* Announcing is a separate press from saving, so a typo fix never
           blasts the list. This shows exactly what goes out and to how many. */}
@@ -152,7 +170,7 @@ export default async function EditRule({
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-[15px] font-semibold">Tell subscribers</h2>
             <span className="text-[13px] text-dim">
-              {pending} on the list
+              {pending} on the list · filtered by each person&rsquo;s setup
             </span>
           </div>
           <p className="mt-3 text-[14px] leading-relaxed text-muted-fg">

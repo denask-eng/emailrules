@@ -110,14 +110,70 @@ export interface SendResult {
   error?: string;
 }
 
-/**
- * Sends via Resend's REST API directly rather than its SDK: one fetch, no
- * dependency, and the headers below are the whole reason this exists.
- */
-export async function sendAlert(
-  to: string,
-  input: AlertInput,
-): Promise<{ ok: boolean; error?: string }> {
+export interface DomainAlertInput {
+  domain: string;
+  changes: string[];
+  checkUrl: string;
+  unsubscribeUrl: string;
+}
+
+export function domainAlertSubject(domain: string): string {
+  return `DNS auth changed on ${domain}`;
+}
+
+export function domainAlertText({
+  domain,
+  changes,
+  checkUrl,
+  unsubscribeUrl,
+}: DomainAlertInput): string {
+  return [
+    `Authentication DNS for ${domain} moved since we last checked.`,
+    ``,
+    ...changes,
+    ``,
+    `Live check:`,
+    checkUrl,
+    ``,
+    `--`,
+    `You asked to watch this domain. One email when SPF, DKIM, DMARC, BIMI or MX actually changes — nothing else.`,
+    `Unsubscribe in one click: ${unsubscribeUrl}`,
+    POSTAL_ADDRESS ? `\n${POSTAL_ADDRESS}` : ``,
+    `Not legal advice.`,
+  ].join("\n");
+}
+
+export function domainAlertHtml({
+  domain,
+  changes,
+  checkUrl,
+  unsubscribeUrl,
+}: DomainAlertInput): string {
+  const body = changes
+    .map((c) => `<p style="margin:0 0 12px;white-space:pre-wrap">${esc(c)}</p>`)
+    .join("");
+  return `<!doctype html>
+<html lang="en"><body style="margin:0;padding:24px;background:#fdfdfb;color:#17171a;font:16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<div style="max-width:560px;margin:0 auto">
+<p style="margin:0 0 8px;font-size:13px;color:#6c6c68">Domain watch</p>
+<h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;letter-spacing:-0.02em">${esc(domain)}</h1>
+<p style="margin:0 0 20px">Authentication DNS moved since we last checked.</p>
+${body}
+<p style="margin:0 0 32px"><a href="${checkUrl}" style="color:#2347d9">Open the live check</a></p>
+<hr style="border:0;border-top:1px solid #e7e7e1;margin:0 0 16px">
+<p style="margin:0 0 8px;font-size:13px;color:#6c6c68">You asked to watch this domain. <a href="${unsubscribeUrl}" style="color:#6c6c68">Unsubscribe</a>.</p>
+${POSTAL_ADDRESS ? `<p style="margin:0 0 8px;font-size:12px;color:#8f8f89">${esc(POSTAL_ADDRESS)}</p>` : ""}
+<p style="margin:0;font-size:12px;color:#8f8f89">Not legal advice.</p>
+</div></body></html>`;
+}
+
+async function sendResend(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  unsubscribeUrl: string;
+}): Promise<{ ok: boolean; error?: string }> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.ALERT_FROM ?? "emailrules.today <alerts@alerts.emailrules.today>";
   if (!key) return { ok: false, error: "RESEND_API_KEY is not set" };
@@ -134,14 +190,14 @@ export async function sendAlert(
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
     body: JSON.stringify({
       from,
-      to,
-      subject: alertSubject(input.rule, input.changeDate),
-      text: alertText(input),
-      html: alertHtml(input),
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text,
+      html: opts.html,
       headers: {
         /* Both are required. A List-Unsubscribe header on its own is not
            one-click and does not satisfy Gmail or Yahoo. */
-        "List-Unsubscribe": `<${input.unsubscribeUrl}>`,
+        "List-Unsubscribe": `<${opts.unsubscribeUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     }),
@@ -149,4 +205,34 @@ export async function sendAlert(
 
   if (!res.ok) return { ok: false, error: `${res.status} ${await res.text()}` };
   return { ok: true };
+}
+
+/**
+ * Sends via Resend's REST API directly rather than its SDK: one fetch, no
+ * dependency, and the headers below are the whole reason this exists.
+ */
+export async function sendAlert(
+  to: string,
+  input: AlertInput,
+): Promise<{ ok: boolean; error?: string }> {
+  return sendResend({
+    to,
+    subject: alertSubject(input.rule, input.changeDate),
+    text: alertText(input),
+    html: alertHtml(input),
+    unsubscribeUrl: input.unsubscribeUrl,
+  });
+}
+
+export async function sendDomainAlert(
+  to: string,
+  input: DomainAlertInput,
+): Promise<{ ok: boolean; error?: string }> {
+  return sendResend({
+    to,
+    subject: domainAlertSubject(input.domain),
+    text: domainAlertText(input),
+    html: domainAlertHtml(input),
+    unsubscribeUrl: input.unsubscribeUrl,
+  });
 }

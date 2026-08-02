@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { runCheck, subscribe } from "@/app/actions";
+import { runCheck } from "@/app/actions";
+import { SubscribeForm } from "@/components/subscribe-form";
 import { getAllRules, getChangelog, getStats, countsByTopic, fmtDate } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
@@ -353,25 +354,11 @@ export default async function Home() {
           <div>
             <h3 className="text-[15px]">Get told when a rule moves</h3>
             <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
-              One email per change, and nothing else, ever.
+              Market moves that match your setup — not every re-verify. Optional: watch a
+              domain&rsquo;s auth DNS.
             </p>
           </div>
-          <form className="flex w-full gap-2.5 sm:w-auto" action={subscribe}>
-            <input
-              type="email"
-              name="email"
-              required
-              placeholder="you@brand.com"
-              aria-label="Email address"
-              className="num h-10 w-full rounded-[10px] border bg-card px-3.5 text-[13.5px] outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25 sm:w-[17rem]"
-            />
-            <button
-              type="submit"
-              className={cn(buttonVariants(), "h-10 rounded-[10px] px-4 font-medium")}
-            >
-              Subscribe
-            </button>
-          </form>
+          <SubscribeForm />
         </div>
       </section>
     </>
