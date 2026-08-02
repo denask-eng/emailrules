@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { GLOSSARY, OWNER_LABEL, type TermOwner } from "@/content/how-email-works";
 import { cn } from "@/lib/utils";
+import { OwnershipStrike } from "@/components/how-email-works/ownership-strike";
 
 /* Scoped keyframes rather than globals.css, which another branch is editing.
    A proportion should arrive as a proportion, so the segments grow from zero
@@ -11,106 +12,33 @@ const MOTION = `
 @media (prefers-reduced-motion: reduce) { .glo-seg { animation: none; transform: none; } }`;
 
 const SPLIT_ORDER: TermOwner[] = ["yours", "shared", "esp", "context"];
-const SPLIT_TONE: Record<TermOwner, { fill: string; text: string }> = {
-  yours: { fill: "bg-accent", text: "text-accent" },
-  shared: { fill: "bg-soon", text: "text-soon" },
-  esp: { fill: "bg-ok", text: "text-ok" },
-  context: { fill: "bg-dim", text: "text-muted-fg" },
-};
+
+/** Wall name for a term: the canonical word, without its aliases or gloss. */
+const wallName = (term: string) => term.split(" / ")[0].split(" (")[0];
 
 /**
  * The thesis of the entire site, applied to its own vocabulary: a good share
  * of what frightens people is already done for them, and nobody who sells
- * deliverability software is able to say so. Counted from the corpus rather
- * than typed, so it can never drift from the pages it describes.
- *
- * One bar per row, all on the same scale, rather than one stacked bar with a
- * legend underneath. A stacked bar forces the labels into a grid that cannot
- * line up with proportional segments — the label for a 12% slice either sits
- * under the wrong slice or gets truncated — and the misalignment is the first
- * thing anyone sees. Rows cannot misalign, and they still carry the
- * comparison, which was the only job the stack was doing.
+ * deliverability software is able to say so. Everything here is counted from
+ * the corpus rather than typed, so it can never drift from the pages it
+ * describes — the server derives the words, the owners and the totals, and
+ * the client island performs them. The glossary itself never ships to the
+ * browser.
  */
 export function OwnershipSplit() {
   const total = GLOSSARY.length;
-  const counts = SPLIT_ORDER.map((o) => ({
+  const terms = GLOSSARY.map((t) => ({ name: wallName(t.term), owner: t.owner }));
+  const legend = SPLIT_ORDER.map((o) => ({
     owner: o,
     n: GLOSSARY.filter((t) => t.owner === o).length,
+    short: OWNER_LABEL[o].short,
+    long: OWNER_LABEL[o].long,
   }));
-  const notYours = counts
-    .filter((c) => c.owner === "esp" || c.owner === "context")
-    .reduce((a, c) => a + c.n, 0);
-  const max = Math.max(...counts.map((c) => c.n));
+  const notYours = legend
+    .filter((l) => l.owner === "esp" || l.owner === "context")
+    .reduce((a, l) => a + l.n, 0);
 
-  return (
-    <section className="mt-14 border-t pt-9 sm:mt-20 sm:pt-12">
-      <style>{MOTION}</style>
-      <p className="label">Before you read any of it</p>
-
-      {/* One element at real scale. A page where the largest thing after the
-          h1 is 15px has no subject; the count is the subject here, and it is
-          the most shareable true sentence this site owns. */}
-      <div className="mt-5 grid gap-x-10 gap-y-2 lg:grid-cols-[auto_1fr] lg:items-start">
-        <p
-          className="num leading-[0.82] font-semibold tracking-[-0.05em] text-accent"
-          style={{ fontSize: "clamp(4rem,11vw,7rem)" }}
-        >
-          {notYours}
-        </p>
-        <div className="lg:pt-2">
-          <h2 className="max-w-[20ch] text-[clamp(1.5rem,3.4vw,2.15rem)] leading-[1.06] font-semibold tracking-tight">
-            of these {total} words are not your problem
-          </h2>
-          <p className="mt-4 max-w-[48ch] text-[15.5px] leading-relaxed text-muted-fg">
-            Already handled by the platform, or impossible to act on at all. Knowing which is
-            which is most of the job, and it is the one thing nobody who sells deliverability
-            software is able to tell you.
-          </p>
-        </div>
-      </div>
-
-      <dl className="mt-8 sm:mt-12">
-        {counts.map((c, i) => (
-          <div
-            key={c.owner}
-            className={cn(
-              "grid items-baseline gap-x-6 gap-y-2 border-b border-border-soft py-4 last:border-b-0",
-              "sm:grid-cols-[3.5rem_8rem_10rem_1fr]",
-            )}
-          >
-            <dd
-              className={cn(
-                "num text-[26px] leading-none font-semibold tabular-nums",
-                SPLIT_TONE[c.owner].text,
-              )}
-            >
-              {c.n}
-            </dd>
-            <dt className={cn("text-[14.5px] font-semibold", SPLIT_TONE[c.owner].text)}>
-              {OWNER_LABEL[c.owner].short}
-            </dt>
-
-            {/* Same scale on every row, so the lengths mean something. */}
-            <dd className="hidden items-center sm:flex">
-              <span className="relative h-2 w-full overflow-hidden rounded-full bg-bg-2">
-                <span
-                  className={cn(
-                    "glo-seg absolute inset-y-0 left-0 rounded-full",
-                    SPLIT_TONE[c.owner].fill,
-                  )}
-                  style={{ width: `${(c.n / max) * 100}%`, animationDelay: `${i * 90}ms` }}
-                />
-              </span>
-            </dd>
-
-            <dd className="text-[13.5px] leading-relaxed text-muted-fg">
-              {OWNER_LABEL[c.owner].long}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
+  return <OwnershipStrike terms={terms} legend={legend} total={total} notYours={notYours} />;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
