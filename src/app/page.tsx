@@ -29,10 +29,12 @@ export default async function Home() {
      Hide it until it has something in it, and let the heading count itself. */
   const topics = (Object.keys(TOPICS) as Topic[]).filter((t) => (counts[t] ?? 0) > 0);
 
+  const yours = stats.total - stats.notYours;
+
   return (
     <>
       <SiteFaqJsonLd />
-      <section className="shell pt-12 pb-12 text-center sm:pt-20 sm:pb-16">
+      <section className="shell pt-12 pb-10 text-center sm:pt-20 sm:pb-12">
         <Link
           href="/rules"
           className="inline-flex items-center gap-2.5 rounded-full border bg-card py-1.5 pr-4 pl-2.5 text-[13px] hover:bg-muted"
@@ -53,9 +55,9 @@ export default async function Home() {
 
         <p className="mx-auto mt-5 max-w-[34rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.12rem]">
           You ship campaigns. You do not have a free afternoon for folklore PDFs. Pick your role,
-          get <b className="font-medium text-fg">five things that matter</b> — whose job, what to do
-          first. A small shelf with sources, not a fake encyclopedia. Of {stats.total} rules, your
-          email tool already covers {stats.notYours}.
+          get <b className="font-medium text-fg">five things that matter</b>: whose job, what to do
+          first. A small shelf with sources, not a fake encyclopedia. Of {stats.total} rules, about{" "}
+          {stats.notYours} are already on your ESP or shared desk.
         </p>
 
         <div className="mx-auto mt-8 flex max-w-md flex-col items-stretch gap-2.5 sm:max-w-none sm:flex-row sm:justify-center">
@@ -86,7 +88,7 @@ export default async function Home() {
             {
               href: "/rules",
               t: "Filter to my desk",
-              d: "Role + geos. Five first — not the whole library.",
+              d: "Role + geos. Five first, not the whole library.",
             },
             {
               href: "/brief",
@@ -132,10 +134,6 @@ export default async function Home() {
             Awkward FAQ
           </Link>
           {" · "}
-          <Link href="/#why" className="underline underline-offset-3 hover:text-fg">
-            Why care
-          </Link>
-          {" · "}
           <Link href="/coverage" className="underline underline-offset-3 hover:text-fg">
             What we skip on purpose
           </Link>
@@ -143,74 +141,8 @@ export default async function Home() {
         </p>
       </section>
 
-      {/* The only value claim that holds. Not feature cards: three truths. */}
-      <section id="why" className="border-t bg-bg-2 py-16 sm:py-20">
-        <div className="shell">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="label">Why care</p>
-            <h2 className="mt-4 text-[clamp(1.75rem,4.2vw,2.65rem)] tracking-tight text-balance">
-              Why should you care?
-            </h2>
-            <p className="mx-auto mt-4 max-w-[36rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.1rem]">
-              You are busy. This is not another compliance library. The whole product is three
-              answers you cannot get from your ESP blog or a seed-score shop.
-            </p>
-          </div>
-
-          <ol className="mx-auto mt-12 max-w-2xl list-none border-t border-fg/12 p-0">
-            {[
-              {
-                t: "Whose job is this, really?",
-                d: `Of ${stats.total} rules on the shelf, about ${stats.notYours} are already handled by a mainstream email tool, shared with ops, or pure context. We name that so you stop re-implementing platform work and still catch what lands on your desk.`,
-              },
-              {
-                t: "What actually moved?",
-                d: "Gmail bulk rules, CASL clocks, ePrivacy, DMARC ladders. You usually hear months late, from legal. The ledger and optional alerts are market moves only, filtered to your setup. Re-checks and “we wrote a page” never leave the building.",
-              },
-              {
-                t: "What do I do Monday?",
-                d: "Every rule has a primary source, a verification date, and a first step you can run this week. No placement score theatre. No fake encyclopedia. A small shelf you can paste into Slack or defend in a meeting.",
-              },
-            ].map((row, i) => (
-              <Reveal key={row.t} as="li" delay={i} className="border-b border-border-soft">
-                <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 py-7 sm:gap-x-6 sm:py-8">
-                  <span className="num pt-1 text-[12px] font-medium tracking-[0.12em] text-accent">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="text-[1.15rem] font-semibold tracking-tight sm:text-[1.25rem]">
-                      {row.t}
-                    </h3>
-                    <p className="mt-2.5 max-w-[52ch] text-[15px] leading-relaxed text-muted-fg sm:text-[15.5px]">
-                      {row.d}
-                    </p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </ol>
-
-          <div className="mx-auto mt-10 max-w-2xl text-center">
-            <p className="text-[14.5px] leading-relaxed text-dim">
-              If that is not useful this week, leave. Quiet is allowed here.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[14px]">
-              <Link
-                href="/rules"
-                className="font-medium text-accent underline-offset-3 hover:underline"
-              >
-                Show me what applies to me →
-              </Link>
-              <Link href="/changed" className="text-muted-fg underline-offset-3 hover:text-fg hover:underline">
-                See what moved
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Market-only ledger — quiet weeks still earn a visit. */}
-      <section className="shell py-16">
+      {/* Proof first: the product is the market, not the pitch. */}
+      <section className="shell pb-4 sm:pb-6">
         <Panel>
           <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-5 py-2.5">
             <span className="label">Market moves · not site edits</span>
@@ -278,7 +210,61 @@ export default async function Home() {
         </Panel>
       </section>
 
-      {/* Browse — editorial index, not a half-empty card grid */}
+      {/*
+        Value after proof, before the catalog.
+        One strip, three short lines — not a second sales page and not a twin
+        of “three things it is not.”
+      */}
+      <section id="why" className="shell py-14 sm:py-16">
+        <div className="mx-auto max-w-2xl">
+          <p className="label">Why this exists</p>
+          <h2 className="mt-3 text-[clamp(1.55rem,3.4vw,2.1rem)] tracking-tight text-balance">
+            Three answers. That is the product.
+          </h2>
+          <p className="mt-3 max-w-[40rem] text-[15.5px] leading-relaxed text-muted-fg">
+            Not a course, not a score out of 100, not an ESP blog. You open this when you need to
+            know if something is real, if it is your desk, and what to do first.
+          </p>
+
+          <dl className="mt-9 list-none border-t border-fg/12 p-0">
+            {[
+              {
+                t: "Whose job",
+                d: `Roughly ${yours} of ${stats.total} rules still need a human. The rest your tool already owns, or are context. We say which, so you stop re-doing platform work.`,
+              },
+              {
+                t: "What moved",
+                d: "The ledger above is market only. Re-verifies and “we wrote a page” never ship as alerts. Optional email matches the setup you pick on Rules.",
+              },
+              {
+                t: "Monday step",
+                d: "Every page: primary source, last verified date, first action. Paste to Slack or a lawyer. Defend it in a meeting without inventing a placement score.",
+              },
+            ].map((row, i) => (
+              <div
+                key={row.t}
+                className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-4 border-b border-border-soft py-5 sm:grid-cols-[3rem_7.5rem_minmax(0,1fr)] sm:gap-x-5 sm:py-6"
+              >
+                <dt className="num pt-0.5 text-[11px] font-medium tracking-[0.12em] text-accent">
+                  {String(i + 1).padStart(2, "0")}
+                </dt>
+                <dt className="col-start-2 text-[15px] font-semibold tracking-tight sm:col-start-auto">
+                  {row.t}
+                </dt>
+                <dd className="col-start-2 mt-1.5 max-w-[48ch] text-[14.5px] leading-relaxed text-muted-fg sm:col-start-auto sm:mt-0">
+                  {row.d}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <p className="mt-7 text-[13.5px] leading-relaxed text-dim">
+            If that is not useful this week, leave. Quiet is the point.
+          </p>
+        </div>
+      </section>
+
+      {/* Browse — the catalog, after you know why it exists */}
       <section id="browse" className="shell border-t py-16 sm:py-20">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
           <SectionHead
@@ -344,42 +330,8 @@ export default async function Home() {
         </ol>
       </section>
 
-      {/* What it is not */}
-      <section className="border-t bg-bg-2 py-16">
-        <div className="shell">
-          <SectionHead label="What this is" title="Three things it is not." center />
-          {/* Was three columns of 13.5px grey with nothing to anchor the eye.
-              Same three points, given a numeral, a rule between them and type
-              you can actually read across a room. */}
-          <div className="mx-auto grid max-w-5xl gap-px overflow-hidden border-y bg-border sm:grid-cols-3">
-            {[
-              [
-                "Not a course.",
-                "No modules, no certificate, no drip sequence. One page per rule, readable in forty seconds, then you get back to work.",
-              ],
-              [
-                "Not a forum.",
-                "No login, no invite, no unsearchable Slack history. Every rule is a public URL you can paste to your boss or your lawyer.",
-              ],
-              [
-                "Not opinion.",
-                "Every claim names its primary source and the date it was last verified. Where the evidence is thin, the page says so.",
-              ],
-            ].map(([h, p], i) => (
-              <div key={h} className="bg-bg-2 px-6 py-9 sm:px-7">
-                <span className="num text-[13px] font-semibold text-accent">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <h3 className="mt-4 text-[19px]">{h}</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-muted-fg">{p}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* The check */}
-      <section className="shell py-16">
+      <section className="shell border-t py-16">
         <div
           className="overflow-hidden rounded-2xl border px-6 py-14 text-center sm:px-12"
           style={{ background: "var(--card)", boxShadow: "var(--lift-2)" }}
@@ -389,7 +341,7 @@ export default async function Home() {
             A calm look at your sending domain
           </h2>
           <p className="mx-auto mt-4 max-w-[54ch] text-[16px] leading-relaxed text-muted-fg">
-            Live SPF, DKIM and DMARC from DNS — findings with sources, never a scary score out of ten.
+            Live SPF, DKIM and DMARC from DNS: findings with sources, never a scary score out of ten.
             If you are clean, we say so. Techy enough for headers; plain enough for a quick Monday check.
           </p>
           <form className="mx-auto mt-8 flex max-w-md gap-2.5" action={runCheck}>
@@ -412,7 +364,7 @@ export default async function Home() {
             <Link href="/check/headers" className="text-fg underline decoration-1 underline-offset-3">
               Paste its headers
             </Link>{" "}
-            for DKIM alignment and one-click unsubscribe — DNS alone cannot prove those.
+            for DKIM alignment and one-click unsubscribe. DNS alone cannot prove those.
           </p>
           <p className="label mt-4">Free · no account · findings with sources, never a score</p>
         </div>
@@ -424,7 +376,7 @@ export default async function Home() {
           <div>
             <h3 className="text-[15px]">Get told when a rule moves</h3>
             <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
-              Market moves that match your setup — not every re-verify. Optional: watch a
+              Market moves that match your setup, not every re-verify. Optional: watch a
               domain&rsquo;s auth DNS.
             </p>
           </div>
