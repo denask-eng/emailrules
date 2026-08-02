@@ -3,6 +3,7 @@ import type { Rule, RuleStatus, Ownership } from "@/lib/types";
 import { STATUS_LABEL, OWNERSHIP } from "@/lib/types";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Explained } from "@/components/explained";
 import {
   whyItMatters,
   freshness,
@@ -170,12 +171,12 @@ export function RuleRow({ rule }: { rule: Rule }) {
       </div>
       <div className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-muted-fg">
         <span className="font-medium text-fg/80">Why it matters: </span>
-        {whyItMatters(rule)}
+        <Explained text={whyItMatters(rule)} />
       </div>
       {rule.ignoreIf ? (
         <div className="mt-1.5 max-w-[68ch] text-[12.5px] leading-relaxed text-dim">
-          Skip if {rule.ignoreIf.charAt(0).toLowerCase()}
-          {rule.ignoreIf.slice(1)}
+          <span className="font-medium">Skip if: </span>
+          <Explained text={rule.ignoreIf} />
         </div>
       ) : null}
     </Link>
@@ -204,11 +205,16 @@ export function OwnershipBlock({ rule }: { rule: Rule }) {
       <p className={cn("text-[15px] font-semibold", tone.text)}>
         {OWNERSHIP[rule.ownership].label}
       </p>
-      <p className="mt-2.5 max-w-[64ch] text-[15px] leading-relaxed">{rule.handled.already}</p>
+      <p className="mt-1 text-[12.5px] text-muted-fg">{OWNERSHIP[rule.ownership].blurb}</p>
+      <Explained
+        as="p"
+        className="mt-2.5 max-w-[64ch] text-[15px] leading-relaxed"
+        text={rule.handled.already}
+      />
       {rule.handled.stillYours ? (
         <p className="mt-3 max-w-[64ch] text-[15px] leading-relaxed">
           <b>Your part: </b>
-          <span className="text-muted-fg">{rule.handled.stillYours}</span>
+          <Explained as="span" className="text-muted-fg" text={rule.handled.stillYours} />
         </p>
       ) : null}
     </section>
@@ -220,30 +226,34 @@ export function MondayMorning({ rule }: { rule: Rule }) {
   return (
     <section className="mt-7 rounded-xl border bg-card px-5 py-5" style={{ boxShadow: "var(--lift)" }}>
       <p className="label">What to do first</p>
-      <p className="mt-2.5 max-w-[64ch] text-[15px] leading-relaxed">{rule.mondayMorning}</p>
+      <Explained
+        as="p"
+        className="mt-2.5 max-w-[64ch] text-[15px] leading-relaxed"
+        text={rule.mondayMorning}
+      />
       {rule.ignoreIf ? (
         <p className="mt-3 max-w-[64ch] text-[14px] leading-relaxed text-muted-fg">
           <b className="text-fg">You can skip this if: </b>
-          {rule.ignoreIf}
+          <Explained as="span" text={rule.ignoreIf} />
         </p>
       ) : null}
     </section>
   );
 }
 
-/** One-line “why open this” under the plain answer on the detail page. */
+/** Why open this page — plain + optional ownership hint. */
 export function WhyOnRadar({ rule }: { rule: Rule }) {
+  const hint =
+    rule.ownership === "esp"
+      ? " If you use a mainstream email tool (an ESP), this is often already handled."
+      : rule.ownership === "context"
+        ? " Nothing to fix today — worth knowing when someone asks."
+        : "";
   return (
-    <p className="mt-5 max-w-[64ch] rounded-lg border border-border-soft bg-bg-2 px-4 py-3 text-[14px] leading-relaxed text-muted-fg">
-      <b className="text-fg">Why this is here: </b>
-      {whyItMatters(rule)}
-      {rule.ownership === "esp" ? (
-        <span className="text-dim"> — usually already handled if you are on a mainstream ESP.</span>
-      ) : null}
-      {rule.ownership === "context" ? (
-        <span className="text-dim"> — nothing to fix today; worth knowing when someone asks.</span>
-      ) : null}
-    </p>
+    <div className="mt-5 max-w-[64ch] rounded-lg border border-border-soft bg-bg-2 px-4 py-3 text-[14px] leading-relaxed text-muted-fg">
+      <b className="text-fg">Why it matters: </b>
+      <Explained as="span" text={whyItMatters(rule) + hint} />
+    </div>
   );
 }
 

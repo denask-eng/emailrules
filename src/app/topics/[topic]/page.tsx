@@ -5,6 +5,8 @@ import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
 import { SITE } from "@/lib/site";
 import { RuleRow, SectionHead } from "@/components/bits";
+import { TOPIC_BRIEFS } from "@/content/topic-briefs";
+import Link from "next/link";
 
 /* New rules added in /admin must get a URL without a rebuild, so unknown
    slugs render on demand instead of 404ing. */
@@ -64,7 +66,32 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
     <div className={"shell shell-tight py-12 sm:py-16"}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SectionHead label="Topic" title={meta.label} lede={meta.blurb} />
-      <ul className="list-none border-t p-0">
+
+      {TOPIC_BRIEFS[topic as Topic] ? (
+        <div className="mt-8 max-w-[64ch] rounded-xl border bg-bg-2 px-5 py-5 text-[14px] leading-relaxed">
+          <p>
+            <b className="text-fg">Who should care: </b>
+            <span className="text-muted-fg">{TOPIC_BRIEFS[topic as Topic].who}</span>
+          </p>
+          <p className="mt-3">
+            <b className="text-fg">If you are new: </b>
+            <span className="text-muted-fg">{TOPIC_BRIEFS[topic as Topic].newbie}</span>
+          </p>
+          <p className="mt-3">
+            <b className="text-fg">Common mistake: </b>
+            <span className="text-muted-fg">{TOPIC_BRIEFS[topic as Topic].watch}</span>
+          </p>
+          <p className="mt-3 text-[12.5px] text-dim">
+            Stuck on a word?{" "}
+            <Link href="/glossary" className="underline underline-offset-2">
+              Glossary
+            </Link>
+            .
+          </p>
+        </div>
+      ) : null}
+
+      <ul className="mt-10 list-none border-t p-0">
         {rules.map((r) => (
           <RuleRow key={r.slug} rule={r} />
         ))}

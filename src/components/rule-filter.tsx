@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { Rule } from "@/lib/types";
 import { RuleRow } from "@/components/bits";
 import { cn } from "@/lib/utils";
@@ -10,20 +16,15 @@ import {
   STORAGE_KEY,
   ONBOARD_KEY,
   AUDIENCE_CHIPS,
-  PRESETS,
+  ROLE_PRESETS,
   audienceActive,
   audienceToSearch,
   matchesAudience,
   parseAudienceParam,
+  roleTopicBoost,
 } from "@/lib/audience";
 import { briefCounts, sortForMarketer, topForYou } from "@/lib/rule-signals";
-
-/**
- * Audience filters for /rules.
- *
- * Persistence: URL (shareable) + localStorage (tomorrow).
- * First visit without a profile: full-screen gate — one tap, then Top 5.
- */
+import Link from "next/link";
 
 const listeners = new Set<() => void>();
 let memory: Audience = EMPTY_AUDIENCE;
@@ -41,7 +42,7 @@ function readStored(): Audience {
 }
 
 function isOnboarded(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
   try {
     return window.localStorage.getItem(ONBOARD_KEY) === "1" || audienceActive(readStored());
   } catch {
@@ -53,15 +54,14 @@ function markOnboarded() {
   try {
     window.localStorage.setItem(ONBOARD_KEY, "1");
   } catch {
-    /* private mode */
+    /* */
   }
 }
 
 function readAudience(): Audience {
   if (typeof window === "undefined") return EMPTY_AUDIENCE;
   if (!hydrated) {
-    const fromUrl = parseAudienceParam(window.location.search);
-    memory = fromUrl ?? readStored();
+    memory = parseAudienceParam(window.location.search) ?? readStored();
     hydrated = true;
   }
   return memory;
@@ -69,18 +69,17 @@ function readAudience(): Audience {
 
 function persist(next: Audience, pushUrl: boolean) {
   memory = next;
-  const raw = JSON.stringify(next);
   try {
     if (audienceActive(next)) {
-      window.localStorage.setItem(STORAGE_KEY, raw);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       markOnboarded();
     } else {
       window.localStorage.removeItem(STORAGE_KEY);
     }
   } catch {
-    /* private mode */
+    /* */
   }
-  if (pushUrl && typeof window !== "undefined") {
+  if (pushUrl) {
     window.history.replaceState(null, "", `${window.location.pathname}${audienceToSearch(next)}`);
   }
   listeners.forEach((l) => l());
@@ -103,119 +102,136 @@ function subscribe(cb: () => void) {
 
 const serverSnapshot = () => EMPTY_AUDIENCE;
 
-function presetActive(a: Audience, p: (typeof PRESETS)[0]) {
+function RoleGate({
+  rulesCount,
+  onPick,
+  onSkip,
+}: {
+  rulesCount: number;
+  onPick: (a: Audience) => void;
+  onSkip: () => void;
+}) {
   return (
-    a.eu === p.audience.eu &&
-    a.us === p.audience.us &&
-    a.ca === p.audience.ca &&
-    a.uk === p.audience.uk &&
-    a.au === p.audience.au &&
-    a.gmailBulk === p.audience.gmailBulk &&
-    a.klaviyo === p.audience.klaviyo
+    <div
+      className="rounded-2xl border bg-card px-5 py-10 sm:px-10 sm:py-12"
+      style={{ boxShadow: "var(--lift-2)" }}
+    >
+      <p className="label text-center">Start here · 10 seconds</p>
+      <h2 className="mx-auto mt-3 max-w-[24ch] text-center text-[clamp(1.45rem,4vw,1.95rem)] font-semibold tracking-tight">
+        What kind of email work do you do?
+      </h2>
+      <p className="mx-auto mt-3 max-w-[44ch] text-center text-[15px] leading-relaxed text-muted-fg">
+        One tap. We save it on this browser, show five rules that matter first, and explain every
+        jargon word as you go. {rulesCount} rules on the shelf — you will not need most of them
+        today.
+      </p>
+      <div className="mx-auto mt-8 grid max-w-2xl gap-2.5 sm:grid-cols-2">
+        {ROLE_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onPick(p.audience)}
+            className="rounded-xl border bg-bg px-4 py-4 text-left transition-colors hover:border-accent hover:bg-accent-soft"
+          >
+            <span className="block text-[15px] font-semibold">{p.label}</span>
+            <span className="mt-1.5 block text-[12.5px] leading-snug text-muted-fg">{p.blurb}</span>
+          </button>
+        ))}
+      </div>
+      <div className="mx-auto mt-8 flex max-w-md flex-col items-center gap-3 text-center">
+        <Link
+          href="/check"
+          className="text-[14px] font-medium text-fg underline underline-offset-3"
+        >
+          I only want to check my domain setup →
+        </Link>
+        <button
+          type="button"
+          onClick={onSkip}
+          className="text-[13px] text-muted-fg underline underline-offset-3 hover:text-fg"
+        >
+          Browse everything (I&rsquo;ll filter later)
+        </button>
+        <p className="text-[12px] text-dim">
+          Stuck on a word? Open the{" "}
+          <Link href="/glossary" className="underline underline-offset-2">
+            glossary
+          </Link>
+          .
+        </p>
+      </div>
+    </div>
   );
 }
 
 export function RuleFilter({ rules }: { rules: Rule[] }) {
   const a = useSyncExternalStore(subscribe, readAudience, serverSnapshot);
   const [copied, setCopied] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [needsGate, setNeedsGate] = useState(false);
+  /** null = not hydrated; true = show gate; false = show list */
+  const [gate, setGate] = useState<boolean | null>(null);
 
-  useEffect(() => {
+  /* useLayoutEffect: decide gate before paint so returning users don't flash the welcome. */
+  useLayoutEffect(() => {
     hydrated = false;
     readAudience();
     listeners.forEach((l) => l());
-    const hasProfile = audienceActive(readAudience()) || !!parseAudienceParam(window.location.search);
-    setNeedsGate(!hasProfile && !isOnboarded());
-    setReady(true);
-  }, []);
-
-  const set = useCallback((patch: Partial<Audience>) => {
-    const next = { ...readAudience(), ...patch };
-    persist(next, true);
-    setNeedsGate(false);
+    const has =
+      audienceActive(readAudience()) ||
+      !!parseAudienceParam(window.location.search) ||
+      isOnboarded();
+    setGate(!has);
   }, []);
 
   const apply = useCallback((next: Audience) => {
     persist(next, true);
     markOnboarded();
-    setNeedsGate(false);
+    setGate(false);
   }, []);
 
-  const skipAll = useCallback(() => {
-    markOnboarded();
-    persist(EMPTY_AUDIENCE, true);
-    setNeedsGate(false);
-  }, []);
+  const set = useCallback((patch: Partial<Audience>) => {
+    apply({ ...readAudience(), ...patch });
+  }, [apply]);
+
+  const boost = useCallback(
+    (topic: string) => roleTopicBoost(topic, a.role),
+    [a.role],
+  );
 
   const shown = useMemo(() => {
     const filtered = rules.filter((r) => matchesAudience(r, a));
-    return sortForMarketer(filtered);
-  }, [rules, a]);
+    return sortForMarketer(filtered, boost);
+  }, [rules, a, boost]);
 
-  const top = useMemo(() => topForYou(shown, 5), [shown]);
+  const top = useMemo(() => topForYou(shown, 5, boost), [shown, boost]);
   const topSlugs = useMemo(() => new Set(top.map((r) => r.slug)), [top]);
   const rest = useMemo(() => shown.filter((r) => !topSlugs.has(r.slug)), [shown, topSlugs]);
-
   const brief = briefCounts(shown);
   const filtered = audienceActive(a);
 
   const copyLink = async () => {
-    const url = `${window.location.origin}/rules${audienceToSearch(a)}`;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/rules${audienceToSearch(a)}`,
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      /* ignore */
+      /* */
     }
   };
 
-  /* SSR + first paint: avoid flashing the full library before we know. */
-  if (!ready) {
+  /* SSR + first paint: role gate immediately — never "Loading…" */
+  if (gate === null || gate === true) {
     return (
-      <div className="rounded-xl border bg-card px-5 py-10 text-center text-[14px] text-muted-fg">
-        Loading your setup…
-      </div>
-    );
-  }
-
-  /* First visit: one decision, then value. */
-  if (needsGate) {
-    return (
-      <div
-        className="rounded-2xl border bg-card px-5 py-10 sm:px-10 sm:py-12"
-        style={{ boxShadow: "var(--lift-2)" }}
-      >
-        <p className="label text-center">10 seconds</p>
-        <h2 className="mx-auto mt-3 max-w-[22ch] text-center text-[clamp(1.4rem,4vw,1.85rem)] font-semibold tracking-tight">
-          Who do you email?
-        </h2>
-        <p className="mx-auto mt-3 max-w-[42ch] text-center text-[15px] leading-relaxed text-muted-fg">
-          One tap. We save it on this browser and show the five things that matter first — not all{" "}
-          {rules.length} rules at once.
-        </p>
-        <div className="mx-auto mt-8 grid max-w-xl gap-2.5 sm:grid-cols-2">
-          {PRESETS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => apply(p.audience)}
-              className="rounded-xl border bg-bg px-4 py-4 text-left transition-colors hover:border-accent hover:bg-accent-soft"
-            >
-              <span className="block text-[15px] font-semibold">{p.label}</span>
-              <span className="mt-1 block text-[12.5px] leading-snug text-muted-fg">{p.blurb}</span>
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={skipAll}
-          className="mx-auto mt-8 block text-[13.5px] text-muted-fg underline underline-offset-3 hover:text-fg"
-        >
-          Browse everything (I&rsquo;ll filter later)
-        </button>
-      </div>
+      <RoleGate
+        rulesCount={rules.length}
+        onPick={apply}
+        onSkip={() => {
+          markOnboarded();
+          persist(EMPTY_AUDIENCE, true);
+          setGate(false);
+        }}
+      />
     );
   }
 
@@ -223,47 +239,50 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
     <>
       <div className="rounded-xl border bg-card p-5 sm:p-6" style={{ boxShadow: "var(--lift)" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 max-w-[40rem]">
+          <div>
             <h2 className="text-[1.05rem] font-semibold tracking-tight">Your setup</h2>
-            <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-fg">
-              Saved on this browser and in the link. Change anytime — tomorrow opens the same list.
+            <p className="mt-1.5 max-w-[40rem] text-[13.5px] leading-relaxed text-muted-fg">
+              Saved on this browser and in the URL. Change anytime. Dotted words open plain-English
+              definitions.
             </p>
           </div>
           {filtered ? (
-            <p className="num shrink-0 rounded-full border border-ok/30 bg-ok-bg px-2.5 py-1 text-[11px] font-medium text-ok">
+            <p className="rounded-full border border-ok/30 bg-ok-bg px-2.5 py-1 text-[11px] font-medium text-ok">
               Saved for next visit
             </p>
           ) : null}
         </div>
 
         <div className="mt-5">
-          <p className="label mb-2">Profile</p>
+          <p className="label mb-2">Your role</p>
           <div className="flex flex-wrap gap-2">
-            {PRESETS.map((p) => (
+            {ROLE_PRESETS.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => apply({ ...p.audience, onlyMine: a.onlyMine })}
-                title={p.blurb}
+                onClick={() => apply({ ...p.audience, onlyMine: a.onlyMine && p.audience.onlyMine })}
                 className={cn(
-                  "rounded-lg border px-3 py-2 text-left text-[13px] transition-colors",
-                  presetActive(a, p) ? "border-accent bg-accent-soft text-fg" : "bg-bg hover:bg-muted",
+                  "rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors",
+                  a.role === p.audience.role
+                    ? "border-accent bg-accent-soft"
+                    : "bg-bg hover:bg-muted",
                 )}
               >
-                <span className="font-medium">{p.label}</span>
+                {p.label}
               </button>
             ))}
           </div>
         </div>
 
         <div className="mt-5">
-          <p className="label mb-2">Fine-tune</p>
+          <p className="label mb-2">Where you send (optional)</p>
           <div className="flex flex-wrap gap-2">
             {AUDIENCE_CHIPS.map((q) => (
               <button
                 key={q.key}
                 type="button"
-                aria-pressed={a[q.key]}
+                title={q.explain}
+                aria-pressed={!!a[q.key]}
                 onClick={() => set({ [q.key]: !a[q.key] })}
                 className={cn(
                   "rounded-full border px-3.5 py-1.5 text-[13.5px] transition-colors",
@@ -281,26 +300,25 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4 text-[13px]">
+          <button
+            type="button"
+            onClick={() => apply(EMPTY_AUDIENCE)}
+            className="text-muted-fg underline underline-offset-3 hover:text-fg"
+          >
+            Clear filters
+          </button>
           {filtered ? (
-            <>
-              <button
-                type="button"
-                onClick={() => apply(EMPTY_AUDIENCE)}
-                className="text-muted-fg underline underline-offset-3 hover:text-fg"
-              >
-                Clear — show all {rules.length}
-              </button>
-              <button
-                type="button"
-                onClick={copyLink}
-                className="text-muted-fg underline underline-offset-3 hover:text-fg"
-              >
-                {copied ? "Link copied" : "Copy link with filters"}
-              </button>
-            </>
-          ) : (
-            <span className="text-muted-fg">Showing everything. Pick a profile to cut noise.</span>
-          )}
+            <button
+              type="button"
+              onClick={copyLink}
+              className="text-muted-fg underline underline-offset-3 hover:text-fg"
+            >
+              {copied ? "Link copied" : "Copy link with this setup"}
+            </button>
+          ) : null}
+          <Link href="/glossary" className="text-muted-fg underline underline-offset-3 hover:text-fg">
+            Glossary
+          </Link>
           <button
             type="button"
             onClick={() => {
@@ -312,21 +330,21 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               }
               hydrated = false;
               persist(EMPTY_AUDIENCE, true);
-              setNeedsGate(true);
+              setGate(true);
             }}
             className="text-dim underline underline-offset-3 hover:text-fg"
           >
-            Reset setup
+            Reset
           </button>
         </div>
       </div>
 
       <div className="mt-6 grid gap-2 sm:grid-cols-4">
         {[
-          { v: brief.act, k: "Need you", hint: "Nobody else will do these" },
-          { v: brief.shared, k: "You + ESP", hint: "Platform half, judgment yours" },
-          { v: brief.handled + brief.fyi, k: "Handled or FYI", hint: "Skim or skip" },
-          { v: brief.upcoming, k: "Coming up", hint: "Dated, not biting yet" },
+          { v: brief.act, k: "Need you", hint: "A person must decide or build" },
+          { v: brief.shared, k: "You + your ESP", hint: "Tool does half; judgment is yours" },
+          { v: brief.handled + brief.fyi, k: "Handled or FYI", hint: "Often safe to skim" },
+          { v: brief.upcoming, k: "Coming up", hint: "Dated — not biting yet" },
         ].map((x) => (
           <div key={x.k} className="rounded-xl border bg-card px-4 py-3">
             <div className="num text-[1.35rem] font-semibold tracking-tight">{x.v}</div>
@@ -337,13 +355,9 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
       </div>
 
       {shown.length === 0 ? (
-        <p className="mt-8 max-w-[52ch] rounded-xl border bg-bg-2 px-5 py-6 text-[0.95rem] leading-relaxed text-muted-fg">
-          Nothing matches. That can be good news.{" "}
-          <button
-            type="button"
-            onClick={() => apply(EMPTY_AUDIENCE)}
-            className="text-fg underline underline-offset-3"
-          >
+        <p className="mt-8 rounded-xl border bg-bg-2 px-5 py-6 text-[0.95rem] text-muted-fg">
+          Nothing matches.{" "}
+          <button type="button" className="text-fg underline" onClick={() => apply(EMPTY_AUDIENCE)}>
             Clear filters
           </button>
           .
@@ -351,17 +365,11 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
       ) : (
         <>
           <section className="mt-10">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-[1.1rem] font-semibold tracking-tight">
-                Start here{filtered ? " for you" : ""}
-              </h2>
-              <p className="text-[13px] text-dim">
-                {top.length} of {brief.total}
-                {filtered ? " matching" : ""} · your desk first
-              </p>
-            </div>
+            <h2 className="text-[1.15rem] font-semibold tracking-tight">
+              Start with these {top.length}
+            </h2>
             <p className="mt-1 max-w-[58ch] text-[13.5px] text-muted-fg">
-              Open these first. Everything else is optional reading.
+              Highest-signal for your role. Hover any dotted word for a definition.
             </p>
             <ul className="mt-4 list-none border-t p-0">
               {top.map((r) => (
@@ -369,13 +377,10 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               ))}
             </ul>
           </section>
-
           {rest.length > 0 ? (
             <section className="mt-12">
-              <h2 className="text-[1.05rem] font-semibold tracking-tight">Everything else</h2>
-              <p className="mt-1 text-[13.5px] text-muted-fg">
-                Same filters · lower urgency · still yours if you dig
-              </p>
+              <h2 className="text-[1.05rem] font-semibold">Everything else in your filter</h2>
+              <p className="mt-1 text-[13.5px] text-muted-fg">{rest.length} more · lower urgency</p>
               <ul className="mt-4 list-none border-t p-0">
                 {rest.map((r) => (
                   <RuleRow key={r.slug} rule={r} />

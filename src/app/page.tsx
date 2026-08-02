@@ -49,40 +49,51 @@ export default async function Home() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-[56ch] text-[1.06rem] leading-relaxed text-muted-fg sm:text-[1.14rem]">
-          Built for people who ship email for a living — lifecycle, CRM, deliverability, agency.
-          Of {stats.total} rules here, your ESP already covers {stats.notYours}. We tell you which,
-          with sources, and skip the fear.
+          From week-one marketers to deliverability leads: what is true right now, whose job it is,
+          and what to do first. Of {stats.total} rules, your email tool already covers{" "}
+          {stats.notYours}. Dotted words explain themselves. No scores. No fear-selling.
         </p>
 
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/rules"
-            className={cn(buttonVariants({ size: "lg" }), "h-11 rounded-[10px] px-6 text-[15px] font-medium")}
-          >
-            Show me what&rsquo;s mine
-          </Link>
-          <Link
-            href="/check"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "h-11 rounded-[10px] px-6 text-[15px] font-medium",
-            )}
-          >
-            Check my domain
-          </Link>
+        <div className="mx-auto mt-9 grid max-w-2xl gap-2.5 text-left sm:grid-cols-3">
+          {[
+            {
+              href: "/rules",
+              t: "What applies to me",
+              d: "Pick your role. Get five rules first — not a law library.",
+            },
+            {
+              href: "/check",
+              t: "Check my domain",
+              d: "Live SPF, DKIM, DMARC — plain findings, never a fake score.",
+            },
+            {
+              href: "/changed",
+              t: "What moved",
+              d: "Real market changes only. Quiet weeks stay quiet.",
+            },
+          ].map((x) => (
+            <Link
+              key={x.href}
+              href={x.href}
+              className="rounded-xl border bg-card p-4 transition-colors hover:border-accent hover:bg-accent-soft"
+              style={{ boxShadow: "var(--lift)" }}
+            >
+              <span className="block text-[14.5px] font-semibold">{x.t}</span>
+              <span className="mt-1.5 block text-[12.5px] leading-snug text-muted-fg">{x.d}</span>
+            </Link>
+          ))}
         </div>
-        <p className="mx-auto mt-3 text-[13px] text-dim">
-          New here?{" "}
-          <Link href="/start" className="text-muted-fg underline underline-offset-3 hover:text-fg">
-            Two-minute tour
+        <p className="mx-auto mt-5 text-[13px] text-dim">
+          <Link href="/glossary" className="underline underline-offset-3 hover:text-fg">
+            Glossary
           </Link>
           {" · "}
-          <Link href="/check/headers" className="text-muted-fg underline underline-offset-3 hover:text-fg">
+          <Link href="/check/headers" className="underline underline-offset-3 hover:text-fg">
             Paste headers
           </Link>
           {" · "}
-          <Link href="/coverage" className="text-muted-fg underline underline-offset-3 hover:text-fg">
-            Coverage
+          <Link href="/coverage" className="underline underline-offset-3 hover:text-fg">
+            Coverage map
           </Link>
         </p>
 

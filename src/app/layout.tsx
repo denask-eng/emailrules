@@ -124,6 +124,7 @@ function Footer() {
 
         <div className="flex flex-col gap-2 text-[13px] text-muted-fg md:items-end">
           <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link href="/glossary" className="hover:text-fg">Glossary</Link>
             <Link href="/methodology" className="hover:text-fg">Methodology</Link>
             <Link href="/sources" className="hover:text-fg">Sources</Link>
             <a href="/llms.txt" className="hover:text-fg">llms.txt</a>

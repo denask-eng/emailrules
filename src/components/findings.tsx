@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { Finding, Severity } from "@/lib/dns-check";
 import { cn } from "@/lib/utils";
+import { Explained } from "@/components/explained";
 
-const TONE: Record<Severity, { dot: string; label: string }> = {
-  fail: { dot: "bg-live", label: "Needs fixing" },
-  warn: { dot: "bg-soon", label: "Worth a look" },
-  pass: { dot: "bg-ok", label: "Fine" },
-  info: { dot: "bg-dim", label: "Context" },
+const TONE: Record<Severity, { dot: string; label: string; plain: string }> = {
+  fail: { dot: "bg-live", label: "Needs fixing", plain: "Fix this" },
+  warn: { dot: "bg-soon", label: "Worth a look", plain: "Worth a look" },
+  pass: { dot: "bg-ok", label: "Fine", plain: "Looks fine" },
+  info: { dot: "bg-dim", label: "Context", plain: "Context" },
 };
 
 export function FindingList({
@@ -25,10 +26,17 @@ export function FindingList({
             aria-label={TONE[finding.severity].label}
           />
           <div className="min-w-0">
-            <h2 className="text-[1.02rem] leading-snug font-semibold">{finding.title}</h2>
-            <p className="mt-2 max-w-[64ch] text-[0.95rem] leading-relaxed text-muted-fg">
-              {finding.detail}
+            <p className="text-[11px] font-medium tracking-wide text-dim uppercase">
+              {TONE[finding.severity].plain}
             </p>
+            <h2 className="mt-1 text-[1.02rem] leading-snug font-semibold">
+              <Explained text={finding.title} />
+            </h2>
+            <Explained
+              as="p"
+              className="mt-2 max-w-[64ch] text-[0.95rem] leading-relaxed text-muted-fg"
+              text={finding.detail}
+            />
             {finding.evidence ? (
               <pre className="num mt-3 overflow-x-auto rounded-lg border bg-bg-2 px-3 py-2 text-[0.72rem] text-muted-fg">
                 {finding.evidence}
@@ -39,7 +47,7 @@ export function FindingList({
                 href={`/rules/${finding.rule}`}
                 className="mt-3 inline-block text-[0.84rem] underline underline-offset-3 hover:text-accent"
               >
-                From the rule: {ruleTitles[finding.rule] ?? "Read the rule"}
+                Related rule: {ruleTitles[finding.rule] ?? "Read more"}
               </Link>
             ) : null}
           </div>

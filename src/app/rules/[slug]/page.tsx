@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllRules, getRule, fmtDate, daysSince } from "@/lib/rules";
-import { TOPICS, STATUS_LABEL } from "@/lib/types";
+import { TOPICS, STATUS_LABEL, JURISDICTIONS } from "@/lib/types";
 import { SITE } from "@/lib/site";
 import { StatusPill, OwnershipBlock, MondayMorning, WhyOnRadar } from "@/components/bits";
+import { Explained } from "@/components/explained";
+import { impactOf, IMPACT_LABEL } from "@/lib/rule-signals";
 
 /* One column, no app shell. These pages are read by strangers who arrived from
    a search result: the finding first, the method at the bottom for the people
@@ -118,30 +120,61 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <StatusPill status={rule.status} />
+        <span className="inline-flex rounded-full border bg-bg-2 px-2 py-0.5 text-[11px] font-medium text-muted-fg">
+          {IMPACT_LABEL[impactOf(rule)]}
+        </span>
         <span className="num text-[0.74rem] text-dim">
-          {rule.status === "upcoming" ? "from" : "since"} {fmtDate(rule.effectiveDate)}
-          {rule.jurisdictions.map((j) => (
-            <span key={j}>
-              {" · "}
-              <Link
-                href={`/jurisdictions/${j.toLowerCase()}`}
-                className="no-underline hover:text-fg hover:underline"
-              >
-                {j}
-              </Link>
-            </span>
-          ))}
-          {rule.provider ? ` · ${rule.provider}` : ""}
+          {rule.status === "upcoming" ? "Starts " : "In force since "}
+          {fmtDate(rule.effectiveDate)}
         </span>
       </div>
 
+      <p className="mt-3 max-w-[64ch] text-[13px] leading-relaxed text-muted-fg">
+        Applies in{" "}
+        {rule.jurisdictions.map((j, i) => (
+          <span key={j}>
+            {i > 0 ? ", " : ""}
+            <Link
+              href={`/jurisdictions/${j.toLowerCase()}`}
+              className="font-medium text-fg underline underline-offset-2"
+            >
+              {JURISDICTIONS[j]?.label ?? j}
+            </Link>
+          </span>
+        ))}
+        {rule.provider ? (
+          <>
+            {" "}
+            · about <span className="font-medium text-fg">{rule.provider}</span>
+          </>
+        ) : null}
+        .{" "}
+        <Link href="/glossary" className="underline underline-offset-2">
+          Glossary
+        </Link>
+      </p>
+
       <h1 className="mt-4 text-[clamp(1.9rem,5.2vw,2.9rem)]">{rule.title}</h1>
 
-      <p className="mt-6 max-w-[64ch] text-[1.12rem] leading-relaxed text-fg">{rule.plain}</p>
+      {/* L1 — everyone, especially newbies */}
+      <p className="label mt-8">In plain English</p>
+      <Explained
+        as="p"
+        className="mt-2 max-w-[64ch] text-[1.12rem] leading-relaxed text-fg"
+        text={rule.plain}
+      />
 
       <WhyOnRadar rule={rule} />
       <OwnershipBlock rule={rule} />
       <MondayMorning rule={rule} />
+
+      <p className="mt-6 text-[12.5px] text-dim">
+        Dotted words open short definitions. Full dictionary:{" "}
+        <Link href="/glossary" className="underline underline-offset-2">
+          glossary
+        </Link>
+        .
+      </p>
 
       {age > 90 ? (
         <p className="num mt-6 border border-soon/40 bg-soon-bg px-4 py-3 text-[0.78rem] leading-relaxed text-soon">
@@ -149,35 +182,51 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         </p>
       ) : null}
 
-      {/* The lead paragraph is now the plain version, so the precise wording
-          still has to be on the page: it is what the FAQ schema quotes and
-          what anyone checking our work will read. */}
-      <Block title="The exact position">
-        <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.answer}</p>
-      </Block>
+      {/* L2 — at work */}
+      <div className="mt-12 border-t pt-10">
+        <p className="label">At work</p>
+        <h2 className="mt-2 text-[1.2rem] font-semibold">Details for getting it done</h2>
+      </div>
 
       <Block title="Who this applies to">
-        <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.appliesTo}</p>
+        <Explained as="p" className="prose-rule m-0 text-[0.96rem] leading-relaxed" text={rule.appliesTo} />
       </Block>
 
-      <Block title="What to do">
+      <Block title="Checklist">
         <ul className="prose-rule m-0 list-none p-0 text-[0.96rem]">
           {rule.whatToDo.map((w) => (
             <li key={w} className="border-b border-border-soft py-2.5 leading-relaxed last:border-b-0">
-              {w}
+              <Explained text={w} />
             </li>
           ))}
         </ul>
       </Block>
 
       {rule.exempt ? (
-        <Block title="What is exempt">
-          <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.exempt}</p>
+        <Block title="Exceptions (when this does not apply)">
+          <Explained as="p" className="prose-rule m-0 text-[0.96rem] leading-relaxed" text={rule.exempt} />
         </Block>
       ) : null}
 
+      {/* L3 — proof */}
+      <div className="mt-12 border-t pt-10">
+        <p className="label">For experts &amp; records</p>
+        <h2 className="mt-2 text-[1.2rem] font-semibold">Exact wording, enforcement, sources</h2>
+        <p className="mt-2 max-w-[58ch] text-[13.5px] text-muted-fg">
+          Same facts as above, written for precision and citation. Skip if you already know what to do.
+        </p>
+      </div>
+
+      <Block title="The exact position">
+        <Explained as="p" className="prose-rule m-0 text-[0.96rem] leading-relaxed" text={rule.answer} />
+      </Block>
+
       <Block title="What happens if you do not">
-        <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.enforcement}</p>
+        <Explained
+          as="p"
+          className="prose-rule m-0 text-[0.96rem] leading-relaxed"
+          text={rule.enforcement}
+        />
       </Block>
 
       <Block title={rule.sources.length > 1 ? "Sources" : "Source"}>

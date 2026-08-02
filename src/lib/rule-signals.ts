@@ -109,11 +109,18 @@ export const CHANGE_KIND_LABEL: Record<ChangeKind, string> = {
 };
 
 /** Sort: act first, then shared, then time-sensitive upcoming, then rest. */
-export function sortForMarketer(rules: Rule[]): Rule[] {
+export function sortForMarketer(
+  rules: Rule[],
+  roleBoost?: (topic: string) => number,
+): Rule[] {
   const own: Record<Ownership, number> = { yours: 0, shared: 1, esp: 2, context: 3 };
   return [...rules].sort((a, b) => {
     const oa = own[a.ownership] - own[b.ownership];
     if (oa !== 0) return oa;
+    if (roleBoost) {
+      const rb = roleBoost(a.topic) - roleBoost(b.topic);
+      if (rb !== 0) return rb;
+    }
     /* Upcoming with nearer dates first within same ownership */
     if (a.status === "upcoming" && b.status === "upcoming") {
       return a.effectiveDate.localeCompare(b.effectiveDate);
@@ -149,8 +156,12 @@ export function briefCounts(rules: Rule[]) {
  * The five things worth opening first: your desk + coming deadlines,
  * then shared. Never pad with FYI.
  */
-export function topForYou(rules: Rule[], n = 5): Rule[] {
-  const sorted = sortForMarketer(rules);
+export function topForYou(
+  rules: Rule[],
+  n = 5,
+  roleBoost?: (topic: string) => number,
+): Rule[] {
+  const sorted = sortForMarketer(rules, roleBoost);
   const priority = sorted.filter(
     (r) => r.ownership === "yours" || r.status === "upcoming" || r.ownership === "shared",
   );
