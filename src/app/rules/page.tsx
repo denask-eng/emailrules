@@ -24,8 +24,8 @@ export default async function RulesIndex() {
     <div className="shell py-12 sm:py-16">
       <SectionHead
         label="Rules"
-        title="What matters for your email programme"
-        lede={`One setup, then five things to open first. We remember who you are on this browser. ${stats.total} rules on the shelf — most are not your problem today.`}
+        title="What matters for you"
+        lede={`One setup. Five first. We remember this browser. ${stats.total} curated rules with sources — most are not your problem today.`}
       />
 
       <RuleFilter rules={rules} />

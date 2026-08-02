@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { SITE, NAV } from "@/lib/site";
 import { Byline, AuthorJsonLd } from "@/components/byline";
+import { SiteFaq } from "@/components/site-faq";
 import { Search } from "@/components/search";
 import { getAllRules } from "@/lib/rules";
 import { cn } from "@/lib/utils";
@@ -122,32 +123,38 @@ async function Nav() {
 
 function Footer() {
   return (
-    <footer className="mt-8 border-t bg-bg-2 py-14">
+    <footer className="border-t bg-bg py-14">
       <div className="shell grid gap-12 md:grid-cols-[1.2fr_1fr]">
         <div>
           <div className="mb-3 text-[14.5px] font-semibold tracking-[-0.035em]">
             emailrules<span className="text-accent">.today</span>
           </div>
           <p className="mb-6 max-w-[44ch] text-[13.5px] leading-relaxed text-muted-fg">
-            {SITE.maintainer} Independent by design: no tracking pixels sold, no seed tests, no ESP
-            affiliate. Email only — SMS and push are different laws.
+            {SITE.maintainer} Independent: no tracking pixels sold, no seed tests, no ESP affiliate.
+            Email only. A curated shelf with sources — not a fake encyclopedia.
           </p>
           <Byline />
         </div>
 
         <div className="flex flex-col gap-2.5 text-[13px] text-muted-fg md:items-end">
           <div className="flex flex-wrap gap-x-4 gap-y-2 md:justify-end">
+            <Link href="/#faq" className="hover:text-fg">
+              FAQ
+            </Link>
             <Link href="/glossary" className="hover:text-fg">
               Glossary
             </Link>
             <Link href="/start" className="hover:text-fg">
               Start here
             </Link>
+            <Link href="/coverage" className="hover:text-fg">
+              Coverage
+            </Link>
             <Link href="/methodology" className="hover:text-fg">
               Methodology
             </Link>
             <Link href="/connect" className="hover:text-fg">
-              Connect (roadmap)
+              Connect roadmap
             </Link>
             <Link href="/sources" className="hover:text-fg">
               Sources
@@ -174,6 +181,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthorJsonLd siteUrl={SITE.url} />
         <Nav />
         <main className="flex-1">{children}</main>
+        <SiteFaq />
         <Footer />
       </body>
     </html>

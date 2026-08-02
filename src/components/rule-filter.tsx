@@ -23,20 +23,6 @@ import {
   parseAudienceParam,
   roleTopicBoost,
 } from "@/lib/audience";
-import {
-  type Profile,
-  briefPathForProfile,
-  deleteProfile,
-  emptyProfile,
-  ensureProfilesFromLegacy,
-  getActiveProfile,
-  readActiveProfileId,
-  readProfiles,
-  setActiveProfileId,
-  upsertProfile,
-  PROFILES_KEY,
-  ACTIVE_PROFILE_KEY,
-} from "@/lib/profiles";
 import { briefCounts, sortForMarketer, topForYou } from "@/lib/rule-signals";
 import Link from "next/link";
 
@@ -131,12 +117,12 @@ function RoleGate({
       style={{ boxShadow: "var(--lift-2)" }}
     >
       <p className="label text-center">Start here · 10 seconds</p>
-      <h2 className="mx-auto mt-3 max-w-[22ch] text-center text-[clamp(1.45rem,4vw,1.95rem)] font-semibold tracking-tight">
+      <h2 className="mx-auto mt-3 max-w-[20ch] text-center text-[clamp(1.5rem,4vw,2rem)] font-semibold tracking-tight">
         What kind of email work do you do?
       </h2>
-      <p className="mx-auto mt-3 max-w-[42ch] text-center text-[15px] leading-relaxed text-muted-fg">
-        One tap. Five rules that matter first — not all {rulesCount}. Built for people who ship
-        email and are too busy to re-read every PDF. Jargon opens on the dotted words.
+      <p className="mx-auto mt-3 max-w-[40ch] text-center text-[15px] leading-relaxed text-muted-fg">
+        One tap. You get five rules that matter — not all {rulesCount}. Dotted words explain
+        themselves.
       </p>
       <div className="mx-auto mt-8 grid max-w-2xl gap-2.5 sm:grid-cols-2">
         {ROLE_PRESETS.map((p) => (
@@ -144,19 +130,16 @@ function RoleGate({
             key={p.id}
             type="button"
             onClick={() => onPick(p.audience)}
-            className="rounded-xl border bg-bg px-4 py-4 text-left transition-colors hover:border-accent hover:bg-accent-soft"
+            className="rounded-2xl border bg-bg px-4 py-4 text-left hover:border-accent hover:bg-accent-soft"
           >
-            <span className="block text-[15px] font-semibold">{p.label}</span>
+            <span className="block text-[15px] font-semibold tracking-tight">{p.label}</span>
             <span className="mt-1.5 block text-[12.5px] leading-snug text-muted-fg">{p.blurb}</span>
           </button>
         ))}
       </div>
       <div className="mx-auto mt-8 flex max-w-md flex-col items-center gap-3 text-center">
-        <Link
-          href="/check"
-          className="text-[14px] font-medium text-fg underline underline-offset-3"
-        >
-          I only want to check my domain setup →
+        <Link href="/check" className="text-[14px] font-medium text-fg underline underline-offset-3">
+          I only want to check my domain →
         </Link>
         <button
           type="button"
@@ -165,13 +148,6 @@ function RoleGate({
         >
           Browse everything (I&rsquo;ll filter later)
         </button>
-        <p className="text-[12px] text-dim">
-          Stuck on a word? Open the{" "}
-          <Link href="/glossary" className="underline underline-offset-2">
-            glossary
-          </Link>
-          .
-        </p>
       </div>
     </div>
   );
@@ -182,25 +158,11 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
   const [copied, setCopied] = useState(false);
   /** null = not hydrated; true = show gate; false = show list */
   const [gate, setGate] = useState<boolean | null>(null);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [profileName, setProfileName] = useState("My programme");
 
-  /* useLayoutEffect: decide gate before paint so returning users don't flash the welcome. */
   useLayoutEffect(() => {
     hydrated = false;
     readAudience();
     listeners.forEach((l) => l());
-    const list = ensureProfilesFromLegacy();
-    setProfiles(list);
-    const active = getActiveProfile();
-    if (active) {
-      setActiveId(active.id);
-      setProfileName(active.name);
-      if (audienceActive(active.audience) && !audienceActive(readAudience())) {
-        persist(active.audience, true);
-      }
-    }
     const has =
       audienceActive(readAudience()) ||
       !!parseAudienceParam(window.location.search) ||
@@ -212,47 +174,16 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
     persist(next, true);
     markOnboarded();
     setGate(false);
-    /* Keep active profile in sync so agencies can switch clients. */
-    try {
-      const id = readActiveProfileId();
-      const list = readProfiles();
-      const cur = list.find((p) => p.id === id) ?? emptyProfile(profileName || "My programme");
-      const saved = upsertProfile({
-        ...cur,
-        name: (profileName || cur.name || "My programme").slice(0, 80),
-        audience: next,
-      });
-      setProfiles(saved);
-      setActiveId(saved.find((p) => p.id === cur.id)?.id ?? saved[0]?.id ?? null);
-    } catch {
-      /* */
-    }
-  }, [profileName]);
-
-  const set = useCallback((patch: Partial<Audience>) => {
-    apply({ ...readAudience(), ...patch });
-  }, [apply]);
-
-  const switchProfile = useCallback((p: Profile) => {
-    setActiveProfileId(p.id);
-    setActiveId(p.id);
-    setProfileName(p.name);
-    persist(p.audience, true);
-    markOnboarded();
-    setGate(false);
   }, []);
 
-  const addClient = useCallback(() => {
-    const p = emptyProfile("New client");
-    const saved = upsertProfile(p);
-    setProfiles(saved);
-    switchProfile(p);
-  }, [switchProfile]);
-
-  const boost = useCallback(
-    (topic: string) => roleTopicBoost(topic, a.role),
-    [a.role],
+  const set = useCallback(
+    (patch: Partial<Audience>) => {
+      apply({ ...readAudience(), ...patch });
+    },
+    [apply],
   );
+
+  const boost = useCallback((topic: string) => roleTopicBoost(topic, a.role), [a.role]);
 
   const shown = useMemo(() => {
     const filtered = rules.filter((r) => matchesAudience(r, a));
@@ -277,7 +208,6 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
     }
   };
 
-  /* SSR + first paint: role gate immediately — never "Loading…" */
   if (gate === null || gate === true) {
     return (
       <RoleGate
@@ -292,84 +222,20 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
     );
   }
 
-  const activeProfile = profiles.find((p) => p.id === activeId) ?? null;
-
   return (
     <>
       <div className="rounded-2xl border bg-card p-5 sm:p-6" style={{ boxShadow: "var(--lift)" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-[1.05rem] font-semibold tracking-tight">Your setup</h2>
-            <p className="mt-1.5 max-w-[40rem] text-[13.5px] leading-relaxed text-muted-fg">
-              Saved on this browser and in the URL. Agencies: name each client and switch without an
-              account.
+            <p className="mt-1 max-w-[36rem] text-[13.5px] leading-relaxed text-muted-fg">
+              Role + where you send. Saved here and in the URL. That&rsquo;s the whole system.
             </p>
           </div>
           {filtered ? (
             <p className="rounded-full border border-ok/30 bg-ok-bg px-2.5 py-1 text-[11px] font-medium text-ok">
-              Saved for next visit
+              Saved
             </p>
-          ) : null}
-        </div>
-
-        <div className="mt-5">
-          <p className="label mb-2">Programme / client name</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              value={profileName}
-              onChange={(e) => setProfileName(e.target.value.slice(0, 80))}
-              onBlur={() => {
-                if (!activeProfile && !audienceActive(a)) return;
-                apply(a);
-              }}
-              placeholder="e.g. Acme EU or My brand"
-              className="h-10 min-w-[12rem] flex-1 rounded-xl border bg-bg px-3 text-[14px] outline-none focus-visible:border-accent"
-            />
-            <button
-              type="button"
-              onClick={addClient}
-              className="h-10 rounded-xl border bg-bg px-3.5 text-[13px] font-medium hover:bg-muted"
-            >
-              + Another client
-            </button>
-          </div>
-          {profiles.length > 1 ? (
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {profiles.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => switchProfile(p)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-[12.5px] font-medium",
-                    p.id === activeId
-                      ? "border-accent bg-accent-soft text-accent"
-                      : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
-                  )}
-                >
-                  {p.name}
-                </button>
-              ))}
-              {activeId && profiles.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = deleteProfile(activeId);
-                    setProfiles(next);
-                    if (next[0]) switchProfile(next[0]);
-                    else {
-                      setActiveId(null);
-                      setProfileName("My programme");
-                      apply(EMPTY_AUDIENCE);
-                    }
-                  }}
-                  className="rounded-full px-2 py-1 text-[12px] text-dim underline-offset-2 hover:text-fg hover:underline"
-                >
-                  Remove this client
-                </button>
-              ) : null}
-            </div>
           ) : null}
         </div>
 
@@ -380,12 +246,14 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => apply({ ...p.audience, onlyMine: a.onlyMine && p.audience.onlyMine })}
+                onClick={() =>
+                  apply({ ...p.audience, onlyMine: a.onlyMine && p.audience.onlyMine })
+                }
                 className={cn(
-                  "rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors",
+                  "rounded-full border px-3.5 py-2 text-[13px] font-medium",
                   a.role === p.audience.role
-                    ? "border-accent bg-accent-soft"
-                    : "bg-bg hover:bg-muted",
+                    ? "border-accent bg-accent-soft text-fg"
+                    : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
                 )}
               >
                 {p.label}
@@ -395,7 +263,7 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
         </div>
 
         <div className="mt-5">
-          <p className="label mb-2">Where you send (optional)</p>
+          <p className="label mb-2">Where you send</p>
           <div className="flex flex-wrap gap-2">
             {AUDIENCE_CHIPS.map((q) => (
               <button
@@ -405,12 +273,12 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
                 aria-pressed={!!a[q.key]}
                 onClick={() => set({ [q.key]: !a[q.key] })}
                 className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-[13.5px] transition-colors",
+                  "rounded-full border px-3.5 py-1.5 text-[13.5px]",
                   a[q.key]
                     ? q.key === "onlyMine"
                       ? "border-fg bg-fg text-bg"
                       : "border-accent bg-accent text-accent-fg"
-                    : "bg-bg hover:bg-muted",
+                    : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
                 )}
               >
                 {q.label}
@@ -425,7 +293,7 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
             onClick={() => apply(EMPTY_AUDIENCE)}
             className="text-muted-fg underline underline-offset-3 hover:text-fg"
           >
-            Clear filters
+            Clear
           </button>
           {filtered ? (
             <button
@@ -433,19 +301,11 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               onClick={copyLink}
               className="text-muted-fg underline underline-offset-3 hover:text-fg"
             >
-              {copied ? "Link copied" : "Copy link with this setup"}
+              {copied ? "Link copied" : "Copy setup link"}
             </button>
           ) : null}
           <Link
-            href={
-              activeProfile
-                ? briefPathForProfile({
-                    ...activeProfile,
-                    name: profileName || activeProfile.name,
-                    audience: a,
-                  })
-                : "/brief"
-            }
+            href="/brief"
             className="font-medium text-accent underline underline-offset-3 hover:text-fg"
           >
             One-page brief
@@ -459,42 +319,38 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               try {
                 window.localStorage.removeItem(ONBOARD_KEY);
                 window.localStorage.removeItem(STORAGE_KEY);
-                window.localStorage.removeItem(PROFILES_KEY);
-                window.localStorage.removeItem(ACTIVE_PROFILE_KEY);
               } catch {
                 /* */
               }
               hydrated = false;
-              setProfiles([]);
-              setActiveId(null);
-              setProfileName("My programme");
               persist(EMPTY_AUDIENCE, true);
               setGate(true);
             }}
             className="text-dim underline underline-offset-3 hover:text-fg"
           >
-            Reset
+            Start over
           </button>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-2 sm:grid-cols-4">
-        {[
-          { v: brief.act, k: "Need you", hint: "A person must decide or build" },
-          { v: brief.shared, k: "You + your ESP", hint: "Tool does half; judgment is yours" },
-          { v: brief.handled + brief.fyi, k: "Handled or FYI", hint: "Often safe to skim" },
-          { v: brief.upcoming, k: "Coming up", hint: "Dated — not biting yet" },
-        ].map((x) => (
-          <div key={x.k} className="rounded-xl border bg-card px-4 py-3">
-            <div className="num text-[1.35rem] font-semibold tracking-tight">{x.v}</div>
-            <div className="mt-0.5 text-[13px] font-medium">{x.k}</div>
-            <div className="mt-0.5 text-[11.5px] text-dim">{x.hint}</div>
-          </div>
-        ))}
-      </div>
+      {/* One glance — not a dashboard of metrics */}
+      <p className="mt-6 text-[14px] leading-relaxed text-muted-fg">
+        In this filter:{" "}
+        <b className="font-medium text-fg">{brief.act}</b> need you
+        <span className="text-dim"> · </span>
+        <b className="font-medium text-fg">{brief.shared}</b> shared with your ESP
+        <span className="text-dim"> · </span>
+        <b className="font-medium text-fg">{brief.handled + brief.fyi}</b> handled or FYI
+        {brief.upcoming > 0 ? (
+          <>
+            <span className="text-dim"> · </span>
+            <b className="font-medium text-fg">{brief.upcoming}</b> upcoming
+          </>
+        ) : null}
+      </p>
 
       {shown.length === 0 ? (
-        <p className="mt-8 rounded-xl border bg-bg-2 px-5 py-6 text-[0.95rem] text-muted-fg">
+        <p className="mt-8 rounded-2xl border bg-bg-2 px-5 py-6 text-[0.95rem] text-muted-fg">
           Nothing matches.{" "}
           <button type="button" className="text-fg underline" onClick={() => apply(EMPTY_AUDIENCE)}>
             Clear filters
@@ -503,47 +359,36 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
         </p>
       ) : (
         <>
-          <section className="mt-10">
-            <h2 className="text-[1.15rem] font-semibold tracking-tight">
-              Start with these {top.length}
+          <section className="mt-8">
+            <h2 className="text-[1.2rem] font-semibold tracking-tight">
+              Open these {top.length} first
             </h2>
-            <p className="mt-1 max-w-[58ch] text-[13.5px] text-muted-fg">
-              Highest-signal for your role. Open them, act, you&rsquo;re done for today. Hover any
-              dotted word for a definition.
+            <p className="mt-1 max-w-[52ch] text-[14px] text-muted-fg">
+              Highest signal for your role. Read, act or skip — then you&rsquo;re done for today.
             </p>
-            <ul className="mt-4 list-none border-t p-0">
+            <ul className="mt-4 list-none border-t border-fg/12 p-0">
               {top.map((r) => (
                 <RuleRow key={r.slug} rule={r} />
               ))}
             </ul>
-            <p className="mt-5 rounded-xl border border-ok/25 bg-ok-bg px-4 py-3 text-[13.5px] leading-relaxed text-ok">
-              <b className="font-semibold">Done for today?</b> If you handled the five above (or
-              marked them skip), you&rsquo;re ahead of most programmes. Share a{" "}
-              <Link
-                href={
-                  activeProfile
-                    ? briefPathForProfile({
-                        ...activeProfile,
-                        name: profileName || activeProfile.name,
-                        audience: a,
-                      })
-                    : "/brief"
-                }
-                className="font-medium underline underline-offset-2"
-              >
-                one-page brief
-              </Link>{" "}
-              with your team, or come back when{" "}
-              <Link href="/changed" className="font-medium underline underline-offset-2">
-                something moves
+            <div className="mt-6 rounded-2xl border border-border-soft bg-bg-2 px-5 py-4 text-[14px] leading-relaxed text-muted-fg">
+              <b className="font-semibold text-fg">Done for today?</b> If the five above are handled
+              or honestly skipped, you&rsquo;re ahead of most programmes.{" "}
+              <Link href="/brief" className="font-medium text-accent underline underline-offset-2">
+                Share a one-page brief
               </Link>
-              .
-            </p>
+              {" · "}
+              <Link href="/changed" className="underline underline-offset-2 hover:text-fg">
+                What moved
+              </Link>
+            </div>
           </section>
           {rest.length > 0 ? (
             <section className="mt-12">
-              <h2 className="text-[1.05rem] font-semibold">Everything else in your filter</h2>
-              <p className="mt-1 text-[13.5px] text-muted-fg">{rest.length} more · lower urgency</p>
+              <h2 className="text-[1.05rem] font-semibold tracking-tight">The rest in your filter</h2>
+              <p className="mt-1 text-[13.5px] text-muted-fg">
+                {rest.length} more · lower urgency. Skim when you have time.
+              </p>
               <ul className="mt-4 list-none border-t p-0">
                 {rest.map((r) => (
                   <RuleRow key={r.slug} rule={r} />

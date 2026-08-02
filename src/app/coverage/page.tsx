@@ -42,8 +42,8 @@ export default async function Coverage() {
     <div className="shell shell-tight py-12 sm:py-16">
       <SectionHead
         label="Coverage"
-        title={`${stats.total} rules. Honest inventory.`}
-        lede="For people who want the map before they dive in — ops, deliverability, legal-curious. Topics, jurisdictions, ownership, and what we still refuse to invent."
+        title={`${stats.total} rules on purpose — not 400 of folklore.`}
+        lede="A curated shelf: primary sources only. Thin and checkable beats fat and embarrassing. Topics, jurisdictions, ownership, and what we still refuse to invent."
       />
 
       <div className="mt-10 grid gap-3 sm:grid-cols-3">

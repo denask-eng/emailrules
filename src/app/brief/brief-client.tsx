@@ -13,7 +13,6 @@ import {
   parseAudienceParam,
   roleTopicBoost,
 } from "@/lib/audience";
-import { getActiveProfile } from "@/lib/profiles";
 import { briefCounts, impactOf, IMPACT_LABEL, sortForMarketer } from "@/lib/rule-signals";
 import { displayTldr } from "@/content/plain-overrides";
 import { OWNERSHIP } from "@/lib/types";
@@ -81,46 +80,39 @@ function toSortable(r: LightRule): Rule {
   };
 }
 
-function clientFromSearch(): string {
-  if (typeof window === "undefined") return "";
-  try {
-    const q = new URLSearchParams(window.location.search);
-    const c = q.get("client");
-    return c ? decodeURIComponent(c).slice(0, 80) : "";
-  } catch {
-    return "";
-  }
-}
-
 export function BriefClient({ rules }: { rules: LightRule[] }) {
   const [a, setA] = useState<Audience>(EMPTY_AUDIENCE);
-  const [clientName, setClientName] = useState("");
+  const [label, setLabel] = useState("");
   const [copied, setCopied] = useState<"link" | "slack" | null>(null);
-  /* true after client reads localStorage / URL so we do not flash wrong filters */
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setA(readAudience());
-    const fromUrl = clientFromSearch();
-    const fromProfile = getActiveProfile()?.name ?? "";
-    setClientName(fromUrl || fromProfile || "");
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const c = q.get("label") || q.get("client");
+      if (c) setLabel(decodeURIComponent(c).slice(0, 80));
+    } catch {
+      /* */
+    }
     setHydrated(true);
   }, []);
 
-  /* Keep the address bar shareable so “copy link” always includes setup. */
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
-    const qs = audienceToSearch(a);
-    const params = new URLSearchParams(qs.startsWith("?") ? qs.slice(1) : qs);
-    if (clientName.trim()) params.set("client", clientName.trim());
-    else params.delete("client");
+    const params = new URLSearchParams(
+      audienceToSearch(a).startsWith("?") ? audienceToSearch(a).slice(1) : audienceToSearch(a),
+    );
+    if (label.trim()) params.set("label", label.trim());
+    else {
+      params.delete("label");
+      params.delete("client");
+    }
     const s = params.toString();
     const next = `${window.location.pathname}${s ? `?${s}` : ""}`;
     const cur = `${window.location.pathname}${window.location.search}`;
-    if (next !== cur) {
-      window.history.replaceState(null, "", next);
-    }
-  }, [a, clientName, hydrated]);
+    if (next !== cur) window.history.replaceState(null, "", next);
+  }, [a, label, hydrated]);
 
   const filtered = useMemo(() => {
     return rules.filter((r) => matchesAudience(r, a)).map(toSortable);
@@ -143,18 +135,16 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
     const params = new URLSearchParams(
       audienceToSearch(a).startsWith("?") ? audienceToSearch(a).slice(1) : audienceToSearch(a),
     );
-    if (clientName.trim()) params.set("client", clientName.trim());
+    if (label.trim()) params.set("label", label.trim());
     const s = params.toString();
     return `${window.location.origin}/brief${s ? `?${s}` : ""}`;
   };
 
-  const headline = clientName.trim()
-    ? `${clientName.trim()} · email rules brief`
-    : "Email rules brief";
+  const titleLine = label.trim() || "Email rules brief";
 
   const slackText = () => {
     const lines = [
-      `*${headline}* · ${roleLabel(a)} · as of ${today}`,
+      `*${titleLine}* · ${roleLabel(a)} · as of ${today}`,
       `${counts.act} need a person · ${counts.shared} shared with ESP · ${counts.handled + counts.fyi} handled/FYI · ${counts.upcoming} upcoming`,
       ``,
       `*Open these five first:*`,
@@ -187,40 +177,54 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
           <h1 className="mt-1 text-[clamp(1.6rem,4vw,2.2rem)] font-semibold tracking-tight">
             Send this to your team
           </h1>
-          <p className="mt-2 max-w-[52ch] text-[14px] text-muted-fg">
-            Generated from your saved setup. Paste in Slack or print to PDF. Not legal advice — a
-            working brief with full rules one click away.
+          <p className="mt-2 max-w-[48ch] text-[14px] text-muted-fg">
+            From your saved setup. Slack paste or print PDF. Optional title for the stand-up — not a
+            multi-client CRM.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => copy("link")}
-            className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-[10px] px-4")}
+            className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-full px-4")}
           >
-            {copied === "link" ? "Link copied" : "Copy share link"}
+            {copied === "link" ? "Link copied" : "Copy link"}
           </button>
           <button
             type="button"
             onClick={() => copy("slack")}
-            className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-[10px] px-4")}
+            className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-full px-4")}
           >
-            {copied === "slack" ? "Slack text copied" : "Copy for Slack"}
+            {copied === "slack" ? "Copied" : "Copy for Slack"}
           </button>
           <button
             type="button"
             onClick={() => window.print()}
-            className={cn(buttonVariants(), "h-10 rounded-[10px] px-4 font-medium")}
+            className={cn(buttonVariants(), "h-10 rounded-full px-4 font-medium")}
           >
             Print / PDF
           </button>
           <Link
             href="/rules"
-            className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-[10px] px-4")}
+            className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-full px-4")}
           >
             Change setup
           </Link>
         </div>
+      </div>
+
+      <div className="no-print mb-6">
+        <label className="label" htmlFor="brief-label">
+          Optional title (for PDF / Slack)
+        </label>
+        <input
+          id="brief-label"
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value.slice(0, 80))}
+          placeholder="e.g. Q3 stand-up or Brand X — leave blank if solo"
+          className="mt-2 h-11 w-full max-w-md rounded-xl border bg-card px-3.5 text-[14px] outline-none focus-visible:border-accent"
+        />
       </div>
 
       {hydrated && !audienceActive(a) ? (
@@ -235,24 +239,29 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
 
       <header className="border-b pb-6">
         <p className="num text-[12px] text-dim">emailrules.today · as of {today}</p>
-        {clientName.trim() ? (
-          <p className="mt-2 text-[13px] font-medium tracking-wide text-accent uppercase">
-            {clientName.trim()}
-          </p>
+        {label.trim() ? (
+          <p className="mt-2 text-[1.5rem] font-semibold tracking-tight">{label.trim()}</p>
         ) : null}
-        <h2 className="mt-1 text-[1.35rem] font-semibold tracking-tight">{roleLabel(a)}</h2>
+        <h2
+          className={cn(
+            "font-semibold tracking-tight",
+            label.trim() ? "mt-1 text-[1.05rem] text-muted-fg" : "mt-2 text-[1.35rem]",
+          )}
+        >
+          {roleLabel(a)}
+        </h2>
         <p className="mt-2 max-w-[60ch] text-[14px] leading-relaxed text-muted-fg">
           Of <b className="text-fg">{counts.total}</b> rules in this filter,{" "}
           <b className="text-fg">{counts.act}</b> need a person,{" "}
-          <b className="text-fg">{counts.shared}</b> are shared with your email tool,{" "}
-          <b className="text-fg">{counts.handled + counts.fyi}</b> are handled or FYI,{" "}
+          <b className="text-fg">{counts.shared}</b> shared with your email tool,{" "}
+          <b className="text-fg">{counts.handled + counts.fyi}</b> handled or FYI,{" "}
           <b className="text-fg">{counts.upcoming}</b> upcoming.
         </p>
       </header>
 
       <section className="mt-8">
         <h3 className="text-[1.05rem] font-semibold">Open these five first</h3>
-        <p className="mt-1 text-[13px] text-muted-fg">Highest signal — not the full library.</p>
+        <p className="mt-1 text-[13px] text-muted-fg">Highest signal — not the full shelf.</p>
         <ol className="mt-5 list-none space-y-0 border-t p-0">
           {top.map((r, i) => (
             <li key={r.slug} className="border-b py-4">
@@ -286,12 +295,10 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
       <section className="mt-10 rounded-xl border bg-bg-2 px-5 py-5 text-[13.5px] leading-relaxed text-muted-fg">
         <p>
           <b className="text-fg">How to use: </b>
-          Copy for Slack (formatted), share the link (keeps your role filters), or Print / PDF for a
-          stand-up. Each full rule has plain English, whose job, and primary sources.
+          Slack, print, or walk the five links. Full rules have plain English, whose job, and
+          sources.
         </p>
-        <p className="mt-2">
-          Not legal advice. Independent — no tracking pixels, seed tests, or ESP for sale.
-        </p>
+        <p className="mt-2">Not legal advice. Independent — no scores, no seed tests for sale.</p>
       </section>
     </div>
   );

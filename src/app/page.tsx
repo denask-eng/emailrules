@@ -36,7 +36,7 @@ export default async function Home() {
         >
           <StatusDot status="in_force" />
           <span className="num font-medium">{stats.total}</span>
-          <span className="text-muted-fg">rules · yours in under a minute</span>
+          <span className="text-muted-fg">curated rules · yours in under a minute</span>
           <span className="text-dim">→</span>
         </Link>
 
@@ -48,10 +48,10 @@ export default async function Home() {
         </h1>
 
         <p className="mx-auto mt-5 max-w-[34rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.12rem]">
-          You ship campaigns. You do not have a free afternoon to re-read Gmail help pages. Open
-          this, pick your role, get <b className="font-medium text-fg">five things that matter</b> —
-          whose job, what to do first. Of {stats.total} rules, your email tool already covers{" "}
-          {stats.notYours}.
+          You ship campaigns. You do not have a free afternoon for folklore PDFs. Pick your role,
+          get <b className="font-medium text-fg">five things that matter</b> — whose job, what to do
+          first. A small shelf with sources, not a fake encyclopedia. Of {stats.total} rules, your
+          email tool already covers {stats.notYours}.
         </p>
 
         <div className="mx-auto mt-8 flex max-w-md flex-col items-stretch gap-2.5 sm:max-w-none sm:flex-row sm:justify-center">
@@ -86,8 +86,8 @@ export default async function Home() {
             },
             {
               href: "/brief",
-              t: "Team / client brief",
-              d: "Slack paste or PDF. Agencies: name the client.",
+              t: "Team brief",
+              d: "Slack paste or PDF. Top five + do-first lines.",
             },
             {
               href: "/check",
@@ -122,8 +122,15 @@ export default async function Home() {
         </div>
 
         <p className="mx-auto mt-6 max-w-[48ch] text-[12.5px] leading-relaxed text-dim">
-          Free. No account. Email only — SMS is different law. No tracking pixels sold, no seed
-          tests, so we can tell you when those things are the problem.
+          Free. No account. Email only. No scores.{" "}
+          <Link href="/#faq" className="underline underline-offset-3 hover:text-fg">
+            Awkward FAQ
+          </Link>
+          {" · "}
+          <Link href="/coverage" className="underline underline-offset-3 hover:text-fg">
+            What we skip on purpose
+          </Link>
+          .
         </p>
       </section>
 
