@@ -17,8 +17,8 @@ export type RuleStatus =
 
 export type Jurisdiction =
   | "EU" | "FR" | "IT" | "DE" | "UK"
-  | "US" | "US-WA" | "US-CA" | "US-MD"
-  | "CA" | "Global";
+  | "US" | "US-WA" | "US-CA" | "US-MD" | "US-CO"
+  | "CA" | "AU" | "Global";
 
 export type Topic =
   | "consent-tracking"
@@ -32,12 +32,43 @@ export type Topic =
 export type Actor =
   | "regulator" | "court" | "mailbox-provider" | "esp" | "standards-body";
 
+/**
+ * Who actually has to do the work.
+ *
+ * This is the field that stops the site becoming another compliance scare
+ * sheet. Most rule changes are absorbed by the platform: Klaviyo shipped
+ * one-click unsubscribe long before anyone read RFC 8058. Telling a working
+ * email marketer to "implement" something their ESP has done automatically
+ * for two years is how a reference proves it has never opened the tool.
+ *
+ * So every rule states it plainly, including when the honest answer is
+ * "nothing, you are already fine".
+ */
+export type Ownership =
+  | "esp"      // the platform does this for you; there is nothing on your desk
+  | "shared"   // the platform does part of it, the rest is genuinely yours
+  | "yours"    // nobody does this for you
+  | "context"; // nothing to action; it changes a risk or a number you report
+
+export interface Handled {
+  /** What the major platforms already do automatically. Name them. */
+  already: string;
+  /** The part still on your desk. Omit when there honestly isn't one. */
+  stillYours?: string;
+}
+
 export interface RuleSource {
   /** Human citation, e.g. "CNIL délibération n° 2026-042" */
   name: string;
   url: string;
-  /** ISO date the source was published */
-  published: string;
+  /**
+   * ISO date the source was published or last updated.
+   *
+   * Optional on purpose. Some publishers, Google's help centre among them,
+   * put no date on the page at all. Inventing a plausible one is how a cited
+   * reference quietly becomes fiction, so an undated source says so instead.
+   */
+  published?: string;
   /** Who issued it — drives the "who says so" badge */
   actor: Actor;
 }
@@ -66,10 +97,20 @@ export interface Rule {
 
   /** The plain answer, 2-4 sentences. No preamble. */
   answer: string;
+  /** The same fact said like a colleague. Wit allowed, accuracy never traded for it. */
+  plain: string;
   /** Who is on the hook */
   appliesTo: string;
   /** Imperative bullets */
   whatToDo: string[];
+
+  /** Whether this is actually your job. See the Ownership doc comment. */
+  ownership: Ownership;
+  handled: Handled;
+  /** The one concrete first move, naming the real screen where one exists. */
+  mondayMorning: string;
+  /** Who can stop reading. Kills the anxiety in a line. */
+  ignoreIf?: string;
   /** The carve-out, stated precisely. Omit if none. */
   exempt?: string;
   /**
@@ -122,9 +163,100 @@ export const TOPICS: Record<Topic, { label: string; blurb: string }> = {
   },
 };
 
+/**
+ * Deliberately reassuring where reassurance is the honest answer. A reference
+ * that makes everything sound urgent is indistinguishable from the vendors
+ * selling the fix, and practitioners can smell it instantly.
+ */
+export const OWNERSHIP: Record<
+  Ownership,
+  { label: string; short: string; blurb: string }
+> = {
+  esp: {
+    label: "Your ESP already did this",
+    short: "Already handled",
+    blurb: "Mainstream platforms do this automatically. You can move on.",
+  },
+  shared: {
+    label: "Part platform, part you",
+    short: "Shared",
+    blurb: "The platform covers the mechanical bit. The judgement is still yours.",
+  },
+  yours: {
+    label: "This one needs you",
+    short: "Yours",
+    blurb: "No platform does this for you. One concrete move, then you are done.",
+  },
+  context: {
+    label: "Good to know — nothing to fix",
+    short: "FYI",
+    blurb: "Changes a number you report or a risk you carry, not today's task list.",
+  },
+};
+
 export const STATUS_LABEL: Record<RuleStatus, string> = {
   in_force: "In force",
   upcoming: "Upcoming",
   proposed: "Proposed",
   superseded: "Superseded",
+};
+
+export const JURISDICTIONS: Record<Jurisdiction, { label: string; blurb: string }> = {
+  EU: {
+    label: "European Union",
+    blurb:
+      "Directive-level rules. The detail lives in national law and genuinely differs by member state.",
+  },
+  FR: {
+    label: "France",
+    blurb:
+      "The CNIL moves first and documents everything. What it enforces tends to arrive elsewhere later.",
+  },
+  IT: {
+    label: "Italy",
+    blurb: "The Garante follows the CNIL's playbook, with fines that show it is not theoretical.",
+  },
+  DE: {
+    label: "Germany",
+    blurb:
+      "Courts, not the regulator, set the pace here. Double opt-in is the de facto standard for a reason.",
+  },
+  UK: {
+    label: "United Kingdom",
+    blurb: "PECR plus UK GDPR. Familiar from the EU rules, and no longer identical to them.",
+  },
+  US: {
+    label: "United States",
+    blurb: "Opt-out at the federal level, with states adding their own teeth.",
+  },
+  "US-WA": {
+    label: "Washington State",
+    blurb:
+      "CEMA turned subject lines into litigation. The most active email docket in the country.",
+  },
+  "US-CA": {
+    label: "California",
+    blurb:
+      "Privacy law that reaches email through the back door: data, minors and opt-out signals.",
+  },
+  "US-MD": {
+    label: "Maryland",
+    blurb: "Watch this one for age-targeting restrictions.",
+  },
+  "US-CO": {
+    label: "Colorado",
+    blurb: "Universal opt-out (GPC) for sale and targeted advertising, with a clear limit on email.",
+  },
+  CA: {
+    label: "Canada",
+    blurb: "CASL: the strictest consent regime in North America, with penalties to match.",
+  },
+  AU: {
+    label: "Australia",
+    blurb: "Spam Act consent, identity and unsubscribe — ACMA enforces this one in public.",
+  },
+  Global: {
+    label: "Global",
+    blurb: "Provider requirements and standards that apply wherever you send from.",
+  },
 };

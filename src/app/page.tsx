@@ -1,17 +1,26 @@
 import Link from "next/link";
+import { runCheck, subscribe } from "@/app/actions";
 import { getChangelog, getStats, countsByTopic, fmtDate } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
 import { ChangeRow, Panel, SectionHead, Figures, StatusDot } from "@/components/bits";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isMarketChange } from "@/lib/rule-signals";
 
 export default async function Home() {
-  const [changelog, stats, counts] = await Promise.all([
-    getChangelog(7),
+  const [changelogAll, stats, counts] = await Promise.all([
+    getChangelog(40),
     getStats(),
     countsByTopic(),
   ]);
+
+  /* Homepage only shows real market moves — not "we documented a page". */
+  const marketLedger = changelogAll.filter((c) => isMarketChange(c.note)).slice(0, 7);
+
+  /* A topic with no rules renders a card, takes a click and lands on nothing.
+     Hide it until it has something in it, and let the heading count itself. */
+  const topics = (Object.keys(TOPICS) as Topic[]).filter((t) => (counts[t] ?? 0) > 0);
 
   return (
     <>
@@ -22,13 +31,13 @@ export default async function Home() {
       */}
       <section className="shell pt-14 pb-12 text-center sm:pt-24 sm:pb-16">
         <Link
-          href="/changed"
+          href="/rules"
           className="inline-flex items-center gap-2.5 rounded-full border bg-card py-1.5 pr-4 pl-2.5 text-[13px] transition-colors hover:bg-muted"
           style={{ boxShadow: "var(--lift)" }}
         >
           <StatusDot status="in_force" />
-          <span className="num font-medium">{stats.changed90}</span>
-          <span className="text-muted-fg">rules changed in the last 90 days</span>
+          <span className="num font-medium">{stats.total}</span>
+          <span className="text-muted-fg">rules · filter to yours</span>
           <span className="text-dim">→</span>
         </Link>
 
@@ -40,8 +49,9 @@ export default async function Home() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-[56ch] text-[1.06rem] leading-relaxed text-muted-fg sm:text-[1.14rem]">
-          A dated, cited reference for the rules that govern marketing email. When a regulator or a
-          mailbox provider moves, the page moves, and you get told.
+          Built for people who ship email for a living — lifecycle, CRM, deliverability, agency.
+          Of {stats.total} rules here, your ESP already covers {stats.notYours}. We tell you which,
+          with sources, and skip the fear.
         </p>
 
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
@@ -49,7 +59,7 @@ export default async function Home() {
             href="/rules"
             className={cn(buttonVariants({ size: "lg" }), "h-11 rounded-[10px] px-6 text-[15px] font-medium")}
           >
-            Browse the rules
+            Show me what&rsquo;s mine
           </Link>
           <Link
             href="/check"
@@ -61,6 +71,20 @@ export default async function Home() {
             Check my domain
           </Link>
         </div>
+        <p className="mx-auto mt-3 text-[13px] text-dim">
+          New here?{" "}
+          <Link href="/start" className="text-muted-fg underline underline-offset-3 hover:text-fg">
+            Two-minute tour
+          </Link>
+          {" · "}
+          <Link href="/check/headers" className="text-muted-fg underline underline-offset-3 hover:text-fg">
+            Paste headers
+          </Link>
+          {" · "}
+          <Link href="/coverage" className="text-muted-fg underline underline-offset-3 hover:text-fg">
+            Coverage
+          </Link>
+        </p>
 
         <div className="mt-9">
           <Figures
@@ -73,27 +97,50 @@ export default async function Home() {
         </div>
 
         <p className="mx-auto mt-7 max-w-[52ch] text-[13px] leading-relaxed text-dim">
-          Free, no account. We sell no tracking pixels, no seed tests and no open-rate analytics,
-          which is why this can tell you when they are a problem.
+          Free, no account. No tracking pixels sold, no seed tests, no open-rate theatre — so we can
+          tell you plainly when those things are the problem.
         </p>
       </section>
 
-      {/* The ledger. Dense, left, and directly under the promise. */}
+      {/* Market-only ledger — quiet when nothing moved is a feature. */}
       <section className="shell pb-16">
         <Panel>
           <div className="flex items-center justify-between gap-4 border-b bg-muted/50 px-5 py-2.5">
-            <span className="label">The ledger · newest first</span>
+            <span className="label">Market moves · not site edits</span>
             <Link
               href="/changed"
               className="label transition-colors hover:text-fg"
               style={{ letterSpacing: "0.08em" }}
             >
-              All changes →
+              Full ledger →
             </Link>
           </div>
-          {changelog.map((c) => (
-            <ChangeRow key={`${c.rule.slug}-${c.date}`} rule={c.rule} date={c.date} note={c.note} />
-          ))}
+          {marketLedger.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-[15px] font-medium text-fg">Nothing material moved recently</p>
+              <p className="mx-auto mt-2 max-w-[42ch] text-[13.5px] leading-relaxed text-muted-fg">
+                Quiet is good. We only list real obligation or status changes here — not pages we
+                added to the shelf. Check the{" "}
+                <Link href="/changed" className="text-fg underline underline-offset-3">
+                  full ledger
+                </Link>{" "}
+                for documentation updates, or{" "}
+                <Link href="/rules" className="text-fg underline underline-offset-3">
+                  filter rules to your setup
+                </Link>
+                .
+              </p>
+            </div>
+          ) : (
+            marketLedger.map((c) => (
+              <ChangeRow
+                key={`${c.rule.slug}-${c.date}-${c.note}`}
+                rule={c.rule}
+                date={c.date}
+                note={c.note}
+              />
+            ))
+          )}
         </Panel>
       </section>
 
@@ -101,11 +148,11 @@ export default async function Home() {
       <section className="shell border-t py-16">
         <SectionHead
           label="Browse"
-          title={`${stats.total} rules, seven ways to get bitten`}
-          lede="Grouped by the thing that actually goes wrong, not by which regulator wrote it."
+          title={`${stats.total} rules, ${topics.length} practical buckets`}
+          lede="Grouped by the job (consent, auth, hygiene, measurement…), not by which regulator wrote the PDF."
         />
         <div className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-2 lg:grid-cols-3">
-          {(Object.keys(TOPICS) as Topic[]).map((t) => (
+          {topics.map((t) => (
             <Link
               key={t}
               href={`/topics/${t}`}
@@ -131,7 +178,10 @@ export default async function Home() {
       <section className="border-t bg-bg-2 py-16">
         <div className="shell">
           <SectionHead label="What this is" title="Three things it is not." center />
-          <div className="mx-auto grid max-w-4xl gap-10 sm:grid-cols-3">
+          {/* Was three columns of 13.5px grey with nothing to anchor the eye.
+              Same three points, given a numeral, a rule between them and type
+              you can actually read across a room. */}
+          <div className="mx-auto grid max-w-5xl gap-px overflow-hidden border-y bg-border sm:grid-cols-3">
             {[
               [
                 "Not a course.",
@@ -145,10 +195,13 @@ export default async function Home() {
                 "Not opinion.",
                 "Every claim names its primary source and the date it was last verified. Where the evidence is thin, the page says so.",
               ],
-            ].map(([h, p]) => (
-              <div key={h}>
-                <h3 className="text-[15px]">{h}</h3>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-muted-fg">{p}</p>
+            ].map(([h, p], i) => (
+              <div key={h} className="bg-bg-2 px-6 py-9 sm:px-7">
+                <span className="num text-[13px] font-semibold text-accent">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="mt-4 text-[19px]">{h}</h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-muted-fg">{p}</p>
               </div>
             ))}
           </div>
@@ -163,14 +216,13 @@ export default async function Home() {
         >
           <p className="label">The check</p>
           <h2 className="mx-auto mt-3 max-w-2xl text-[clamp(24px,3.6vw,36px)]">
-            Does your own sending follow these rules?
+            A calm look at your sending domain
           </h2>
           <p className="mx-auto mt-4 max-w-[54ch] text-[16px] leading-relaxed text-muted-fg">
-            Point it at your sending domain. It reads authentication, consent posture and content
-            claims against every rule here, then names what is exposed and the date each rule
-            started to apply.
+            Live SPF, DKIM and DMARC from DNS — findings with sources, never a scary score out of ten.
+            If you are clean, we say so. Techy enough for headers; plain enough for a quick Monday check.
           </p>
-          <form className="mx-auto mt-8 flex max-w-md gap-2.5" action="/api/check" method="post">
+          <form className="mx-auto mt-8 flex max-w-md gap-2.5" action={runCheck}>
             <input
               name="domain"
               required
@@ -185,7 +237,14 @@ export default async function Home() {
               Run check
             </button>
           </form>
-          <p className="label mt-5">Free · no account · findings with sources, never a score</p>
+          <p className="mt-5 text-[13.5px] text-muted-fg">
+            Have a real message?{" "}
+            <Link href="/check/headers" className="text-fg underline decoration-1 underline-offset-3">
+              Paste its headers
+            </Link>{" "}
+            for DKIM alignment and one-click unsubscribe — DNS alone cannot prove those.
+          </p>
+          <p className="label mt-4">Free · no account · findings with sources, never a score</p>
         </div>
       </section>
 
@@ -195,14 +254,10 @@ export default async function Home() {
           <div>
             <h3 className="text-[15px]">Get told when a rule moves</h3>
             <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
-              One email per change, and nothing else, ever. Or take the{" "}
-              <a href="/feed.xml" className="text-fg underline decoration-1 underline-offset-3">
-                RSS feed
-              </a>{" "}
-              instead.
+              One email per change, and nothing else, ever.
             </p>
           </div>
-          <form className="flex w-full gap-2.5 sm:w-auto" action="/api/subscribe" method="post">
+          <form className="flex w-full gap-2.5 sm:w-auto" action={subscribe}>
             <input
               type="email"
               name="email"

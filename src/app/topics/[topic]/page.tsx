@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getRulesByTopic } from "@/lib/rules";
+import { getRulesByTopic, countsByTopic } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
 import { SITE } from "@/lib/site";
-import { RuleRow, Panel, SectionHead } from "@/components/bits";
-import { cn } from "@/lib/utils";
+import { RuleRow, SectionHead } from "@/components/bits";
 
-export const dynamicParams = false;
+/* New rules added in /admin must get a URL without a rebuild, so unknown
+   slugs render on demand instead of 404ing. */
+export const dynamicParams = true;
+export const revalidate = 3600;
 
+/* Only topics that actually hold rules get a URL. An empty topic page is worse
+   than a missing one: it looks like the corpus is thinner than it is. */
 export async function generateStaticParams() {
-  return (Object.keys(TOPICS) as Topic[]).map((topic) => ({ topic }));
+  const counts = await countsByTopic();
+  return (Object.keys(TOPICS) as Topic[])
+    .filter((topic) => (counts[topic] ?? 0) > 0)
+    .map((topic) => ({ topic }));
 }
 
 export async function generateMetadata({
@@ -34,6 +41,9 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
   const meta = TOPICS[topic as Topic];
   if (!meta) notFound();
   const rules = await getRulesByTopic(topic as Topic);
+  /* Empty shelves must 404 even if someone bookmarked a topic before it had
+     rules (or after the last rule moved). A blank list reads as thin coverage. */
+  if (rules.length === 0) notFound();
 
   const jsonLd = {
     "@context": "https://schema.org",

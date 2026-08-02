@@ -1,146 +1,105 @@
 import type { Metadata } from "next";
-import { getStats } from "@/lib/rules";
-import { Panel, SectionHead } from "@/components/bits";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { normaliseDomain } from "@/lib/dns-check";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Check your sends",
+  title: "Check my domain",
   description:
-    "Point it at your sending domain. It reads the last 90 days against every rule on this site and names the sends that are exposed, with the date each rule started to apply.",
+    "A live SPF, DKIM and DMARC check for your sending domain, read against every dated rule on this site. Free, no account, findings with sources rather than a score.",
   alternates: { canonical: "/check" },
 };
 
-const FINDINGS = [
-  {
-    sev: "hi",
-    text: "sends reached French recipients carrying an open-tracking pixel, with no separate tracking consent on record.",
-    n: 12,
-    src: "FR · open-tracking consent · in force 14 Jul 2026 · CNIL 2026-042",
-  },
-  {
-    sev: "hi",
-    text: 'subject lines claimed "Today only" on promotions that ran three days or longer.',
-    n: 3,
-    src: "US-WA · misleading subject line · per-se violation · Brown v. Old Navy",
-  },
-  {
-    sev: "mid",
-    text: "campaign used photorealistic AI-generated product imagery with no disclosure. The deepfake limb has no human-review exception.",
-    n: 1,
-    src: "EU · AI content disclosure · in force 2 Aug 2026 · AI Act Art. 50(4)",
-  },
-  {
-    sev: "mid",
-    text: "image-only emails will be summarised by Apple Mail from the subject line alone. Alt text is ignored.",
-    n: 7,
-    src: "Apple · summary readability · 64.66% of all opens · measured Mar 2025",
-  },
-] as const;
+export default async function Check({
+  searchParams,
+}: {
+  searchParams: Promise<{ e?: string }>;
+}) {
+  const { e } = await searchParams;
 
-export default async function Check() {
-  const stats = await getStats();
+  async function run(formData: FormData) {
+    "use server";
+    const domain = normaliseDomain(String(formData.get("domain") ?? ""));
+    if (!domain) redirect("/check?e=1");
+    redirect(`/check/${domain}`);
+  }
 
   return (
-    <div className={"shell shell-tight py-12 sm:py-16"}>
-      <h1 className="text-[clamp(1.9rem,5.2vw,2.9rem)]">Check your sends against every rule.</h1>
-      <p className="mt-5 max-w-[62ch] text-[1.04rem] leading-relaxed text-dimd-fg">
-        One domain, no signup. You get findings with dates and sources, not a score out of ten.
+    <div className="shell shell-tight py-12 sm:py-16">
+      <h1 className="text-[clamp(1.9rem,5.2vw,2.9rem)]">Check a sending domain</h1>
+      <p className="mt-5 max-w-[62ch] text-[1.04rem] leading-relaxed text-muted-fg">
+        One domain, no signup. Live DNS for SPF, DKIM selectors, DMARC, BIMI and MX — plain findings
+        with sources. If nothing is wrong, we say so. For alignment on a real message, paste headers
+        below.
       </p>
 
-      <form className="mt-7 flex max-w-[520px] gap-2.5" action="/api/check" method="post">
+      <form action={run} className="mt-7 flex max-w-[520px] gap-2.5">
         <input
           name="domain"
           required
           placeholder="yourbrand.com"
           aria-label="Sending domain"
-          className="num h-10 flex-1 rounded-lg border border-border bg-bg px-3 text-[0.9rem] outline-none focus-visible:ring-3 focus-visible:ring-ink/20"
+          className="num h-10 flex-1 rounded-lg border border-border bg-bg px-3 text-[0.9rem] outline-none focus-visible:ring-3 focus-visible:ring-accent/25"
         />
         <button type="submit" className={cn(buttonVariants({ size: "lg" }), "h-10 px-5 font-semibold")}>
           Run check
         </button>
       </form>
-      <p className="mt-2.5 text-[0.86rem] text-dim">
-        Optional: connect Klaviyo read-only to scan the last 90 days of real sends.
-      </p>
+      {e ? (
+        <p role="alert" className="mt-2.5 text-[0.86rem] text-live">
+          That does not look like a domain. Try yourbrand.com.
+        </p>
+      ) : (
+        <p className="mt-2.5 text-[0.86rem] text-dim">
+          Results get a shareable URL. Nothing is stored and no account is created.
+        </p>
+      )}
 
-      <div className="mt-7 max-w-[68ch] border border-border bg-bg-2 p-4 text-[0.9rem] leading-relaxed text-dimd-fg">
-        <b className="text-fg">Why not a score?</b> Two well-known tools scored the same
-        campaign at 85 percent and 40 percent inbox placement. Scores are why nobody trusts this
-        category. You get findings, each one traceable to a rule with a date.
+      <div className="mt-7 max-w-[68ch] rounded-lg border border-border bg-bg-2 p-4 text-[0.9rem] leading-relaxed text-muted-fg">
+        <b className="text-fg">Why not a score?</b> We have watched two different tools score the
+        same campaign at 85 percent and 40 percent inbox placement. Scores are why nobody trusts
+        this category. You get findings, each one traceable to a rule with a date.
       </div>
 
-      {/* sample report */}
-      <section id="sample" className="mt-14 scroll-mt-20 border-t border-border pt-10">
-        <SectionHead
-          label={`Sample report · 90 days · 214 sends · ${stats.total} rules`}
-          title="Four things need attention"
-        />
+      <div className="mt-7 max-w-[68ch] rounded-lg border p-4 text-[0.9rem] leading-relaxed text-muted-fg">
+        <b className="text-fg">What it can and cannot see.</b> DNS shows what you have published:
+        SPF, its lookup count, DMARC and its policy, DKIM keys on the selectors the major platforms
+        use, BIMI and MX. It cannot see your consent records, your subject lines, or whether DKIM
+        aligns on a real message, and it says so rather than guessing. Have a real message?{" "}
+        <Link href="/check/headers" className="text-fg underline decoration-1 underline-offset-3">
+          Paste its headers
+        </Link>{" "}
+        and get the alignment verdict DNS cannot give.
+      </div>
 
-        <ul className="list-none border-t p-0">
-          {FINDINGS.map((f) => (
-            <li
-              key={f.src}
-              className="grid grid-cols-[10px_1fr] items-start gap-4 border-b border-border-soft py-3"
-            >
-              <span
-                className={cn("mt-2 h-2 w-2 rounded-full", f.sev === "hi" ? "bg-live" : "bg-warn")}
-                aria-hidden
-              />
-              <div>
-                <div className="text-[0.94rem] leading-relaxed">
-                  <b className="num">{f.n}</b> {f.text}
-                </div>
-                <div className="num mt-1.5 text-[0.72rem] text-dim">
-                  {f.src}
-                </div>
-              </div>
-            </li>
-          ))}
-          <li className="grid grid-cols-[10px_1fr] items-start gap-4 border-b border-border-soft py-3 last:border-b-0">
-            <span className="mt-2 h-2 w-2 rounded-full bg-ok" aria-hidden />
-            <div>
-              <div className="text-[0.94rem] leading-relaxed">
-                SPF, DKIM and DMARC alignment pass on every send. One-click unsubscribe present and
-                parseable.
-              </div>
-              <div className="num mt-1.5 text-[0.72rem] text-dim">
-                authentication · 214 of 214 sends
-              </div>
-            </div>
+      <section className="mt-14 border-t pt-10">
+        <h2 className="text-[1.3rem]">Two free checks. Nothing priced yet.</h2>
+        <ul className="mt-4 max-w-[58ch] list-none space-y-3 p-0 text-[0.95rem] leading-relaxed text-muted-fg">
+          <li>
+            <b className="text-fg">Domain (DNS)</b> — SPF, DMARC, common DKIM selectors, BIMI, MX.
+            Shareable result URL. Above.
+          </li>
+          <li>
+            <b className="text-fg">Headers (a real message)</b> —{" "}
+            <Link href="/check/headers" className="text-fg underline decoration-1 underline-offset-3">
+              Paste received headers
+            </Link>{" "}
+            for alignment and List-Unsubscribe. That is the finding DNS cannot give you.
           </li>
         </ul>
-
-        <div className="mt-6 max-w-[68ch] border border-good/30 bg-ok/5 p-4 text-[0.9rem] leading-relaxed text-dimd-fg">
-          <b>If you are clean, we say so.</b> Plenty of brands come back with nothing to fix. We will
-          not invent urgency to sell a subscription. The empty report is a real outcome and you get
-          it plainly.
-        </div>
-
-        <div className="mt-10 flex flex-wrap items-center gap-6 border-t pt-6">
-          <div className="min-w-[240px] flex-1">
-            <h3 className="text-[1.02rem] font-bold tracking-[-0.02em]">This check is free, every time.</h3>
-            <p className="mt-2 max-w-[54ch] text-[0.9rem] leading-relaxed text-dimd-fg">
-              What is paid is keeping it: a dated receipt for every send, monitoring as you send, and
-              an alert the day a rule changes, so you can prove what you claimed and when you fixed
-              it.
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="num text-[1.6rem] font-bold tracking-[-0.04em]">
-              $149
-              <span className="text-[0.9rem] font-semibold text-dim">
-                /mo
-              </span>
-            </div>
-            <div className="text-[0.84rem] text-dim">
-              per brand
-            </div>
-          </div>
-          <a href="/#subscribe" className={cn(buttonVariants({ size: "lg" }), "h-10 px-5 font-semibold")}>
-            Start monitoring
-          </a>
-        </div>
+        <p className="mt-5 max-w-[58ch] text-[0.95rem] leading-relaxed text-muted-fg">
+          Continuous monitoring against these rules, Klaviyo send scans, and a paid plan are not
+          built. Today this site sells nothing. The free check is the product; the alert list below
+          is how you hear when a rule moves.
+        </p>
+        <Link
+          href="/#subscribe"
+          className={cn(buttonVariants({ variant: "outline" }), "mt-5 h-10 rounded-[10px] px-5")}
+        >
+          Tell me when a rule moves
+        </Link>
       </section>
     </div>
   );

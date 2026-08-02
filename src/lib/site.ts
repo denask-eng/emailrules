@@ -3,11 +3,11 @@ export const SITE = {
   /** Used in <title> suffix and OG */
   tagline: "What's true about email. Right now.",
   description:
-    "A dated, cited reference for the rules that govern marketing email: consent, tracking, authentication, provider requirements and AI disclosure. Every claim carries its source and the date it was last verified.",
+    "A calm, dated reference for email marketers: which rules are real, which ones your ESP already handles, and what to do on Monday. Consent, deliverability, authentication, measurement. Primary sources, no score, no fear-selling.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://emailrules.today",
   locale: "en",
   /** Shown in the footer and in llms.txt so citations have a human owner */
-  maintainer: "Maintained by operators who run email programmes across 15 locales.",
+  maintainer: "Maintained by practitioners who run email programmes across fifteen locales.",
   contact: "corrections@emailrules.today",
 } as const;
 

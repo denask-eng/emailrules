@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getAllRules, getRule, fmtDate, daysSince } from "@/lib/rules";
 import { TOPICS, STATUS_LABEL } from "@/lib/types";
 import { SITE } from "@/lib/site";
-import { StatusPill } from "@/components/bits";
+import { StatusPill, OwnershipBlock, MondayMorning, WhyOnRadar } from "@/components/bits";
 
 /* One column, no app shell. These pages are read by strangers who arrived from
    a search result: the finding first, the method at the bottom for the people
@@ -12,7 +12,10 @@ import { StatusPill } from "@/components/bits";
 const SHELL =
   "mx-auto max-w-[780px] px-[clamp(1.1rem,4vw,1.6rem)] pt-[clamp(1.1rem,4vw,2.4rem)] pb-16";
 
-export const dynamicParams = false;
+/* New rules added in /admin must get a URL without a rebuild, so unknown
+   slugs render on demand instead of 404ing. */
+export const dynamicParams = true;
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const rules = await getAllRules();
@@ -117,21 +120,41 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         <StatusPill status={rule.status} />
         <span className="num text-[0.74rem] text-dim">
           {rule.status === "upcoming" ? "from" : "since"} {fmtDate(rule.effectiveDate)}
-          {" · "}
-          {rule.jurisdictions.join(" · ")}
+          {rule.jurisdictions.map((j) => (
+            <span key={j}>
+              {" · "}
+              <Link
+                href={`/jurisdictions/${j.toLowerCase()}`}
+                className="no-underline hover:text-fg hover:underline"
+              >
+                {j}
+              </Link>
+            </span>
+          ))}
           {rule.provider ? ` · ${rule.provider}` : ""}
         </span>
       </div>
 
       <h1 className="mt-4 text-[clamp(1.9rem,5.2vw,2.9rem)]">{rule.title}</h1>
 
-      <p className="mt-6 max-w-[64ch] text-[1.12rem] leading-relaxed text-fg">{rule.answer}</p>
+      <p className="mt-6 max-w-[64ch] text-[1.12rem] leading-relaxed text-fg">{rule.plain}</p>
+
+      <WhyOnRadar rule={rule} />
+      <OwnershipBlock rule={rule} />
+      <MondayMorning rule={rule} />
 
       {age > 90 ? (
         <p className="num mt-6 border border-soon/40 bg-soon-bg px-4 py-3 text-[0.78rem] leading-relaxed text-soon">
           Not re-verified in {age} days. Treat as probably current, not certainly current.
         </p>
       ) : null}
+
+      {/* The lead paragraph is now the plain version, so the precise wording
+          still has to be on the page: it is what the FAQ schema quotes and
+          what anyone checking our work will read. */}
+      <Block title="The exact position">
+        <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.answer}</p>
+      </Block>
 
       <Block title="Who this applies to">
         <p className="prose-rule m-0 text-[0.96rem] leading-relaxed">{rule.appliesTo}</p>
@@ -163,7 +186,9 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
             <li key={s.url} className="border-b border-border-soft py-3 last:border-b-0">
               <div className="text-[0.94rem] leading-snug">{s.name}</div>
               <div className="num mt-1.5 flex flex-wrap items-center gap-2 text-[0.72rem] text-dim">
-                <span>Published {fmtDate(s.published)}</span>
+                <span>
+                  {s.published ? `Published ${fmtDate(s.published)}` : "Publisher states no date"}
+                </span>
                 <span aria-hidden>·</span>
                 <a
                   href={s.url}
@@ -201,7 +226,7 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
               <time dateTime={c.date} className="num w-[5.6rem] shrink-0 text-[0.74rem] text-dim">
                 {fmtDate(c.date)}
               </time>
-              <span className="flex-1 text-[0.9rem] leading-relaxed text-dimd-fg">{c.note}</span>
+              <span className="flex-1 text-[0.9rem] leading-relaxed text-muted-fg">{c.note}</span>
             </li>
           ))}
         </ul>
@@ -227,7 +252,7 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-10">
-      <h2 className="num border-b border-ink pb-2.5 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
+      <h2 className="num border-b border-fg pb-2.5 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
         {title}
       </h2>
       <div className="mt-3">{children}</div>
