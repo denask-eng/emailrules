@@ -83,23 +83,24 @@ function toSortable(r: LightRule): Rule {
 export function BriefClient({ rules }: { rules: LightRule[] }) {
   const [a, setA] = useState<Audience>(EMPTY_AUDIENCE);
   const [copied, setCopied] = useState<"link" | "slack" | null>(null);
-  const [ready, setReady] = useState(false);
+  /* true after client reads localStorage / URL so we do not flash wrong filters */
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setA(readAudience());
-    setReady(true);
+    setHydrated(true);
   }, []);
 
   /* Keep the address bar shareable so “copy link” always includes setup. */
   useEffect(() => {
-    if (!ready || typeof window === "undefined") return;
+    if (!hydrated || typeof window === "undefined") return;
     const qs = audienceToSearch(a);
     const next = `${window.location.pathname}${qs}`;
     const cur = `${window.location.pathname}${window.location.search}`;
     if (next !== cur) {
       window.history.replaceState(null, "", next);
     }
-  }, [a, ready]);
+  }, [a, hydrated]);
 
   const filtered = useMemo(() => {
     return rules.filter((r) => matchesAudience(r, a)).map(toSortable);
@@ -149,12 +150,6 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
     }
   };
 
-  if (!ready) {
-    return (
-      <div className="shell shell-tight py-16 text-center text-muted-fg">Building your brief…</div>
-    );
-  }
-
   return (
     <div className="shell shell-tight py-10 sm:py-14">
       <div className="no-print mb-8 flex flex-wrap items-center justify-between gap-3">
@@ -199,7 +194,7 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
         </div>
       </div>
 
-      {!audienceActive(a) ? (
+      {hydrated && !audienceActive(a) ? (
         <div className="no-print mb-8 rounded-xl border border-soon/40 bg-soon-bg px-5 py-4 text-[14px] text-muted-fg">
           No setup saved — showing <b className="text-fg">everything</b>.{" "}
           <Link href="/rules" className="font-medium text-fg underline underline-offset-2">
