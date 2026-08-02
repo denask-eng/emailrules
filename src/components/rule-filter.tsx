@@ -23,6 +23,20 @@ import {
   parseAudienceParam,
   roleTopicBoost,
 } from "@/lib/audience";
+import {
+  type Profile,
+  briefPathForProfile,
+  deleteProfile,
+  emptyProfile,
+  ensureProfilesFromLegacy,
+  getActiveProfile,
+  readActiveProfileId,
+  readProfiles,
+  setActiveProfileId,
+  upsertProfile,
+  PROFILES_KEY,
+  ACTIVE_PROFILE_KEY,
+} from "@/lib/profiles";
 import { briefCounts, sortForMarketer, topForYou } from "@/lib/rule-signals";
 import Link from "next/link";
 
@@ -117,13 +131,12 @@ function RoleGate({
       style={{ boxShadow: "var(--lift-2)" }}
     >
       <p className="label text-center">Start here · 10 seconds</p>
-      <h2 className="mx-auto mt-3 max-w-[24ch] text-center text-[clamp(1.45rem,4vw,1.95rem)] font-semibold tracking-tight">
+      <h2 className="mx-auto mt-3 max-w-[22ch] text-center text-[clamp(1.45rem,4vw,1.95rem)] font-semibold tracking-tight">
         What kind of email work do you do?
       </h2>
-      <p className="mx-auto mt-3 max-w-[44ch] text-center text-[15px] leading-relaxed text-muted-fg">
-        One tap. We save it on this browser, show five rules that matter first, and explain every
-        jargon word as you go. {rulesCount} rules on the shelf — you will not need most of them
-        today.
+      <p className="mx-auto mt-3 max-w-[42ch] text-center text-[15px] leading-relaxed text-muted-fg">
+        One tap. Five rules that matter first — not all {rulesCount}. Built for people who ship
+        email and are too busy to re-read every PDF. Jargon opens on the dotted words.
       </p>
       <div className="mx-auto mt-8 grid max-w-2xl gap-2.5 sm:grid-cols-2">
         {ROLE_PRESETS.map((p) => (
@@ -169,12 +182,25 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
   const [copied, setCopied] = useState(false);
   /** null = not hydrated; true = show gate; false = show list */
   const [gate, setGate] = useState<boolean | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState("My programme");
 
   /* useLayoutEffect: decide gate before paint so returning users don't flash the welcome. */
   useLayoutEffect(() => {
     hydrated = false;
     readAudience();
     listeners.forEach((l) => l());
+    const list = ensureProfilesFromLegacy();
+    setProfiles(list);
+    const active = getActiveProfile();
+    if (active) {
+      setActiveId(active.id);
+      setProfileName(active.name);
+      if (audienceActive(active.audience) && !audienceActive(readAudience())) {
+        persist(active.audience, true);
+      }
+    }
     const has =
       audienceActive(readAudience()) ||
       !!parseAudienceParam(window.location.search) ||
@@ -186,11 +212,42 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
     persist(next, true);
     markOnboarded();
     setGate(false);
-  }, []);
+    /* Keep active profile in sync so agencies can switch clients. */
+    try {
+      const id = readActiveProfileId();
+      const list = readProfiles();
+      const cur = list.find((p) => p.id === id) ?? emptyProfile(profileName || "My programme");
+      const saved = upsertProfile({
+        ...cur,
+        name: (profileName || cur.name || "My programme").slice(0, 80),
+        audience: next,
+      });
+      setProfiles(saved);
+      setActiveId(saved.find((p) => p.id === cur.id)?.id ?? saved[0]?.id ?? null);
+    } catch {
+      /* */
+    }
+  }, [profileName]);
 
   const set = useCallback((patch: Partial<Audience>) => {
     apply({ ...readAudience(), ...patch });
   }, [apply]);
+
+  const switchProfile = useCallback((p: Profile) => {
+    setActiveProfileId(p.id);
+    setActiveId(p.id);
+    setProfileName(p.name);
+    persist(p.audience, true);
+    markOnboarded();
+    setGate(false);
+  }, []);
+
+  const addClient = useCallback(() => {
+    const p = emptyProfile("New client");
+    const saved = upsertProfile(p);
+    setProfiles(saved);
+    switchProfile(p);
+  }, [switchProfile]);
 
   const boost = useCallback(
     (topic: string) => roleTopicBoost(topic, a.role),
@@ -235,21 +292,84 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
     );
   }
 
+  const activeProfile = profiles.find((p) => p.id === activeId) ?? null;
+
   return (
     <>
-      <div className="rounded-xl border bg-card p-5 sm:p-6" style={{ boxShadow: "var(--lift)" }}>
+      <div className="rounded-2xl border bg-card p-5 sm:p-6" style={{ boxShadow: "var(--lift)" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-[1.05rem] font-semibold tracking-tight">Your setup</h2>
             <p className="mt-1.5 max-w-[40rem] text-[13.5px] leading-relaxed text-muted-fg">
-              Saved on this browser and in the URL. Change anytime. Dotted words open plain-English
-              definitions.
+              Saved on this browser and in the URL. Agencies: name each client and switch without an
+              account.
             </p>
           </div>
           {filtered ? (
             <p className="rounded-full border border-ok/30 bg-ok-bg px-2.5 py-1 text-[11px] font-medium text-ok">
               Saved for next visit
             </p>
+          ) : null}
+        </div>
+
+        <div className="mt-5">
+          <p className="label mb-2">Programme / client name</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value.slice(0, 80))}
+              onBlur={() => {
+                if (!activeProfile && !audienceActive(a)) return;
+                apply(a);
+              }}
+              placeholder="e.g. Acme EU or My brand"
+              className="h-10 min-w-[12rem] flex-1 rounded-xl border bg-bg px-3 text-[14px] outline-none focus-visible:border-accent"
+            />
+            <button
+              type="button"
+              onClick={addClient}
+              className="h-10 rounded-xl border bg-bg px-3.5 text-[13px] font-medium hover:bg-muted"
+            >
+              + Another client
+            </button>
+          </div>
+          {profiles.length > 1 ? (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {profiles.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => switchProfile(p)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-[12.5px] font-medium",
+                    p.id === activeId
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
+                  )}
+                >
+                  {p.name}
+                </button>
+              ))}
+              {activeId && profiles.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = deleteProfile(activeId);
+                    setProfiles(next);
+                    if (next[0]) switchProfile(next[0]);
+                    else {
+                      setActiveId(null);
+                      setProfileName("My programme");
+                      apply(EMPTY_AUDIENCE);
+                    }
+                  }}
+                  className="rounded-full px-2 py-1 text-[12px] text-dim underline-offset-2 hover:text-fg hover:underline"
+                >
+                  Remove this client
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
 
@@ -316,7 +436,18 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               {copied ? "Link copied" : "Copy link with this setup"}
             </button>
           ) : null}
-          <Link href="/brief" className="text-muted-fg underline underline-offset-3 hover:text-fg">
+          <Link
+            href={
+              activeProfile
+                ? briefPathForProfile({
+                    ...activeProfile,
+                    name: profileName || activeProfile.name,
+                    audience: a,
+                  })
+                : "/brief"
+            }
+            className="font-medium text-accent underline underline-offset-3 hover:text-fg"
+          >
             One-page brief
           </Link>
           <Link href="/glossary" className="text-muted-fg underline underline-offset-3 hover:text-fg">
@@ -328,10 +459,15 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               try {
                 window.localStorage.removeItem(ONBOARD_KEY);
                 window.localStorage.removeItem(STORAGE_KEY);
+                window.localStorage.removeItem(PROFILES_KEY);
+                window.localStorage.removeItem(ACTIVE_PROFILE_KEY);
               } catch {
                 /* */
               }
               hydrated = false;
+              setProfiles([]);
+              setActiveId(null);
+              setProfileName("My programme");
               persist(EMPTY_AUDIENCE, true);
               setGate(true);
             }}
@@ -372,13 +508,37 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               Start with these {top.length}
             </h2>
             <p className="mt-1 max-w-[58ch] text-[13.5px] text-muted-fg">
-              Highest-signal for your role. Hover any dotted word for a definition.
+              Highest-signal for your role. Open them, act, you&rsquo;re done for today. Hover any
+              dotted word for a definition.
             </p>
             <ul className="mt-4 list-none border-t p-0">
               {top.map((r) => (
                 <RuleRow key={r.slug} rule={r} />
               ))}
             </ul>
+            <p className="mt-5 rounded-xl border border-ok/25 bg-ok-bg px-4 py-3 text-[13.5px] leading-relaxed text-ok">
+              <b className="font-semibold">Done for today?</b> If you handled the five above (or
+              marked them skip), you&rsquo;re ahead of most programmes. Share a{" "}
+              <Link
+                href={
+                  activeProfile
+                    ? briefPathForProfile({
+                        ...activeProfile,
+                        name: profileName || activeProfile.name,
+                        audience: a,
+                      })
+                    : "/brief"
+                }
+                className="font-medium underline underline-offset-2"
+              >
+                one-page brief
+              </Link>{" "}
+              with your team, or come back when{" "}
+              <Link href="/changed" className="font-medium underline underline-offset-2">
+                something moves
+              </Link>
+              .
+            </p>
           </section>
           {rest.length > 0 ? (
             <section className="mt-12">

@@ -1,22 +1,26 @@
 import Link from "next/link";
 import { runCheck, subscribe } from "@/app/actions";
-import { getChangelog, getStats, countsByTopic, fmtDate } from "@/lib/rules";
+import { getAllRules, getChangelog, getStats, countsByTopic, fmtDate } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
 import { ChangeRow, Panel, SectionHead, Figures, StatusDot } from "@/components/bits";
+import { TrustStrip } from "@/components/trust-strip";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { isMarketChange } from "@/lib/rule-signals";
+import { displayTldr } from "@/content/plain-overrides";
+import { isMarketChange, stickyRisks } from "@/lib/rule-signals";
 
 export default async function Home() {
-  const [changelogAll, stats, counts] = await Promise.all([
+  const [changelogAll, stats, counts, allRules] = await Promise.all([
     getChangelog(40),
     getStats(),
     countsByTopic(),
+    getAllRules(),
   ]);
 
   /* Homepage only shows real market moves — not "we documented a page". */
   const marketLedger = changelogAll.filter((c) => isMarketChange(c.note)).slice(0, 7);
+  const sticky = stickyRisks(allRules, 3);
 
   /* A topic with no rules renders a card, takes a click and lands on nothing.
      Hide it until it has something in it, and let the heading count itself. */
@@ -24,83 +28,88 @@ export default async function Home() {
 
   return (
     <>
-      {/*
-        The idea: an airy, centred promise, then a dense left-aligned wall of
-        dated fact directly beneath it. The contrast is the argument. Everything
-        above the fold is computed, so the proof arrives with the claim.
-      */}
-      <section className="shell pt-14 pb-12 text-center sm:pt-24 sm:pb-16">
+      <section className="shell pt-12 pb-12 text-center sm:pt-20 sm:pb-16">
         <Link
           href="/rules"
-          className="inline-flex items-center gap-2.5 rounded-full border bg-card py-1.5 pr-4 pl-2.5 text-[13px] transition-colors hover:bg-muted"
+          className="inline-flex items-center gap-2.5 rounded-full border bg-card py-1.5 pr-4 pl-2.5 text-[13px] hover:bg-muted"
           style={{ boxShadow: "var(--lift)" }}
         >
           <StatusDot status="in_force" />
           <span className="num font-medium">{stats.total}</span>
-          <span className="text-muted-fg">rules · filter to yours</span>
+          <span className="text-muted-fg">rules · yours in under a minute</span>
           <span className="text-dim">→</span>
         </Link>
 
-        <h1 className="mx-auto mt-7 max-w-4xl text-[clamp(2.4rem,7vw,4.4rem)]">
+        <h1 className="mx-auto mt-7 max-w-4xl text-[clamp(2.35rem,6.8vw,4.2rem)]">
           What&rsquo;s true about email.
           <br className="hidden sm:block" />{" "}
           Right{" "}
           <span className="font-serif text-accent italic font-normal">now.</span>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-[56ch] text-[1.06rem] leading-relaxed text-muted-fg sm:text-[1.14rem]">
-          From week-one marketers to deliverability leads: what is true right now, whose job it is,
-          and what to do first. Of {stats.total} rules, your email tool already covers{" "}
-          {stats.notYours}. Dotted words explain themselves. No scores. No fear-selling.
+        <p className="mx-auto mt-5 max-w-[34rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.12rem]">
+          You ship campaigns. You do not have a free afternoon to re-read Gmail help pages. Open
+          this, pick your role, get <b className="font-medium text-fg">five things that matter</b> —
+          whose job, what to do first. Of {stats.total} rules, your email tool already covers{" "}
+          {stats.notYours}.
         </p>
 
-        <div className="mx-auto mt-9 grid max-w-3xl gap-2.5 text-left sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto mt-8 flex max-w-md flex-col items-stretch gap-2.5 sm:max-w-none sm:flex-row sm:justify-center">
+          <Link
+            href="/rules"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "h-12 rounded-full px-7 text-[15px] font-medium",
+            )}
+          >
+            Show me what applies to me
+          </Link>
+          <Link
+            href="/check"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "lg" }),
+              "h-12 rounded-full px-6 text-[15px]",
+            )}
+          >
+            Check my domain
+          </Link>
+        </div>
+
+        <TrustStrip className="mt-10" />
+
+        <div className="mx-auto mt-10 grid max-w-3xl gap-2 text-left sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               href: "/rules",
-              t: "What applies to me",
-              d: "Pick your role. Get five rules first — not a law library.",
+              t: "Filter to my desk",
+              d: "Role + geos. Five first — not the whole library.",
             },
             {
               href: "/brief",
-              t: "One-page team brief",
-              d: "Shareable link + Slack paste: top five, counts, do-first lines.",
+              t: "Team / client brief",
+              d: "Slack paste or PDF. Agencies: name the client.",
             },
             {
               href: "/check",
-              t: "Check my domain",
-              d: "Live SPF, DKIM, DMARC — plain findings, never a fake score.",
+              t: "Domain check",
+              d: "Live SPF, DKIM, DMARC. Findings, never a fake score.",
             },
             {
               href: "/changed",
               t: "What moved",
-              d: "Real market changes only. Quiet weeks stay quiet.",
+              d: "Market only. Quiet weeks stay honest.",
             },
           ].map((x) => (
             <Link
               key={x.href}
               href={x.href}
-              className="rounded-xl border bg-card p-4 transition-colors hover:border-accent hover:bg-accent-soft"
-              style={{ boxShadow: "var(--lift)" }}
+              className="rounded-2xl border border-border-soft bg-card/80 px-4 py-3.5 hover:border-border hover:bg-card"
             >
-              <span className="block text-[14.5px] font-semibold">{x.t}</span>
-              <span className="mt-1.5 block text-[12.5px] leading-snug text-muted-fg">{x.d}</span>
+              <span className="block text-[14px] font-semibold tracking-tight">{x.t}</span>
+              <span className="mt-1 block text-[12.5px] leading-snug text-muted-fg">{x.d}</span>
             </Link>
           ))}
         </div>
-        <p className="mx-auto mt-5 text-[13px] text-dim">
-          <Link href="/glossary" className="underline underline-offset-3 hover:text-fg">
-            Glossary
-          </Link>
-          {" · "}
-          <Link href="/check/headers" className="underline underline-offset-3 hover:text-fg">
-            Paste headers
-          </Link>
-          {" · "}
-          <Link href="/coverage" className="underline underline-offset-3 hover:text-fg">
-            Coverage map
-          </Link>
-        </p>
 
         <div className="mt-9">
           <Figures
@@ -112,39 +121,65 @@ export default async function Home() {
           />
         </div>
 
-        <p className="mx-auto mt-7 max-w-[52ch] text-[13px] leading-relaxed text-dim">
-          Free, no account. No tracking pixels sold, no seed tests, no open-rate theatre — so we can
-          tell you plainly when those things are the problem.
+        <p className="mx-auto mt-6 max-w-[48ch] text-[12.5px] leading-relaxed text-dim">
+          Free. No account. Email only — SMS is different law. No tracking pixels sold, no seed
+          tests, so we can tell you when those things are the problem.
         </p>
       </section>
 
-      {/* Market-only ledger — quiet when nothing moved is a feature. */}
+      {/* Market-only ledger — quiet weeks still earn a visit. */}
       <section className="shell pb-16">
         <Panel>
-          <div className="flex items-center justify-between gap-4 border-b bg-muted/50 px-5 py-2.5">
+          <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-5 py-2.5">
             <span className="label">Market moves · not site edits</span>
             <Link
               href="/changed"
-              className="label transition-colors hover:text-fg"
+              className="label hover:text-fg"
               style={{ letterSpacing: "0.08em" }}
             >
               Full ledger →
             </Link>
           </div>
           {marketLedger.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <p className="text-[15px] font-medium text-fg">Nothing material moved recently</p>
-              <p className="mx-auto mt-2 max-w-[42ch] text-[13.5px] leading-relaxed text-muted-fg">
-                Quiet is good. We only list real obligation or status changes here — not pages we
-                added to the shelf. Check the{" "}
-                <Link href="/changed" className="text-fg underline underline-offset-3">
-                  full ledger
-                </Link>{" "}
-                for documentation updates, or{" "}
-                <Link href="/rules" className="text-fg underline underline-offset-3">
-                  filter rules to your setup
+            <div className="px-5 py-8 sm:px-6">
+              <p className="text-[15px] font-semibold tracking-tight text-fg">
+                Nothing material moved recently
+              </p>
+              <p className="mt-1.5 max-w-[48ch] text-[13.5px] leading-relaxed text-muted-fg">
+                Quiet is good. Last shelf verify:{" "}
+                <b className="font-medium text-fg">{fmtDate(stats.lastReview)}</b>. While the market
+                is still, these still need a person on most desks:
+              </p>
+              <ul className="mt-5 list-none space-y-0 border-t p-0">
+                {sticky.map((r, i) => (
+                  <li key={r.slug} className="border-b border-border-soft py-3.5 last:border-b-0">
+                    <div className="flex gap-3">
+                      <span className="num text-[11px] text-dim">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <Link
+                          href={`/rules/${r.slug}`}
+                          className="text-[14.5px] font-semibold tracking-tight underline-offset-3 hover:underline"
+                        >
+                          {r.title}
+                        </Link>
+                        <p className="mt-1 max-w-[58ch] text-[13px] leading-relaxed text-muted-fg">
+                          {displayTldr(r.slug, r.plain)}
+                        </p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-[13px] text-dim">
+                <Link href="/rules" className="font-medium text-fg underline underline-offset-3">
+                  Filter to your role
                 </Link>
-                .
+                {" · "}
+                <Link href="/changed" className="underline underline-offset-3 hover:text-fg">
+                  Full ledger
+                </Link>
               </p>
             </div>
           ) : (
@@ -154,6 +189,7 @@ export default async function Home() {
                 rule={c.rule}
                 date={c.date}
                 note={c.note}
+                compact
               />
             ))
           )}

@@ -174,3 +174,17 @@ export function isMarketChange(note: string): boolean {
   const k = changeKind(note);
   return k === "market" || k === "correction";
 }
+
+/**
+ * Sticky risks when the market is quiet: still-true obligations that need a person.
+ * Used on the homepage empty ledger so quiet weeks are not blank weeks.
+ */
+export function stickyRisks(rules: Rule[], n = 3): Rule[] {
+  return sortForMarketer(
+    rules.filter(
+      (r) =>
+        r.status === "in_force" &&
+        (r.ownership === "yours" || r.ownership === "shared"),
+    ),
+  ).slice(0, n);
+}

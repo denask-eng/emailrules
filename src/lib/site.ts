@@ -3,11 +3,12 @@ export const SITE = {
   /** Used in <title> suffix and OG */
   tagline: "What's true about email. Right now.",
   description:
-    "A calm, dated reference for email marketers: which rules are real, which ones your ESP already handles, and what to do on Monday. Consent, deliverability, authentication, measurement. Primary sources, no score, no fear-selling.",
+    "Built by a working email marketer who is too busy to re-read Gmail help pages every week. What still applies to you, whose job it is, and what to do first — primary sources, no scores, no fear-selling.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://emailrules.today",
   locale: "en",
   /** Shown in the footer and in llms.txt so citations have a human owner */
-  maintainer: "Maintained by practitioners who run email programmes across fifteen locales.",
+  maintainer:
+    "Maintained by someone who runs email programmes for a living — not a content farm.",
   contact: "corrections@emailrules.today",
 } as const;
 
@@ -19,9 +20,11 @@ export const SITE = {
  */
 export const AUTHOR = {
   name: "Denas Kulinicius",
-  role: "Head of email, Iteractive",
+  /** Public label only — no employer. Personal project, not a company promo. */
+  role: "Email geek",
   blurb:
     "I run email programmes across seven brands and fifteen locales. I built this because I kept finding out about rule changes months late, from a lawyer.",
+  hook: "For people who ship email, not people who sell tools about email.",
   avatar: "/denas.jpg",
   x: "https://x.com/denaskulinicius",
   xHandle: "@denaskulinicius",

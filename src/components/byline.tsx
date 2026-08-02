@@ -17,13 +17,13 @@ export function Byline({ compact = false }: { compact?: boolean }) {
           height={28}
           className="rounded-full"
         />
-        <span className="text-[13px] text-muted-foreground">
+        <span className="text-[13px] text-muted-fg">
           Built by{" "}
           <a
             href={AUTHOR.x}
             target="_blank"
             rel="me noopener"
-            className="text-foreground underline underline-offset-2"
+            className="text-fg underline underline-offset-2"
           >
             {AUTHOR.name}
           </a>
@@ -43,10 +43,10 @@ export function Byline({ compact = false }: { compact?: boolean }) {
       />
       <div className="min-w-0">
         <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-[14.5px] font-semibold text-foreground">{AUTHOR.name}</span>
-          <span className="text-[12.5px] text-muted-foreground">{AUTHOR.role}</span>
+          <span className="text-[14.5px] font-semibold text-fg">{AUTHOR.name}</span>
+          <span className="text-[12.5px] text-muted-fg">Email geek</span>
         </div>
-        <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-foreground">
+        <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
           {AUTHOR.blurb}
         </p>
         <div className="mt-2.5 flex items-center gap-4 text-[13px]">
@@ -97,7 +97,7 @@ export function AuthorJsonLd({ siteUrl }: { siteUrl: string }) {
     name: AUTHOR.name,
     url: siteUrl,
     image: `${siteUrl}${AUTHOR.avatar}`,
-    jobTitle: AUTHOR.role,
+    jobTitle: "Email geek",
     sameAs: [AUTHOR.x, AUTHOR.linkedin],
   };
   return (

@@ -9,7 +9,6 @@ import {
   freshness,
   FRESHNESS_LABEL,
   changeKind,
-  CHANGE_KIND_LABEL,
   impactOf,
   IMPACT_LABEL,
   type Freshness,
@@ -54,49 +53,107 @@ export function StatusPill({ status, className }: { status: RuleStatus; classNam
   );
 }
 
-const KIND_TONE: Record<ChangeKind, string> = {
-  market: "text-live bg-live-bg border-live/25",
-  added: "text-muted-fg bg-muted border-border",
-  reverify: "text-dim bg-bg-2 border-border-soft",
-  correction: "text-soon bg-soon-bg border-soon/30",
-  other: "text-muted-fg bg-muted border-border",
+/**
+ * Human skim labels — not internal taxonomy.
+ * Busy marketers need “what / so what / next”, not “Correction” chrome.
+ */
+const KIND_SKIM: Record<ChangeKind, { label: string; tone: string }> = {
+  market: { label: "Something changed", tone: "text-live" },
+  correction: { label: "We fixed our page", tone: "text-soon" },
+  added: { label: "New page on the shelf", tone: "text-muted-fg" },
+  reverify: { label: "Re-checked", tone: "text-dim" },
+  other: { label: "Note", tone: "text-muted-fg" },
 };
 
+function firstSentence(s: string, max = 140): string {
+  const t = s.trim();
+  const cut = t.split(/(?<=[.!?])\s+/)[0] ?? t;
+  if (cut.length <= max) return cut;
+  return `${cut.slice(0, max - 1).trim()}…`;
+}
+
 /**
- * Changelog row. Kind badge separates "the market moved" from "we wrote a page".
+ * Changelog row for people who open /changed on a busy Monday.
+ * Structure: what → why it matters → do next. Badge is secondary.
  */
-export function ChangeRow({ rule, date, note }: { rule: Rule; date: string; note: string }) {
+export function ChangeRow({
+  rule,
+  date,
+  note,
+  compact = false,
+}: {
+  rule: Rule;
+  date: string;
+  note: string;
+  /** Homepage ledger: slightly tighter */
+  compact?: boolean;
+}) {
   const kind = changeKind(note);
+  const skim = KIND_SKIM[kind];
+  const soWhat = firstSentence(
+    displayWhy(rule.slug, whyItMatters({ ...rule, plain: displayPlain(rule.slug, rule.plain) })),
+    compact ? 120 : 160,
+  );
+  const next = firstSentence(rule.mondayMorning, compact ? 100 : 140);
+
   return (
     <Link
       href={`/rules/${rule.slug}`}
-      className="group grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1.5 border-b border-border-soft px-4 py-3.5 transition-colors last:border-b-0 hover:bg-muted/70 sm:grid-cols-[86px_auto_1fr_auto] sm:items-baseline sm:px-5"
+      className={cn(
+        "group block border-b border-border-soft last:border-b-0 hover:bg-muted/50",
+        compact ? "px-4 py-4 sm:px-5" : "px-1 py-5 sm:px-2 sm:py-6",
+      )}
     >
-      <time dateTime={date} className="num text-[12px] whitespace-nowrap text-dim sm:order-1">
-        {fmtDate(date)}
-      </time>
-      <span className="sm:order-2 sm:translate-y-[-1px]">
-        <StatusDot status={rule.status} />
-      </span>
-      <span className="col-span-2 sm:order-3 sm:col-span-1">
-        <span
-          className={cn(
-            "mb-1.5 inline-flex rounded-full border px-2 py-0.5 text-[10.5px] font-medium",
-            KIND_TONE[kind],
-          )}
-        >
-          {CHANGE_KIND_LABEL[kind]}
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <time dateTime={date} className="num text-[12px] text-dim">
+          {fmtDate(date)}
+        </time>
+        <span className={cn("text-[12px] font-medium", skim.tone)}>{skim.label}</span>
+        <span className="num text-[11px] text-dim">
+          {rule.jurisdictions.slice(0, 2).join(" · ")}
+          {rule.provider ? ` · ${rule.provider}` : ""}
         </span>
-        <span className="block text-[14.5px] leading-relaxed">
-          <span className="font-medium decoration-1 underline-offset-4 group-hover:underline">
-            {rule.title}.
-          </span>{" "}
-          <span className="text-muted-fg">{note}</span>
-        </span>
-      </span>
-      <span className="label hidden text-[10px] sm:order-4 sm:block sm:text-right">
-        {rule.jurisdictions[0]}
-      </span>
+      </div>
+
+      <h3
+        className={cn(
+          "mt-2 font-semibold tracking-tight text-fg decoration-1 underline-offset-[5px] group-hover:underline",
+          compact ? "text-[15px] leading-snug" : "text-[1.05rem] leading-snug sm:text-[1.1rem]",
+        )}
+      >
+        {rule.title}
+      </h3>
+
+      <p
+        className={cn(
+          "mt-1.5 max-w-[62ch] leading-relaxed text-muted-fg",
+          compact ? "text-[13px]" : "text-[14px]",
+        )}
+      >
+        <span className="font-medium text-fg/75">What changed: </span>
+        {note}
+      </p>
+
+      {!compact ? (
+        <>
+          <p className="mt-2 max-w-[62ch] text-[13.5px] leading-relaxed text-muted-fg">
+            <span className="font-medium text-fg/75">Why it matters: </span>
+            {soWhat}
+          </p>
+          <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-dim">
+            <span className="font-medium text-muted-fg">Do next: </span>
+            {next}
+            <span className="ml-1.5 text-accent opacity-0 transition-opacity group-hover:opacity-100">
+              Full rule →
+            </span>
+          </p>
+        </>
+      ) : (
+        <p className="mt-1.5 max-w-[58ch] text-[12.5px] leading-relaxed text-dim">
+          <span className="font-medium text-muted-fg">So what: </span>
+          {soWhat}
+        </p>
+      )}
     </Link>
   );
 }
@@ -132,26 +189,18 @@ export function OwnershipTag({ ownership }: { ownership: Ownership }) {
   );
 }
 
-/** Index card: impact + ownership + why it matters. Built for scan. */
+/** Index row: ownership first, one sentence, minimal chrome. */
 export function RuleRow({ rule }: { rule: Rule }) {
   const f = freshness(rule);
   const impact = impactOf(rule);
   return (
     <Link
       href={`/rules/${rule.slug}`}
-      className="group block border-b border-border-soft px-4 py-4 transition-colors last:border-b-0 hover:bg-muted/70 sm:px-5"
+      className="group block border-b border-border-soft px-1 py-5 last:border-b-0 sm:px-2"
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={cn(
-            "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium",
-            IMPACT_TONE[impact],
-          )}
-        >
-          {IMPACT_LABEL[impact]}
-        </span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <OwnershipTag ownership={rule.ownership} />
-        <StatusPill status={rule.status} />
+        {rule.status === "upcoming" ? <StatusPill status={rule.status} /> : null}
         {f !== "stable" ? (
           <span
             className={cn(
@@ -163,29 +212,21 @@ export function RuleRow({ rule }: { rule: Rule }) {
           </span>
         ) : null}
         <span className="num text-[11px] text-dim">
-          {rule.jurisdictions.join(" · ")}
+          {IMPACT_LABEL[impact]}
+          {" · "}
+          {rule.jurisdictions.slice(0, 3).join(" · ")}
           {rule.provider ? ` · ${rule.provider}` : ""}
         </span>
       </div>
-      <div className="mt-2 text-[15.5px] leading-snug font-medium decoration-1 underline-offset-4 group-hover:underline">
+      <div className="mt-2 text-[15.5px] leading-snug font-semibold tracking-tight decoration-1 underline-offset-[5px] group-hover:underline">
         {rule.title}
       </div>
-      <div className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-muted-fg">
-        <span className="font-medium text-fg/80">In one sentence: </span>
+      <div className="mt-1.5 max-w-[64ch] text-[14px] leading-relaxed text-muted-fg">
         <Explained text={displayTldr(rule.slug, rule.plain)} />
       </div>
-      <div className="mt-1 max-w-[68ch] text-[12.5px] leading-relaxed text-dim">
-        <span className="font-medium text-muted-fg">Why it matters: </span>
-        <Explained
-          text={displayWhy(
-            rule.slug,
-            whyItMatters({ ...rule, plain: displayPlain(rule.slug, rule.plain) }),
-          )}
-        />
-      </div>
       {rule.ignoreIf ? (
-        <div className="mt-1.5 max-w-[68ch] text-[12.5px] leading-relaxed text-dim">
-          <span className="font-medium">Skip if: </span>
+        <div className="mt-1.5 max-w-[64ch] text-[12.5px] leading-relaxed text-dim">
+          <span className="font-medium text-muted-fg">Skip if </span>
           <Explained text={rule.ignoreIf} />
         </div>
       ) : null}

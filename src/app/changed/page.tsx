@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getChangelog } from "@/lib/rules";
 import { ChangeRow, SectionHead } from "@/components/bits";
 import { changeKind } from "@/lib/rule-signals";
@@ -6,7 +7,7 @@ import { changeKind } from "@/lib/rule-signals";
 export const metadata: Metadata = {
   title: "What changed",
   description:
-    "What actually moved in email rules — market changes first, then pages we newly documented. Re-checks stay quiet.",
+    "What actually moved in email rules — in plain English: what changed, why it matters, and what to do next. Market first; pages we added second.",
   alternates: { canonical: "/changed" },
 };
 
@@ -22,57 +23,81 @@ export default async function Changed() {
     const k = changeKind(c.note);
     return k !== "market" && k !== "correction" && k !== "added" && k !== "reverify";
   });
-  /* Re-verifies intentionally omitted from the main ledger — they are trust
-     hygiene, not something to interrupt a marketer for. */
+  /* Re-verifies intentionally omitted — trust hygiene, not interrupt. */
 
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <SectionHead
-        label="Ledger"
-        title="What changed"
-        lede="Two different things used to be mixed: the market moved, and we wrote a page. They are separate now. Re-checks that nothing changed stay off this list on purpose."
+        label="What changed"
+        title="Skim in thirty seconds."
+        lede="Each line answers three things: what changed, why a working email person should care, and what to do next. Open the full rule only if you need sources."
       />
 
+      <div className="mt-6 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-dim">
+        <span>
+          <b className="font-medium text-muted-fg">Something changed</b> — obligation or status moved
+        </span>
+        <span className="hidden sm:inline" aria-hidden>
+          ·
+        </span>
+        <span>
+          <b className="font-medium text-muted-fg">We fixed our page</b> — we were wrong; truth updated
+        </span>
+        <span className="hidden sm:inline" aria-hidden>
+          ·
+        </span>
+        <span>
+          <b className="font-medium text-muted-fg">New page</b> — already true; we documented it
+        </span>
+      </div>
+
       <section className="mt-10">
-        <h2 className="text-[1.05rem] font-semibold">The market moved</h2>
-        <p className="mt-1.5 max-w-[58ch] text-[13.5px] leading-relaxed text-muted-fg">
-          Status changes, new obligations, corrections. This is the feed worth coming back for.
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-fg/15 pb-3">
+          <div>
+            <h2 className="text-[1.15rem] font-semibold tracking-tight">Worth your time</h2>
+            <p className="mt-1 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
+              Market moves and corrections. If you only read one list, make it this one.
+            </p>
+          </div>
+          <p className="num text-[12px] text-dim">{market.length} entries</p>
+        </div>
         {market.length === 0 ? (
-          <p className="mt-6 rounded-xl border bg-bg-2 px-5 py-6 text-[0.95rem] text-muted-fg">
-            Nothing in this category right now. Quiet is good — we only list real moves.
+          <p className="mt-6 rounded-2xl border bg-bg-2 px-5 py-6 text-[0.95rem] text-muted-fg">
+            Nothing material moved recently. Quiet is good.{" "}
+            <Link href="/rules" className="font-medium text-fg underline underline-offset-3">
+              Filter rules to your setup
+            </Link>{" "}
+            for what still needs you when the market is still.
           </p>
         ) : (
-          <ul className="mt-4 list-none border-t p-0">
+          <ul className="mt-1 list-none p-0">
             {market.map((c) => (
-              <ChangeRow
-                key={`m-${c.rule.slug}-${c.date}-${c.note}`}
-                rule={c.rule}
-                date={c.date}
-                note={c.note}
-              />
+              <li key={`m-${c.rule.slug}-${c.date}-${c.note}`}>
+                <ChangeRow rule={c.rule} date={c.date} note={c.note} />
+              </li>
             ))}
           </ul>
         )}
       </section>
 
       <section className="mt-14">
-        <h2 className="text-[1.05rem] font-semibold">We documented it</h2>
-        <p className="mt-1.5 max-w-[58ch] text-[13.5px] leading-relaxed text-muted-fg">
-          Rules that were already true; we added a dated page. Useful for coverage, not the same as
-          a new law.
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-fg/15 pb-3">
+          <div>
+            <h2 className="text-[1.1rem] font-semibold tracking-tight">We put it on the shelf</h2>
+            <p className="mt-1 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
+              Already true in the world; we added a dated page. Lower urgency than the list above.
+            </p>
+          </div>
+          <p className="num text-[12px] text-dim">{documented.length}</p>
+        </div>
         {documented.length === 0 ? (
           <p className="mt-6 text-[0.95rem] text-muted-fg">No new pages in this window.</p>
         ) : (
-          <ul className="mt-4 list-none border-t p-0">
+          <ul className="mt-1 list-none p-0">
             {documented.map((c) => (
-              <ChangeRow
-                key={`a-${c.rule.slug}-${c.date}-${c.note}`}
-                rule={c.rule}
-                date={c.date}
-                note={c.note}
-              />
+              <li key={`a-${c.rule.slug}-${c.date}-${c.note}`}>
+                <ChangeRow rule={c.rule} date={c.date} note={c.note} />
+              </li>
             ))}
           </ul>
         )}
@@ -80,19 +105,28 @@ export default async function Changed() {
 
       {other.length > 0 ? (
         <section className="mt-14">
-          <h2 className="text-[1.05rem] font-semibold">Other notes</h2>
-          <ul className="mt-4 list-none border-t p-0">
+          <h2 className="border-b border-fg/15 pb-3 text-[1.05rem] font-semibold">Other notes</h2>
+          <ul className="mt-1 list-none p-0">
             {other.map((c) => (
-              <ChangeRow
-                key={`o-${c.rule.slug}-${c.date}-${c.note}`}
-                rule={c.rule}
-                date={c.date}
-                note={c.note}
-              />
+              <li key={`o-${c.rule.slug}-${c.date}-${c.note}`}>
+                <ChangeRow rule={c.rule} date={c.date} note={c.note} />
+              </li>
             ))}
           </ul>
         </section>
       ) : null}
+
+      <p className="mt-12 max-w-[52ch] text-[13px] leading-relaxed text-dim">
+        Built for people who ship email and do not have time to reverse-engineer our tags. Wrong or
+        stale?{" "}
+        <a
+          href="mailto:corrections@emailrules.today"
+          className="text-fg underline underline-offset-3"
+        >
+          corrections@emailrules.today
+        </a>
+        .
+      </p>
     </div>
   );
 }

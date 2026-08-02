@@ -4,35 +4,31 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light only, and deliberately a hair warm. The stock cold blue-white
-     (#fcfcfd and friends) is the default every generated site ships with;
-     a faint paper warmth reads as a considered surface and makes the blue
-     accent sit better against it. */
-  --bg: #fdfdfb;
-  --bg-2: #f5f5f1;
-  --fg: #17171a;
+  /* Warm paper, not cold SaaS white. One accent. Daylight product. */
+  --bg: #fafaf7;
+  --bg-2: #f3f3ee;
+  --fg: #141416;
   --card: #ffffff;
-  --border: #e7e7e1;
-  --border-soft: #efefea;
-  --input: #d9d9d2;
-  --muted: #f5f5f1;
-  --muted-fg: #6c6c68;
-  --dim: #97978f;
+  --border: #e5e5df;
+  --border-soft: #edede8;
+  --input: #d6d6cf;
+  --muted: #f3f3ee;
+  --muted-fg: #63635e;
+  --dim: #91918a;
 
-  /* One accent. Deep, confident, editorial. */
-  --accent: #2347d9;
+  --accent: #1d3fd0;
   --accent-fg: #ffffff;
-  --accent-soft: #eef1fe;
+  --accent-soft: #eef1fc;
 
-  --live: #c0281f;
-  --live-bg: #fdf1f0;
-  --soon: #8a5a08;
+  --live: #b8241c;
+  --live-bg: #fdf2f1;
+  --soon: #855608;
   --soon-bg: #fdf6e8;
-  --ok: #157347;
+  --ok: #0f6b3f;
   --ok-bg: #eef8f2;
 
-  --r: 10px;
-  --r-sm: 8px;
+  --r: 12px;
+  --r-sm: 9px;
 
   --sans: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont,
     "Segoe UI", Inter, Helvetica, Arial, sans-serif;
@@ -40,11 +36,10 @@
   --mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo,
     Consolas, monospace;
 
-  --lift: 0 1px 2px rgb(20 20 16 / 0.04), 0 1px 1px rgb(20 20 16 / 0.03);
-  --lift-2: 0 1px 2px rgb(20 20 16 / 0.05), 0 8px 24px -12px rgb(20 20 16 / 0.12);
+  --lift: 0 1px 2px rgb(20 20 16 / 0.035), 0 1px 1px rgb(20 20 16 / 0.025);
+  --lift-2: 0 1px 2px rgb(20 20 16 / 0.04), 0 12px 32px -16px rgb(20 20 16 / 0.14);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Light only. No dark variant on purpose: a dark reference site reads as
-     a developer tool, and this one is read by marketers in daylight. */
   color-scheme: light;
 }
 
@@ -100,21 +95,33 @@
     color: var(--fg);
     font-family: var(--sans);
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.55;
+    letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     font-synthesis-weight: none;
   }
 
   h1, h2, h3, h4 { margin: 0; text-wrap: balance; }
-  h1 { letter-spacing: -0.038em; line-height: 1.02; font-weight: 600; }
-  h2 { letter-spacing: -0.028em; line-height: 1.1; font-weight: 600; }
-  h3 { letter-spacing: -0.015em; font-weight: 600; }
+  h1 { letter-spacing: -0.042em; line-height: 1.02; font-weight: 600; }
+  h2 { letter-spacing: -0.03em; line-height: 1.12; font-weight: 600; }
+  h3 { letter-spacing: -0.018em; font-weight: 600; }
 
   a { color: inherit; }
   hr { border: 0; border-top: 1px solid var(--border); }
   ::selection { background: var(--accent); color: var(--accent-fg); }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  /* Soft transitions only — Apple-like ease, never bounce */
+  a, button {
+    transition:
+      color 160ms var(--ease-out),
+      background-color 160ms var(--ease-out),
+      border-color 160ms var(--ease-out),
+      box-shadow 200ms var(--ease-out),
+      opacity 160ms var(--ease-out),
+      transform 200ms var(--ease-out);
+  }
 }
 
 @layer components {
@@ -135,9 +142,22 @@
     color: var(--dim);
   }
 
-  .shell { width: 100%; max-width: 1080px; margin-inline: auto; padding-inline: 22px; }
-  .shell-tight { max-width: 760px; }
-  @media (min-width: 768px) { .shell { padding-inline: 32px; } }
+  .shell { width: 100%; max-width: 1040px; margin-inline: auto; padding-inline: 20px; }
+  .shell-tight { max-width: 720px; }
+  @media (min-width: 768px) { .shell { padding-inline: 28px; } }
+
+  /* Quiet interactive surface — not a WordPress card stack */
+  .surface {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: var(--lift);
+  }
+  .surface-quiet {
+    background: var(--card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r);
+  }
 
   .prose-rule { color: var(--muted-fg); max-width: 66ch; }
   .prose-rule strong, .prose-rule b { color: var(--fg); font-weight: 600; }

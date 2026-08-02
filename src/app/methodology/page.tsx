@@ -91,7 +91,7 @@ export default async function Methodology() {
             Not legal advice
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
-            This is a reference for practitioners, written by practitioners. It is not legal advice
+            This is a reference for people who ship email, written by an email geek. It is not legal advice
             and no lawyer reviewed it. Confirm anything that matters with your own counsel before
             you rely on it.
           </p>

@@ -13,6 +13,7 @@ import {
   parseAudienceParam,
   roleTopicBoost,
 } from "@/lib/audience";
+import { getActiveProfile } from "@/lib/profiles";
 import { briefCounts, impactOf, IMPACT_LABEL, sortForMarketer } from "@/lib/rule-signals";
 import { displayTldr } from "@/content/plain-overrides";
 import { OWNERSHIP } from "@/lib/types";
@@ -80,14 +81,29 @@ function toSortable(r: LightRule): Rule {
   };
 }
 
+function clientFromSearch(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const q = new URLSearchParams(window.location.search);
+    const c = q.get("client");
+    return c ? decodeURIComponent(c).slice(0, 80) : "";
+  } catch {
+    return "";
+  }
+}
+
 export function BriefClient({ rules }: { rules: LightRule[] }) {
   const [a, setA] = useState<Audience>(EMPTY_AUDIENCE);
+  const [clientName, setClientName] = useState("");
   const [copied, setCopied] = useState<"link" | "slack" | null>(null);
   /* true after client reads localStorage / URL so we do not flash wrong filters */
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setA(readAudience());
+    const fromUrl = clientFromSearch();
+    const fromProfile = getActiveProfile()?.name ?? "";
+    setClientName(fromUrl || fromProfile || "");
     setHydrated(true);
   }, []);
 
@@ -95,12 +111,16 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
     const qs = audienceToSearch(a);
-    const next = `${window.location.pathname}${qs}`;
+    const params = new URLSearchParams(qs.startsWith("?") ? qs.slice(1) : qs);
+    if (clientName.trim()) params.set("client", clientName.trim());
+    else params.delete("client");
+    const s = params.toString();
+    const next = `${window.location.pathname}${s ? `?${s}` : ""}`;
     const cur = `${window.location.pathname}${window.location.search}`;
     if (next !== cur) {
       window.history.replaceState(null, "", next);
     }
-  }, [a, hydrated]);
+  }, [a, clientName, hydrated]);
 
   const filtered = useMemo(() => {
     return rules.filter((r) => matchesAudience(r, a)).map(toSortable);
@@ -120,12 +140,21 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
 
   const shareUrl = () => {
     if (typeof window === "undefined") return "https://emailrules.today/brief";
-    return `${window.location.origin}/brief${audienceToSearch(a)}`;
+    const params = new URLSearchParams(
+      audienceToSearch(a).startsWith("?") ? audienceToSearch(a).slice(1) : audienceToSearch(a),
+    );
+    if (clientName.trim()) params.set("client", clientName.trim());
+    const s = params.toString();
+    return `${window.location.origin}/brief${s ? `?${s}` : ""}`;
   };
+
+  const headline = clientName.trim()
+    ? `${clientName.trim()} · email rules brief`
+    : "Email rules brief";
 
   const slackText = () => {
     const lines = [
-      `*Email rules brief* · ${roleLabel(a)} · as of ${today}`,
+      `*${headline}* · ${roleLabel(a)} · as of ${today}`,
       `${counts.act} need a person · ${counts.shared} shared with ESP · ${counts.handled + counts.fyi} handled/FYI · ${counts.upcoming} upcoming`,
       ``,
       `*Open these five first:*`,
@@ -206,7 +235,12 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
 
       <header className="border-b pb-6">
         <p className="num text-[12px] text-dim">emailrules.today · as of {today}</p>
-        <h2 className="mt-2 text-[1.35rem] font-semibold tracking-tight">{roleLabel(a)}</h2>
+        {clientName.trim() ? (
+          <p className="mt-2 text-[13px] font-medium tracking-wide text-accent uppercase">
+            {clientName.trim()}
+          </p>
+        ) : null}
+        <h2 className="mt-1 text-[1.35rem] font-semibold tracking-tight">{roleLabel(a)}</h2>
         <p className="mt-2 max-w-[60ch] text-[14px] leading-relaxed text-muted-fg">
           Of <b className="text-fg">{counts.total}</b> rules in this filter,{" "}
           <b className="text-fg">{counts.act}</b> need a person,{" "}
