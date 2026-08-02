@@ -160,34 +160,68 @@ export default async function Home() {
         </Panel>
       </section>
 
-      {/* Browse */}
-      <section className="shell border-t py-16">
-        <SectionHead
-          label="Browse"
-          title={`${stats.total} rules, ${topics.length} practical buckets`}
-          lede="Grouped by the job (consent, auth, hygiene, measurement…), not by which regulator wrote the PDF."
-        />
-        <div className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-2 lg:grid-cols-3">
-          {topics.map((t) => (
+      {/* Browse — editorial index, not a half-empty card grid */}
+      <section id="browse" className="shell border-t py-16 sm:py-20">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
+          <SectionHead
+            label="Browse by job"
+            title={`${stats.total} rules. ${topics.length} kinds of work.`}
+            lede="Grouped by what you are actually doing (consent, auth, hygiene, measurement), not by which regulator wrote the PDF."
+          />
+          <div className="mb-7 flex shrink-0 flex-wrap gap-x-4 gap-y-2 text-[13.5px]">
             <Link
-              key={t}
-              href={`/topics/${t}`}
-              className="group flex flex-col justify-between gap-6 bg-card p-5 transition-colors hover:bg-muted/70"
+              href="/rules"
+              className="font-medium text-accent underline-offset-3 hover:underline"
             >
-              <div>
-                <h3 className="text-[15px] decoration-1 underline-offset-4 group-hover:underline">
-                  {TOPICS[t].label}
-                </h3>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-muted-fg">
-                  {TOPICS[t].blurb}
-                </p>
-              </div>
-              <span className="num text-[12px] text-dim">
-                {counts[t] ?? 0} {counts[t] === 1 ? "rule" : "rules"}
-              </span>
+              Filter to your role →
             </Link>
-          ))}
+            <Link href="/coverage" className="text-muted-fg underline-offset-3 hover:text-fg hover:underline">
+              Full coverage map
+            </Link>
+          </div>
         </div>
+
+        <ol className="mt-2 list-none border-t border-fg/15 p-0">
+          {[...topics]
+            .sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0))
+            .map((t, i) => {
+              const n = counts[t] ?? 0;
+              return (
+                <li key={t} className="border-b border-border-soft last:border-b-0">
+                  <Link
+                    href={`/topics/${t}`}
+                    className="group grid grid-cols-[2.5rem_minmax(0,1fr)] items-baseline gap-x-3 py-5 sm:grid-cols-[2.75rem_minmax(0,1fr)_auto] sm:gap-x-6 sm:py-[1.35rem]"
+                  >
+                    <span className="num pt-1 text-[11px] font-medium tracking-[0.1em] text-dim transition-colors group-hover:text-accent">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-[1.08rem] font-semibold tracking-tight text-fg decoration-1 underline-offset-[5px] group-hover:underline sm:text-[1.15rem]">
+                        {TOPICS[t].label}
+                      </h3>
+                      <p className="mt-1.5 max-w-[56ch] text-[13.5px] leading-relaxed text-muted-fg sm:text-[14.5px]">
+                        {TOPICS[t].blurb}
+                      </p>
+                    </div>
+                    <div className="col-start-2 mt-3 flex items-baseline gap-2 sm:col-start-auto sm:mt-0 sm:flex-col sm:items-end sm:gap-0 sm:self-center sm:pl-4">
+                      <span className="num text-[1.4rem] font-semibold tracking-tight tabular-nums leading-none text-fg sm:text-[1.65rem]">
+                        {n}
+                      </span>
+                      <span className="text-[11.5px] tracking-wide text-dim sm:mt-1">
+                        {n === 1 ? "rule" : "rules"}
+                        <span
+                          aria-hidden
+                          className="ml-2 inline-block text-dim transition-transform group-hover:translate-x-0.5 group-hover:text-accent sm:ml-0 sm:mt-2 sm:block sm:text-center"
+                        >
+                          →
+                        </span>
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+        </ol>
       </section>
 
       {/* What it is not */}
