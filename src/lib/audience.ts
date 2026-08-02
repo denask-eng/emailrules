@@ -33,10 +33,14 @@ export const STORAGE_KEY = "emailrules.audience.v3";
 export const ONBOARD_KEY = "emailrules.onboarded.v2";
 
 export const AUDIENCE_CHIPS: { key: keyof Audience; label: string; explain: string }[] = [
-  { key: "eu", label: "EU", explain: "People in the European Union on your list" },
+  {
+    key: "eu",
+    label: "EU / Europe",
+    explain: "EU recipients — ePrivacy, FR/DE/IT tracking and consent pages tagged EU",
+  },
   { key: "us", label: "US", explain: "People in the United States" },
   { key: "ca", label: "Canada", explain: "CASL and Canadian recipients" },
-  { key: "uk", label: "UK", explain: "United Kingdom recipients" },
+  { key: "uk", label: "UK", explain: "United Kingdom PECR — not EU, separate chip" },
   { key: "au", label: "Australia", explain: "Australian-link commercial email" },
   {
     key: "gmailBulk",

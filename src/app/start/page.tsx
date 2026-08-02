@@ -28,7 +28,8 @@ export default async function StartHere() {
           {
             n: "01",
             t: "Say what kind of work you do",
-            d: "On Rules, pick a role (newer marketer, campaigns & flows, inbox & auth, or multi-country). We save it and show five rules first — not all " +
+            d:
+              "On Rules, pick a role (newer marketer, campaigns & flows, inbox & auth, or multi-country). Toggle where you send — EU / Europe, UK, US, Canada, Australia. Five rules first — not all " +
               stats.total +
               " at once.",
             href: "/rules",

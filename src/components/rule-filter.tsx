@@ -285,6 +285,14 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               </button>
             ))}
           </div>
+          <p className="mt-2 max-w-[48ch] text-[12.5px] leading-relaxed text-dim">
+            EU / Europe pulls ePrivacy plus FR, DE, IT pages tagged EU. UK is its own law — separate
+            chip. Not every Member State yet; see{" "}
+            <Link href="/coverage" className="underline underline-offset-2 hover:text-fg">
+              coverage
+            </Link>
+            .
+          </p>
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4 text-[13px]">

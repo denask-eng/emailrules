@@ -90,6 +90,11 @@ export default async function Coverage() {
 
       <section className="mt-14">
         <h2 className="text-[1.15rem] font-semibold">By jurisdiction</h2>
+        <p className="mt-1.5 max-w-[54ch] text-[13.5px] leading-relaxed text-muted-fg">
+          Europe is first-class where we have sources: EU-wide ePrivacy / AI / accessibility, plus
+          France, Germany, Italy, and UK PECR as its own row. Missing Member States means we have not
+          shipped a sourced page yet — not that those markets are irrelevant.
+        </p>
         <ul className="mt-4 list-none border-t p-0">
           {byJuris.map(({ j, n }) => (
             <li key={j} className="flex items-baseline justify-between gap-3 border-b py-3">

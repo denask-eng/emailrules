@@ -12,11 +12,11 @@ export type FaqItem = {
 export const SITE_FAQ: FaqItem[] = [
   {
     q: "Who is this actually for?",
-    a: "People who ship email and are too busy to re-read every PDF: week-one marketers, lifecycle/CRM, deliverability, multi-country ops, DTC brands, agencies. You want what is true, whose job it is, and what to do Monday. Not for people who sell tools about email and need a fake score to demo.",
+    a: "People who ship email and are too busy to re-read every PDF: week-one marketers, lifecycle/CRM, deliverability, multi-country ops, DTC brands, agencies. That includes EU and UK programmes — turn on EU / Europe (and UK separately) in filters, or pick “I send to many countries.” You want what is true, whose job it is, and what to do Monday. Not for people who sell tools about email and need a fake score to demo.",
   },
   {
     q: "Why only ~35 rules? Isn’t that… thin?",
-    a: "On purpose. A wall of 400 undated “best practices” is how you look busy and still get burned. Every page needs a primary source we actually read. Thin and checkable beats fat and folklore. Coverage map says what we still refuse to invent — including SMS, seed scores, and warm-up magic.",
+    a: "On purpose. A wall of 400 undated “best practices” is how you look busy and still get burned. Every page needs a primary source we actually read. Thin and checkable beats fat and folklore. Europe is on the shelf (ePrivacy, France/Italy tracking, Germany consent, EU B2B, AI Act, accessibility reality-check, UK PECR) — not every Member State. Coverage map lists geos and what we still refuse to invent.",
   },
   {
     q: "Is this legal advice?",
