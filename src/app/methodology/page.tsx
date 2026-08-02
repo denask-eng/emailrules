@@ -24,6 +24,19 @@ export default async function Methodology() {
       <div className="prose-rule space-y-9">
         <section>
           <h2 className="num mb-2.5 border-b border-fg pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
+            Who stands behind this
+          </h2>
+          <p className="m-0 text-[0.96rem] leading-relaxed">
+            A named human owns the shelf: claims are checked, dated, and corrected in public. Tools
+            may help with typing or research grunt work. They do not invent citations, enforcement
+            theatre, or fake scores. If a page cannot be traced to a primary source a person read,
+            it does not ship. That is the opposite of LLM content farms — and the opposite of vendor
+            blogs that cannot afford to say their product is the problem.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="num mb-2.5 border-b border-fg pb-2 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
             What counts as a source
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">

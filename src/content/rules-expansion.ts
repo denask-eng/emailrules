@@ -348,7 +348,8 @@ export const RULES_EXPANSION: Rule[] = [
     added: "2026-08-02",
     updated: "2026-08-02",
     lastVerified: "2026-08-02",
-    changelog: [{ date: "2026-08-02", note: "Added standalone Yahoo requirements (was only a Gmail footnote)." }],
+    changelog: [
+      { date: "2026-08-02", note: "Re-verified against primary sources (bulk/auth/consent core)." },{ date: "2026-08-02", note: "Added standalone Yahoo requirements (was only a Gmail footnote)." }],
   },
 
   {
@@ -708,7 +709,8 @@ export const RULES_EXPANSION: Rule[] = [
     added: "2026-08-02",
     updated: "2026-08-02",
     lastVerified: "2026-08-02",
-    changelog: [{ date: "2026-08-02", note: "Added from statute and CRTC materials." }],
+    changelog: [
+      { date: "2026-08-02", note: "Re-verified against primary sources (bulk/auth/consent core)." },{ date: "2026-08-02", note: "Added from statute and CRTC materials." }],
   },
 
   {
@@ -979,5 +981,274 @@ export const RULES_EXPANSION: Rule[] = [
     updated: "2026-08-02",
     lastVerified: "2026-08-02",
     changelog: [{ date: "2026-08-02", note: "Added France/Germany B2B contrast." }],
+  },
+
+  // ─────────────────────────────────────────── P0 technical (WttW / senior deliv gaps)
+  {
+    slug: "bimi-is-optional-brand-display-not-a-bulk-mandate",
+    title: "BIMI shows a logo after DMARC — it is not a bulk-sender mandate",
+    question: "Do I need BIMI to reach the inbox at Gmail or Yahoo?",
+    status: "in_force",
+    effectiveDate: "2020-01-01",
+    jurisdictions: ["Global"],
+    topic: "authentication",
+    featured: true,
+    answer:
+      "Brand Indicators for Message Identification (BIMI) is a specification that lets supporting clients show a brand-controlled logo next to authenticated mail. BIMI does not replace SPF, DKIM, or DMARC, and it is not listed as a requirement in Gmail or Yahoo bulk-sender mandates. Practical display usually needs a DMARC policy of quarantine or reject (not p=none), a BIMI DNS TXT record pointing at an SVG logo over HTTPS, and — for Gmail and other picky clients — a Verified Mark Certificate (VMC) or Common Mark Certificate (CMC) as evidence. Microsoft Outlook/Exchange Online support for BIMI remains limited or absent depending on product surface; treat logo display as brand UX, not deliverability law.",
+    appliesTo:
+      "Brands that want a verified logo in supporting inboxes and already authenticate mail. Anyone who was told BIMI is required to pass Gmail bulk checks.",
+    plain:
+      "BIMI can put your logo next to the message in some inboxes after DMARC is strong. It is not on the Gmail/Yahoo “bulk sender must” list. No BIMI does not mean automatic spam.",
+    ownership: "shared",
+    handled: {
+      already:
+        "Nothing required. ESPs may host SVG or help with DNS templates; they cannot buy your trademark certificate for you.",
+      stillYours:
+        "DMARC enforcement policy, logo/SVG correctness, certificate purchase if you want Gmail-class display, and the BIMI DNS record.",
+    },
+    mondayMorning:
+      "If someone sold you “BIMI or no inbox,” open Gmail’s bulk sender requirements and BIMI Group docs side by side. Fix DMARC alignment and complaint rate first; treat BIMI as optional brand polish after p=quarantine or reject is honest.",
+    ignoreIf: "You do not care about logos in the inbox chrome and your auth/complaints are already clean.",
+    whatToDo: [
+      "Do not prioritise BIMI over SPF/DKIM alignment, DMARC, or spam-complaint rate.",
+      "If you want BIMI display: move DMARC toward quarantine/reject only when you can pass aligned auth at volume.",
+      "Publish a BIMI TXT record with an HTTPS SVG; add a VMC/CMC when the clients you care about require evidence documents.",
+      "Expect uneven client support — including weak or no Microsoft support depending on product.",
+    ],
+    enforcement:
+      "No mailbox provider fines you for lacking BIMI. Without it, mail can still pass bulk requirements. With broken auth, BIMI will not save you.",
+    sources: [
+      {
+        name: "BIMI Group, Brand Indicators for Message Identification",
+        url: "https://bimigroup.org/",
+        actor: "standards-body",
+      },
+      {
+        name: "Google Workspace Admin Help, Set up BIMI",
+        url: "https://knowledge.workspace.google.com/admin/security/set-up-bimi",
+        actor: "mailbox-provider",
+      },
+      {
+        name: "Google, Email sender guidelines (bulk sender requirements)",
+        url: "https://support.google.com/a/answer/81126",
+        actor: "mailbox-provider",
+      },
+    ],
+    related: [
+      "gmail-bulk-sender-requirements",
+      "dkim-alignment-vs-dkim-passing",
+      "dmarc-policy-none-is-not-enforcement",
+    ],
+    added: "2026-08-02",
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
+    changelog: [
+      {
+        date: "2026-08-02",
+        note: "Added BIMI as optional brand display after primary BIMI Group and Google docs; not a bulk mandate.",
+      },
+    ],
+  },
+
+  {
+    slug: "dmarc-policy-none-is-not-enforcement",
+    title: "DMARC p=none is monitoring, not enforcement",
+    question: "Is publishing DMARC at p=none enough to be done with DMARC?",
+    status: "in_force",
+    effectiveDate: "2015-03-01",
+    jurisdictions: ["Global"],
+    topic: "authentication",
+    featured: true,
+    answer:
+      "A DMARC record with p=none asks receivers to send aggregate reports without instructing them to quarantine or reject failing mail. That satisfies many bulk-sender “publish a DMARC record” checkboxes (including Microsoft’s high-volume requirement at minimum p=none) and is a correct first step. It is not domain enforcement. Moving to p=quarantine or p=reject is how you instruct receivers to treat unauthenticated use of your From domain — and it is a prerequisite for practical BIMI display in major clients. In May 2026 the IETF published RFC 9989 (core DMARC), RFC 9990 (aggregate reporting), and RFC 9991 (failure reporting), obsoleting RFC 7489 as the primary specification reference while remaining compatible with existing v=DMARC1 records.",
+    appliesTo:
+      "Every brand that publishes DMARC for bulk compliance, board security, or brand protection — especially teams that stopped at p=none years ago.",
+    plain:
+      "p=none means “watch and report,” not “block impostors.” Bulk rules often only demand that the record exists. Real protection — and BIMI — needs quarantine or reject when your aligned traffic is clean enough.",
+    ownership: "yours",
+    handled: {
+      already:
+        "ESPs can sign DKIM and help you collect reports. They cannot choose your p= policy without you.",
+      stillYours:
+        "Reading aggregate reports (rua), fixing unaligned senders, and deciding when to tighten policy.",
+    },
+    mondayMorning:
+      "Open your DMARC record and your last aggregate report. List every source that fails alignment. Do not jump to p=reject until that list is empty or accepted.",
+    ignoreIf: "You already run p=quarantine or p=reject with clean reports and no unknown senders.",
+    whatToDo: [
+      "Keep p=none only as a deliberate monitoring phase with rua reporting enabled.",
+      "Inventory every system that sends as your From domain; fix alignment before tightening p=.",
+      "Plan a move to quarantine then reject; treat p=none as unfinished brand protection.",
+      "When citing the protocol, prefer RFC 9989/9990/9991 (May 2026) over RFC 7489 alone.",
+    ],
+    enforcement:
+      "Mailbox bulk rules may accept p=none. Brand spoofing continues under p=none. BIMI logo display generally will not. No universal fine for staying at p=none.",
+    sources: [
+      {
+        name: "RFC 9989, Domain-based Message Authentication, Reporting, and Conformance (DMARC)",
+        url: "https://www.rfc-editor.org/rfc/rfc9989",
+        published: "2026-05-01",
+        actor: "standards-body",
+      },
+      {
+        name: "RFC 9990, DMARC Aggregate Reporting",
+        url: "https://www.rfc-editor.org/rfc/rfc9990",
+        published: "2026-05-01",
+        actor: "standards-body",
+      },
+      {
+        name: "Microsoft, High-volume sender requirements for Outlook.com",
+        url: "https://techcommunity.microsoft.com/blog/microsoftdefenderforoffice365blog/strengthening-email-ecosystem-outlook%E2%80%99s-new-requirements-for-high%E2%80%90volume-senders/4399730",
+        published: "2025-04-01",
+        actor: "mailbox-provider",
+      },
+    ],
+    related: [
+      "dkim-alignment-vs-dkim-passing",
+      "outlook-high-volume-sender-authentication",
+      "bimi-is-optional-brand-display-not-a-bulk-mandate",
+    ],
+    added: "2026-08-02",
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
+    changelog: [
+      {
+        date: "2026-08-02",
+        note: "Added DMARC policy ladder and RFC 9989/9990/9991 publication note.",
+      },
+    ],
+  },
+
+  {
+    slug: "complaint-feedback-loops-are-provider-specific",
+    title: "Complaint feedback loops are provider-specific — Gmail is not Yahoo CFL",
+    question: "How do I see spam complaints from Gmail, Yahoo, and Microsoft?",
+    status: "in_force",
+    effectiveDate: "2010-01-01",
+    jurisdictions: ["Global"],
+    topic: "provider-rules",
+    featured: true,
+    answer:
+      "Mailbox providers expose user spam complaints differently. Yahoo (and related brands on its stack) operates a Complaint Feedback Loop (CFL) that participating senders can use for complaint telemetry. Microsoft offers Junk Mail Reporting Program (JMRP) data alongside Smart Network Data Services (SNDS) for IP-oriented views of Outlook.com-class traffic. Google does not give bulk senders a classic ARF-style FBL for consumer Gmail comparable to Yahoo’s CFL; operators instead rely on Google Postmaster Tools spam-rate and related signals, plus their ESP’s complaint events when available. Copying “we joined the FBL” from a 2015 checklist without naming the provider is how teams invent coverage they do not have.",
+    appliesTo:
+      "Anyone measuring complaints, building suppression, or debugging reputation across Gmail, Yahoo/AOL, and Microsoft consumer mail.",
+    plain:
+      "There is no single “the FBL.” Yahoo has a complaint feedback loop. Microsoft has JMRP/SNDS. Gmail mostly wants you in Postmaster Tools — not a classic FBL for every sender. Ask your ESP what they actually ingest.",
+    ownership: "shared",
+    handled: {
+      already:
+        "ESPs often enrol shared IPs and normalise complaint events into suppressions. Dedicated-IP senders may need to enrol SNDS/JMRP or Yahoo CFL themselves.",
+      stillYours:
+        "Knowing which providers you actually monitor, and not assuming Gmail complaints arrive the same way Yahoo’s do.",
+    },
+    mondayMorning:
+      "Write a three-row table: Gmail | Yahoo | Microsoft — for each, name the tool (Postmaster, CFL, JMRP/SNDS, ESP dashboard) and who owns enrolment. Fix empty cells before the next reputation scare.",
+    ignoreIf: "You send negligible volume to consumer webmail and never look at complaint metrics.",
+    whatToDo: [
+      "Stop saying “FBL” without naming the provider.",
+      "For Microsoft dedicated IPs: enrol SNDS and JMRP; for shared IPs, confirm the ESP’s coverage.",
+      "For Yahoo: confirm CFL participation path via ESP or Yahoo’s sender programmes.",
+      "For Gmail: use Postmaster Tools spam rate and ESP complaint webhooks — do not invent a missing classic FBL.",
+    ],
+    enforcement:
+      "No fine for missing a loop. Blindness shows up as rising spam rates, blocks, and delayed diagnosis when users hit “spam.”",
+    sources: [
+      {
+        name: "Microsoft, Smart Network Data Services (SNDS)",
+        url: "https://sendersupport.olc.protection.outlook.com/snds/",
+        actor: "mailbox-provider",
+      },
+      {
+        name: "Yahoo Sender Hub / sender best practices (complaint and authentication guidance)",
+        url: "https://senders.yahooinc.com/best-practices/",
+        actor: "mailbox-provider",
+      },
+      {
+        name: "Google Postmaster Tools",
+        url: "https://postmaster.google.com/",
+        actor: "mailbox-provider",
+      },
+    ],
+    related: [
+      "microsoft-snds-and-jmrp-expose-ip-and-junk-data",
+      "gmail-bulk-sender-requirements",
+      "yahoo-requires-authentication-and-low-complaints",
+    ],
+    added: "2026-08-02",
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
+    changelog: [
+      {
+        date: "2026-08-02",
+        note: "Added provider-specific complaint telemetry map; Gmail is not treated as a classic FBL.",
+      },
+    ],
+  },
+
+  {
+    slug: "transactional-vs-commercial-email-is-not-a-subject-line-trick",
+    title: "Transactional vs commercial email is classification, not a subject-line trick",
+    question: "Can I avoid unsubscribe and consent rules by calling a promo “transactional”?",
+    status: "in_force",
+    effectiveDate: "2004-01-01",
+    jurisdictions: ["Global", "US", "EU", "CA", "UK", "AU"],
+    topic: "consent-tracking",
+    featured: true,
+    answer:
+      "Laws and mailbox providers treat “transactional” or “relationship” messages differently from commercial marketing, but the label in your ESP is not the legal test. US CAN-SPAM carves out transactional or relationship messages that facilitate an agreed-upon transaction or update an existing relationship; primary-purpose analysis still matters when marketing content dominates. Gmail and Yahoo bulk-sender one-click unsubscribe requirements target marketing/bulk commercial mail, not every password reset. Canada’s CASL, UK PECR, EU ePrivacy implementations, and Australia’s Spam Act each define commercial electronic messages with their own consent and identification rules — rebadging a sale as “account update” is a common enforcement and complaint pattern. Misclassification creates both legal risk and spam-button risk.",
+    appliesTo:
+      "Anyone mixing receipts, shipping, account notices, and promotions in the same templates or streams — especially multi-country brands.",
+    plain:
+      "Calling a sale “transactional” in Klaviyo does not make it transactional under the law. If the main point is marketing, treat it as marketing: consent, identity, unsubscribe. Receipts and password resets are different.",
+    ownership: "yours",
+    handled: {
+      already:
+        "ESPs let you mark message types and often attach one-click headers to campaigns by default. They do not adjudicate your legal primary purpose.",
+      stillYours:
+        "Template classification, consent basis per geo, and not stuffing promos into “order update” shells.",
+    },
+    mondayMorning:
+      "Pull ten recent “transactional” templates. If any is mostly offer, discount, or win-back, reclassify them as commercial and check consent + unsubscribe before the next send.",
+    ignoreIf: "You only send pure service messages with no promotional content, under clear account relationships.",
+    whatToDo: [
+      "Define transactional vs commercial in writing for your programme — not only ESP folder names.",
+      "Apply geo rules (CASL, PECR, ePrivacy, Spam Act, CAN-SPAM primary purpose) before the ESP toggle.",
+      "Keep marketing out of password-reset and shipping templates.",
+      "Expect bulk-sender one-click duties on commercial bulk, not on pure transactional streams.",
+    ],
+    enforcement:
+      "Regulators and private plaintiffs care about content and purpose, not your internal label. Mailbox users hit spam when unexpected promo arrives as “account mail.” ACMA and similar agencies have public cases against misleading commercial classification.",
+    sources: [
+      {
+        name: "FTC, CAN-SPAM Act: A Compliance Guide for Business",
+        url: "https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business",
+        actor: "regulator",
+      },
+      {
+        name: "Google, Email sender guidelines",
+        url: "https://support.google.com/a/answer/81126",
+        actor: "mailbox-provider",
+      },
+      {
+        name: "ACMA, spam and telemarketing compliance",
+        url: "https://www.acma.gov.au/spam-and-telemarketing",
+        actor: "regulator",
+      },
+    ],
+    related: [
+      "can-spam-penalty-per-email",
+      "one-click-unsubscribe-rfc-8058",
+      "australia-commercial-email-needs-consent-identity-and-a-working-unsubscribe",
+      "canada-casl-commercial-email-needs-provable-consent",
+    ],
+    added: "2026-08-02",
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
+    changelog: [
+      {
+        date: "2026-08-02",
+        note: "Added transactional vs commercial classification rule from primary regulator and bulk-sender docs.",
+      },
+    ],
   },
 ];

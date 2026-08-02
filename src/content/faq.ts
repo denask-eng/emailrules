@@ -15,8 +15,8 @@ export const SITE_FAQ: FaqItem[] = [
     a: "People who ship email and are too busy to re-read every PDF: week-one marketers, lifecycle/CRM, deliverability, multi-country ops, DTC brands, agencies — on Klaviyo, Mailchimp, Braze, HubSpot, SFMC, or something else. Pick your tool and geos so product-specific pages only appear when they match. EU and UK are first-class filters. Not for people who sell tools about email and need a fake score to demo.",
   },
   {
-    q: "Why only ~35 rules? Isn’t that… thin?",
-    a: "On purpose. A wall of 400 undated “best practices” is how you look busy and still get burned. Every page needs a primary source we actually read. Thin and checkable beats fat and folklore. Europe is on the shelf (ePrivacy, France/Italy tracking, Germany consent, EU B2B, AI Act, accessibility reality-check, UK PECR) — not every Member State. Coverage map lists geos and what we still refuse to invent.",
+    q: "Why only ~40 rules? Isn’t that… thin?",
+    a: "On purpose. A wall of 400 undated “best practices” is how you look busy and still get burned. Every page needs a primary source we actually read. Thin and checkable beats fat and folklore. Europe, bulk inbox rules, measurement honesty, and protocol topics like BIMI/DMARC policy are on the shelf when we can cite them — not every Member State and not every vendor myth. Coverage map lists what we still refuse to invent.",
   },
   {
     q: "Is this legal advice?",
@@ -28,7 +28,7 @@ export const SITE_FAQ: FaqItem[] = [
   },
   {
     q: "Why should I trust you more than my ESP’s blog?",
-    a: "ESPs sell seats. AI invents citations when nobody watches. We sell nothing today — no pixels, no seed tests, no affiliate — so we can say “your open rate is broken” without selling the fix. Named human, last-verified dates, public corrections when we’re wrong (we already have been). Check the sources. Fail that test and leave.",
+    a: "ESPs sell seats. Seed-score vendors sell fear. AI invents citations when nobody watches. We sell nothing today — no pixels, no placement scores, no affiliate — so we can say when a tool is the problem. A human verifies, dates, and corrects in public. Tools may help draft; they do not ship unsourced claims. Check the primary links. Fail that test and leave.",
   },
   {
     q: "Do I need an account?",

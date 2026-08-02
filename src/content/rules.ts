@@ -408,6 +408,7 @@ const RULES_CORE: Rule[] = [
     updated: "2026-08-02",
     lastVerified: "2026-08-02",
     changelog: [
+      { date: "2026-08-02", note: "Re-verified against primary sources (bulk/auth/consent core)." },
       {
         date: "2026-08-02",
         note: "Correction: this page said Gmail enforces silently and that Google scopes ARC to indirect mail. Both were wrong. Google's guidelines name the failures they return (4.7.0, 4.7.28, 5.7.1, 5.7.26), and the word ARC does not appear on the page at all. Re-read both help paths and counted; the ARC claim was traced to a citation that does not exist.",
@@ -469,9 +470,10 @@ const RULES_CORE: Rule[] = [
     ],
     related: ["gmail-bulk-sender-requirements"],
     added: "2026-05-02",
-    updated: "2026-05-02",
-    lastVerified: "2026-08-01",
-    changelog: [{ date: "2026-05-02", note: "Added." }],
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
+    changelog: [
+      { date: "2026-08-02", note: "Re-verified against primary sources (bulk/auth/consent core)." },{ date: "2026-05-02", note: "Added." }],
   },
 
   {
@@ -803,9 +805,10 @@ const RULES_CORE: Rule[] = [
     ],
     related: ["gmail-bulk-sender-requirements"],
     added: "2026-05-18",
-    updated: "2026-05-18",
-    lastVerified: "2026-08-01",
-    changelog: [{ date: "2026-05-18", note: "Added." }],
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
+    changelog: [
+      { date: "2026-08-02", note: "Re-verified against primary sources (bulk/auth/consent core)." },{ date: "2026-05-18", note: "Added." }],
   },
 
   {
@@ -856,9 +859,10 @@ const RULES_CORE: Rule[] = [
     ],
     related: ["gmail-bulk-sender-requirements", "dkim-alignment-vs-dkim-passing"],
     added: "2026-08-01",
-    updated: "2026-08-01",
-    lastVerified: "2026-08-01",
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
     changelog: [
+      { date: "2026-08-02", note: "Re-verified against primary sources (bulk/auth/consent core)." },
       {
         date: "2026-08-01",
         note: "Added. Microsoft's requirement had been missing while Gmail and Yahoo were covered, which was a real gap.",
@@ -973,9 +977,10 @@ const RULES_CORE: Rule[] = [
     ],
     related: ["washington-misleading-subject-lines", "one-click-unsubscribe-rfc-8058"],
     added: "2026-08-01",
-    updated: "2026-08-01",
-    lastVerified: "2026-08-01",
+    updated: "2026-08-02",
+    lastVerified: "2026-08-02",
     changelog: [
+      { date: "2026-08-02", note: "Re-verified against primary sources (bulk/auth/consent core)." },
       {
         date: "2026-08-01",
         note: "Added. The baseline US rule was missing entirely, and the 2026 penalty figure is widely misreported because the annual adjustment was cancelled.",

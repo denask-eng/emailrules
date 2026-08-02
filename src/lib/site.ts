@@ -3,12 +3,12 @@ export const SITE = {
   /** Used in <title> suffix and OG */
   tagline: "What's true about email. Right now.",
   description:
-    "Built by a working email marketer who is too busy to re-read Gmail help pages every week. What still applies to you, whose job it is, and what to do first — primary sources, no scores, no fear-selling.",
+    "What’s true about email right now: bulk inbox rules, consent by country, auth, measurement. Human-verified, primary sources, whose job it is, what to do Monday. No placement scores, no seed tests, no ESP affiliate.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://emailrules.today",
   locale: "en",
   /** Shown in the footer and in llms.txt so citations have a human owner */
   maintainer:
-    "Maintained by someone who runs email programmes for a living — not a content farm.",
+    "Human-verified by someone who ships email — not a content farm, not a seed-score shop.",
   contact: "corrections@emailrules.today",
 } as const;
 

@@ -259,6 +259,34 @@ export const PLAIN_OVERRIDES: Record<string, PlainOverride> = {
     whyItMatters:
       "One Klaviyo segment labelled “EU B2B” without country logic is how legal risk hides in a filter name.",
   },
+  "bimi-is-optional-brand-display-not-a-bulk-mandate": {
+    tldr: "BIMI can show your logo after strong DMARC — it is not on Gmail/Yahoo’s bulk “must do” list.",
+    plain:
+      "BIMI is a logo-in-the-inbox feature for some clients after DMARC is solid (usually quarantine or reject) and you publish the right DNS and, for Gmail-class display, a mark certificate. Missing BIMI does not fail bulk sender rules. Broken authentication still fails them with or without a logo.",
+    whyItMatters:
+      "Teams burn budget on certificates while spam rate and alignment are on fire. Fix the bulk requirements first; treat BIMI as optional brand polish.",
+  },
+  "dmarc-policy-none-is-not-enforcement": {
+    tldr: "DMARC p=none means watch and report — it does not tell receivers to block impostors.",
+    plain:
+      "Publishing p=none often satisfies bulk-sender “have a DMARC record” checkboxes. It does not enforce your brand. Quarantine and reject do, once aligned senders are clean. The IETF published updated DMARC specs as RFC 9989/9990/9991 in 2026; existing v=DMARC1 records still work.",
+    whyItMatters:
+      "Security decks say “we have DMARC” while spoofers still pass. p=none is a phase, not a finish line — and BIMI generally needs real policy.",
+  },
+  "complaint-feedback-loops-are-provider-specific": {
+    tldr: "There is no single FBL — Yahoo, Microsoft, and Gmail expose complaints differently.",
+    plain:
+      "Yahoo has a complaint feedback loop. Microsoft uses JMRP with SNDS. Gmail does not give every bulk sender a classic ARF FBL; Postmaster Tools spam rate and your ESP’s complaint events are the usual path. Saying “we’re on the FBL” without naming the provider is cargo cult.",
+    whyItMatters:
+      "You cannot fix what you cannot see. Empty Gmail visibility is why teams only discover complaint spikes after Postmaster turns red.",
+  },
+  "transactional-vs-commercial-email-is-not-a-subject-line-trick": {
+    tldr: "Calling a promo “transactional” in your ESP does not make it transactional under the law.",
+    plain:
+      "Laws and inboxes care about purpose and content, not your folder name. Receipts and password resets are different from sales. Stuffing offers into “account update” templates creates legal risk and spam clicks. Apply the real commercial rules — consent, identity, unsubscribe — when marketing is the point.",
+    whyItMatters:
+      "Mislabelled promo is how you earn regulators, complaint rate, and a reputation problem in the same week.",
+  },
 };
 
 export function displayPlain(slug: string, fallback: string): string {
