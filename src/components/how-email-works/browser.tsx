@@ -179,13 +179,34 @@ export function GlossaryBrowser({
       {stages.map((s) => {
         const list = byStage.get(s.id) ?? [];
         if (filtering && list.length === 0) return null;
+        /* Stops 4 and 5 happen inside Gmail, not inside your platform. Giving
+           them their own surface turns eight identically-separated sections
+           into a page with a spine: your building, their building, yours
+           again — which is also the argument the page is making. */
+        const theirs = s.id === "judge" || s.id === "filter";
         return (
-          <section key={s.id} id={s.id} className="scroll-mt-[7.5rem] pt-16">
+          <section
+            key={s.id}
+            id={s.id}
+            className={cn(
+              "scroll-mt-[7.5rem]",
+              theirs
+                ? "mt-8 rounded-2xl border border-border bg-bg-2 px-5 py-10 first:mt-16 sm:px-8"
+                : "pt-16",
+            )}
+          >
+            {theirs ? (
+              <p className="label mb-5 flex items-center gap-2 text-muted-fg">
+                <span aria-hidden className="h-px w-6 bg-fg/25" />
+                Their building — none of this is in your platform
+              </p>
+            ) : null}
+
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="num text-[12px] text-accent">
+              <span className="num text-[13px] font-semibold text-accent">
                 {String(s.n).padStart(2, "0")}
               </span>
-              <h2 className="text-[clamp(1.25rem,2.6vw,1.5rem)] font-semibold tracking-tight">
+              <h2 className="text-[clamp(1.45rem,3vw,1.85rem)] leading-tight font-semibold tracking-tight">
                 {s.name}
               </h2>
               <span className="num text-[11.5px] text-dim">{s.when}</span>

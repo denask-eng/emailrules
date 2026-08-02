@@ -7,16 +7,16 @@ import { cn } from "@/lib/utils";
 /**
  * One email, making the trip.
  *
- * The rail was a diagram; a diagram of a journey that does not move is a
- * strange object. Press play and a single message crosses the eight stops
- * while each one says, in one sentence, what is happening to it. That is the
- * entire idea of this page rendered as something you can watch rather than
- * something you have to assemble in your head.
+ * This is the centrepiece of the page and the first version of it was the
+ * lightest thing on the screen: eight 13px labels on a hairline, which reads
+ * as a caption rather than as a diagram. It is now a single object with a
+ * surface of its own, a rail the message physically travels, and one element
+ * — the name of the current stop — set large enough to carry the page. The
+ * scale jump is the point: at 13px everywhere, nothing is the subject.
  *
- * Restraint on purpose: one dot, one caption, no easing tricks. It runs once
- * when it first scrolls into view, and never again unless asked. An
- * explainer that loops forever stops being an explainer and becomes a
- * screensaver you have to read around.
+ * Restraint still applies. One accent, hairline rules, no gradient, and it
+ * runs once when it first scrolls into view. An explainer that loops forever
+ * stops being an explainer and becomes a screensaver you read around.
  */
 
 export interface PlayerStage {
@@ -28,32 +28,19 @@ export interface PlayerStage {
   count: number;
 }
 
-const STEP_MS = 2400;
+const STEP_MS = 2600;
 
 /** Which stops are yours, theirs, and the return leg. */
-const TERRITORY: { span: number; label: string; note: string; theirs?: boolean }[] = [
-  {
-    span: 3,
-    label: "Your building",
-    note: "Every decision that matters is made here, months before the send.",
-  },
-  {
-    span: 3,
-    label: "Their building",
-    note: "Two different questions, one second, none of it reachable from your platform.",
-    theirs: true,
-  },
-  {
-    span: 2,
-    label: "What comes back",
-    note: "A person reacts, and the reaction becomes a number.",
-  },
+const TERRITORY: { span: number; label: string; theirs?: boolean }[] = [
+  { span: 3, label: "Your building" },
+  { span: 3, label: "Their building", theirs: true },
+  { span: 2, label: "What comes back" },
 ];
 
 export function JourneyPlayer({ stages }: { stages: PlayerStage[] }) {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [done, setDone] = useState(false);
+  const [touched, setTouched] = useState(false);
   const rootRef = useRef<HTMLElement | null>(null);
   const started = useRef(false);
 
@@ -62,17 +49,13 @@ export function JourneyPlayer({ stages }: { stages: PlayerStage[] }) {
 
   const play = useCallback(() => {
     setI(0);
-    setDone(false);
+    setTouched(true);
     setPlaying(true);
   }, []);
 
-  /* Runs itself once, the first time it is actually on screen. */
   useEffect(() => {
     const el = rootRef.current;
     if (!el || started.current) return;
-    /* Reduced motion means it never runs itself. It does not mean the reader
-       cannot press play, so nothing here touches state: the button keeps its
-       original label because nothing has happened yet. */
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       started.current = true;
       return;
@@ -85,7 +68,7 @@ export function JourneyPlayer({ stages }: { stages: PlayerStage[] }) {
           io.disconnect();
         }
       },
-      { threshold: 0.4 },
+      { threshold: 0.35 },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -96,7 +79,7 @@ export function JourneyPlayer({ stages }: { stages: PlayerStage[] }) {
     if (i >= last) {
       const t = setTimeout(() => {
         setPlaying(false);
-        setDone(true);
+        setTouched(true);
       }, STEP_MS);
       return () => clearTimeout(t);
     }
@@ -106,51 +89,118 @@ export function JourneyPlayer({ stages }: { stages: PlayerStage[] }) {
 
   const pick = (n: number) => {
     setPlaying(false);
-    setDone(true);
+    setTouched(true);
     setI(n);
   };
 
-  /* Centre of the active column, as a percentage of the track. */
-  const dotLeft = ((i + 0.5) / stages.length) * 100;
-
   return (
-    <section ref={rootRef} aria-label="What happens to one email" className="mt-8">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <section
+      ref={rootRef}
+      aria-label="What happens to one email"
+      className="mt-10 overflow-hidden rounded-2xl border border-border bg-card"
+      style={{ boxShadow: "var(--lift-2)" }}
+    >
+      {/* Header strip: the control and the counter, on their own surface. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-soft bg-bg-2 px-5 py-3 sm:px-7">
         <button
           type="button"
           onClick={playing ? () => setPlaying(false) : play}
           className={cn(
-            "pressable inline-flex h-11 items-center gap-2 rounded-full border px-4 text-[13px] font-medium transition-colors sm:h-9",
+            "pressable inline-flex h-11 items-center gap-2 rounded-full border px-3.5 text-[12.5px] font-medium transition-colors sm:h-9",
             playing
-              ? "border-accent/35 bg-accent-soft text-accent"
+              ? "border-accent/40 bg-accent-soft text-accent"
               : "border-border bg-card text-fg hover:border-accent/40 hover:text-accent",
           )}
-          aria-live="off"
         >
-          <span aria-hidden className="text-[11px]">
-            {playing ? "❙❙" : done ? "↻" : "▶"}
+          <span aria-hidden className="text-[10px] leading-none">
+            {playing ? "❙❙" : touched ? "↻" : "▶"}
           </span>
-          {playing ? "Playing" : done ? "Watch it again" : "Watch one email make the trip"}
+          {playing ? "Playing" : touched ? "Again" : "Watch one email make the trip"}
         </button>
-        <p className="num text-[11.5px] text-dim">
-          Stop {stage.n} of {stages.length}
-        </p>
+
+        <div className="num ml-auto flex items-baseline gap-1 text-[11.5px] text-dim">
+          <span className="text-[15px] font-semibold text-fg">
+            {String(stage.n).padStart(2, "0")}
+          </span>
+          <span>/ {String(stages.length).padStart(2, "0")}</span>
+        </div>
       </div>
 
-      {/* The message itself: one dot, riding the line the stops hang from. It
-          has to precede the list so it sits on that top border rather than
-          under the cards. Hidden below sm, where the track wraps to two
-          columns and a single horizontal axis would be a lie. */}
-      <div aria-hidden className="relative mt-6 hidden h-0 sm:block">
-        <span
-          className="absolute -top-px block h-2 w-2 -translate-x-1/2 rounded-full bg-accent transition-[left] duration-700 ease-out"
-          style={{ left: `${dotLeft}%` }}
-        />
+      {/* ── The rail. Desktop only: eight stops need eight columns. ───────── */}
+      <div className="hidden px-7 pt-9 pb-2 sm:block">
+        <ol className="relative grid list-none grid-cols-8 p-0">
+          {/* The line the message runs along, and the part already travelled. */}
+          <span aria-hidden className="absolute top-[5px] right-0 left-0 h-px bg-border" />
+          <span
+            aria-hidden
+            className="absolute top-[5px] left-0 h-px bg-accent transition-[width] duration-700 ease-out"
+            style={{ width: `${((i + 0.5) / stages.length) * 100}%` }}
+          />
+
+          {stages.map((s, n) => {
+            const active = n === i;
+            const passed = n < i;
+            return (
+              <li key={s.id} className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => pick(n)}
+                  aria-current={active ? "step" : undefined}
+                  className="group block w-full pr-3 text-left"
+                >
+                  {/* The node on the line. The active one gets a soft ring. */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "relative -mt-px block h-[11px] w-[11px] rounded-full border transition-all duration-300",
+                      active
+                        ? "border-accent bg-accent shadow-[0_0_0_4px_var(--accent-soft)]"
+                        : passed
+                          ? "border-accent bg-accent"
+                          : "border-border bg-card group-hover:border-muted-fg",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "num mt-3 block text-[10.5px] transition-colors",
+                      active ? "text-accent" : passed ? "text-muted-fg" : "text-dim",
+                    )}
+                  >
+                    {String(s.n).padStart(2, "0")}
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-1 block text-[12.5px] leading-snug tracking-tight transition-colors",
+                      active ? "font-semibold text-fg" : "text-muted-fg group-hover:text-fg",
+                    )}
+                  >
+                    {s.name}
+                  </span>
+                  <span className="num mt-1 block text-[10.5px] leading-snug text-dim">
+                    {s.when}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+
+        {/* Territory. Three bands under eight stops: yours, theirs, yours again. */}
+        <div className="mt-5 grid grid-cols-8 gap-x-1.5">
+          {TERRITORY.map((t) => (
+            <div
+              key={t.label}
+              style={{ gridColumn: `span ${t.span} / span ${t.span}` }}
+              className={cn("border-t-2 pt-1.5", t.theirs ? "border-t-fg/25" : "border-t-border")}
+            >
+              <p className={cn("label text-[0.56rem]", t.theirs && "text-muted-fg")}>{t.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Stops are player controls, not links: the caption below carries the
-          real anchor, so every section stays reachable with no JavaScript. */}
-      <ol className="mt-6 grid list-none grid-cols-2 gap-x-2 gap-y-2 p-0 sm:mt-0 sm:grid-cols-8 sm:gap-x-0 sm:gap-y-0">
+      {/* ── Mobile: a tappable grid, no fake horizontal axis. ─────────────── */}
+      <ol className="grid list-none grid-cols-2 gap-2 p-5 sm:hidden">
         {stages.map((s, n) => {
           const active = n === i;
           const passed = n < i;
@@ -161,18 +211,17 @@ export function JourneyPlayer({ stages }: { stages: PlayerStage[] }) {
                 onClick={() => pick(n)}
                 aria-current={active ? "step" : undefined}
                 className={cn(
-                  "group relative block h-full w-full rounded-lg px-2.5 py-2 text-left transition-colors",
-                  "border sm:rounded-none sm:border-0 sm:border-t sm:px-2 sm:pt-3.5 sm:pb-1",
+                  "block h-full w-full rounded-lg border px-2.5 py-2 text-left transition-colors",
                   active
-                    ? "border-accent/40 bg-accent-soft sm:border-t-accent sm:bg-transparent"
+                    ? "border-accent/45 bg-accent-soft"
                     : passed
-                      ? "border-border-soft bg-card sm:border-t-accent/30 sm:bg-transparent"
-                      : "border-border-soft bg-card hover:bg-muted/60 sm:border-t-border sm:bg-transparent",
+                      ? "border-border bg-bg-2"
+                      : "border-border-soft bg-card",
                 )}
               >
                 <span
                   className={cn(
-                    "num block text-[10.5px] tracking-wider transition-colors",
+                    "num block text-[10px]",
                     active ? "text-accent" : passed ? "text-muted-fg" : "text-dim",
                   )}
                 >
@@ -180,14 +229,11 @@ export function JourneyPlayer({ stages }: { stages: PlayerStage[] }) {
                 </span>
                 <span
                   className={cn(
-                    "mt-0.5 block text-[12.5px] leading-snug font-medium tracking-tight transition-colors sm:text-[13px]",
-                    active ? "text-accent" : "text-fg",
+                    "mt-0.5 block text-[12.5px] leading-snug tracking-tight",
+                    active ? "font-semibold text-accent" : "text-fg",
                   )}
                 >
                   {s.name}
-                </span>
-                <span className="mt-1 hidden text-[11px] leading-snug text-dim sm:block">
-                  {s.when}
                 </span>
               </button>
             </li>
@@ -195,43 +241,31 @@ export function JourneyPlayer({ stages }: { stages: PlayerStage[] }) {
         })}
       </ol>
 
-      {/* Fixed-height caption so the page never jumps mid-play. */}
-      <div className="mt-5 min-h-[7.5rem] rounded-xl border border-border bg-card px-5 py-4 sm:min-h-[6.5rem]">
-        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-          <span className="label text-accent">Now</span>
+      {/* ── What is happening right now. The one element with real scale. ── */}
+      <div className="border-t border-border-soft px-5 py-6 sm:px-7 sm:py-7">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="label text-accent">Right now</span>
           <span className="num text-[11.5px] text-dim">{stage.when}</span>
         </div>
-        <p key={stage.id} className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-fg">
+
+        <h2
+          key={stage.id}
+          className="mt-2.5 text-[clamp(1.45rem,3.4vw,2.1rem)] leading-[1.08] font-semibold tracking-tight text-fg"
+        >
+          {stage.name}
+        </h2>
+
+        <p className="mt-3 max-w-[58ch] text-[1.02rem] leading-relaxed text-muted-fg">
           {stage.what}
         </p>
+
         <Link
           href={`#${stage.id}`}
-          className="mt-2 inline-flex h-11 items-center text-[13px] font-medium text-accent underline underline-offset-2 sm:h-auto"
+          className="mt-4 inline-flex h-11 items-center text-[13.5px] font-medium text-accent underline underline-offset-2 sm:h-auto"
         >
           The {stage.count} words that live here →
         </Link>
       </div>
-
-      <div className="mt-4 hidden grid-cols-8 gap-x-3 sm:grid">
-        {TERRITORY.map((t) => (
-          <div
-            key={t.label}
-            style={{ gridColumn: `span ${t.span} / span ${t.span}` }}
-            className={cn(
-              "rounded-md border px-3 py-2",
-              t.theirs ? "border-border bg-bg-2" : "border-border-soft bg-transparent",
-            )}
-          >
-            <p className={cn("label text-[0.58rem]", t.theirs && "text-muted-fg")}>{t.label}</p>
-            <p className="mt-1 text-[11.5px] leading-snug text-muted-fg">{t.note}</p>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-3 text-[13px] leading-relaxed text-muted-fg sm:hidden">
-        Three of the eight stops happen in under a second, inside Gmail rather than inside your
-        platform. They are the three everyone tries to fix.
-      </p>
     </section>
   );
 }

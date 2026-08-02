@@ -43,47 +43,67 @@ export function OwnershipSplit() {
   const max = Math.max(...counts.map((c) => c.n));
 
   return (
-    <section className="mt-16 border-t pt-10">
+    <section className="mt-20 border-t pt-12">
       <style>{MOTION}</style>
       <p className="label">Before you read any of it</p>
-      <h2 className="mt-2.5 max-w-[26ch] text-[clamp(1.3rem,3vw,1.7rem)] font-semibold tracking-tight">
-        {notYours} of these {total} words are not your problem
-      </h2>
-      <p className="mt-3 max-w-[54ch] text-[15px] leading-relaxed text-muted-fg">
-        Already handled by the platform, or impossible to act on at all. Knowing which is which is
-        most of the job.
-      </p>
 
-      <dl className="mt-8 max-w-[46rem]">
+      {/* One element at real scale. A page where the largest thing after the
+          h1 is 15px has no subject; the count is the subject here, and it is
+          the most shareable true sentence this site owns. */}
+      <div className="mt-5 grid gap-x-10 gap-y-4 lg:grid-cols-[auto_1fr] lg:items-start">
+        <p
+          className="num leading-[0.82] font-semibold tracking-[-0.05em] text-accent"
+          style={{ fontSize: "clamp(4rem,11vw,7rem)" }}
+        >
+          {notYours}
+        </p>
+        <div className="lg:pt-2">
+          <h2 className="max-w-[20ch] text-[clamp(1.5rem,3.4vw,2.15rem)] leading-[1.06] font-semibold tracking-tight">
+            of these {total} words are not your problem
+          </h2>
+          <p className="mt-4 max-w-[48ch] text-[15.5px] leading-relaxed text-muted-fg">
+            Already handled by the platform, or impossible to act on at all. Knowing which is
+            which is most of the job, and it is the one thing nobody who sells deliverability
+            software is able to tell you.
+          </p>
+        </div>
+      </div>
+
+      <dl className="mt-12">
         {counts.map((c, i) => (
           <div
             key={c.owner}
             className={cn(
-              "grid items-baseline gap-x-5 gap-y-1.5 border-b border-border-soft py-3.5 last:border-b-0",
-              "sm:grid-cols-[7.5rem_7rem_1fr]",
+              "grid items-baseline gap-x-6 gap-y-2 border-b border-border-soft py-4 last:border-b-0",
+              "sm:grid-cols-[3.5rem_8rem_10rem_1fr]",
             )}
           >
-            <dt className="flex items-baseline gap-2">
-              <span className={cn("text-[14px] font-semibold", SPLIT_TONE[c.owner].text)}>
-                {OWNER_LABEL[c.owner].short}
-              </span>
-              <span className="num text-[13px] font-semibold text-fg sm:hidden">{c.n}</span>
+            <dd
+              className={cn(
+                "num text-[26px] leading-none font-semibold tabular-nums",
+                SPLIT_TONE[c.owner].text,
+              )}
+            >
+              {c.n}
+            </dd>
+            <dt className={cn("text-[14.5px] font-semibold", SPLIT_TONE[c.owner].text)}>
+              {OWNER_LABEL[c.owner].short}
             </dt>
 
             {/* Same scale on every row, so the lengths mean something. */}
-            <dd className="flex items-center gap-2.5">
-              <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-bg-2 sm:w-full">
+            <dd className="hidden items-center sm:flex">
+              <span className="relative h-2 w-full overflow-hidden rounded-full bg-bg-2">
                 <span
-                  className={cn("glo-seg absolute inset-y-0 left-0 rounded-full", SPLIT_TONE[c.owner].fill)}
+                  className={cn(
+                    "glo-seg absolute inset-y-0 left-0 rounded-full",
+                    SPLIT_TONE[c.owner].fill,
+                  )}
                   style={{ width: `${(c.n / max) * 100}%`, animationDelay: `${i * 90}ms` }}
                 />
               </span>
-              <span className="num hidden w-5 shrink-0 text-right text-[13px] font-semibold text-fg sm:block">
-                {c.n}
-              </span>
             </dd>
 
-            <dd className="text-[13px] leading-relaxed text-muted-fg">
+            <dd className="text-[13.5px] leading-relaxed text-muted-fg">
               {OWNER_LABEL[c.owner].long}
             </dd>
           </div>
