@@ -1,23 +1,38 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getChangelog } from "@/lib/rules";
+import { getAllEspChanges } from "@/lib/esp-changes";
 import { ChangeRow, SectionHead } from "@/components/bits";
+import { PlatformRow } from "@/components/platform-row";
 import { changeKind } from "@/lib/rule-signals";
 
 export const metadata: Metadata = {
   title: "What changed",
   description:
-    "What actually moved in email rules — in plain English: what changed, why it matters, and what to do next. Market first; pages we added second.",
+    "What actually moved in email — regulators and your sending platform, in one dated timeline. What changed, why it matters, what to do next.",
   alternates: { canonical: "/changed" },
 };
 
 export default async function Changed() {
-  const changelog = await getChangelog();
+  const [changelog, espChanges] = await Promise.all([getChangelog(), getAllEspChanges()]);
 
-  const market = changelog.filter((c) => {
+  const marketRules = changelog.filter((c) => {
     const k = changeKind(c.note);
     return k === "market" || k === "correction";
   });
+
+  /* One timeline, two sources.
+     When a marketer notices a number moved, they do not know whether a
+     regulator or their ESP caused it — and until now the answer lived on two
+     different pages, which made them merge it in their head. A platform
+     shipping a change is exactly as likely to explain the drop as a rule
+     coming into force, so both belong in the same dated list. */
+  const market = [
+    ...marketRules.map((c) => ({ kind: "rule" as const, date: c.date, entry: c })),
+    ...espChanges
+      .filter((c) => c.date)
+      .map((c) => ({ kind: "platform" as const, date: c.date!, entry: c })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
   const documented = changelog.filter((c) => changeKind(c.note) === "added");
   const other = changelog.filter((c) => {
     const k = changeKind(c.note);
@@ -49,6 +64,13 @@ export default async function Changed() {
         <span>
           <b className="font-medium text-muted-fg">New page</b> — already true; we documented it
         </span>
+        <span className="hidden sm:inline" aria-hidden>
+          ·
+        </span>
+        <span>
+          <b className="font-medium text-accent">Your platform</b> — Klaviyo, Mailchimp or Braze
+          shipped something
+        </span>
       </div>
 
       <section className="mt-10">
@@ -56,7 +78,8 @@ export default async function Changed() {
           <div>
             <h2 className="text-[1.15rem] font-semibold tracking-tight">Worth your time</h2>
             <p className="mt-1 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
-              Market moves and corrections. If you only read one list, make it this one.
+              Regulator moves, our corrections, and changes at Klaviyo, Mailchimp and Braze — one
+              timeline, because a number that moved does not tell you which of the three did it.
             </p>
           </div>
           <p className="num text-[12px] text-dim">{market.length} entries</p>
@@ -71,11 +94,17 @@ export default async function Changed() {
           </p>
         ) : (
           <ul className="mt-1 list-none p-0">
-            {market.map((c) => (
-              <li key={`m-${c.rule.slug}-${c.date}-${c.note}`}>
-                <ChangeRow rule={c.rule} date={c.date} note={c.note} />
-              </li>
-            ))}
+            {market.map((c) =>
+              c.kind === "rule" ? (
+                <li key={`m-${c.entry.rule.slug}-${c.date}-${c.entry.note}`}>
+                  <ChangeRow rule={c.entry.rule} date={c.date} note={c.entry.note} />
+                </li>
+              ) : (
+                <li key={`p-${c.entry.id}`}>
+                  <PlatformRow change={c.entry} />
+                </li>
+              ),
+            )}
           </ul>
         )}
       </section>
