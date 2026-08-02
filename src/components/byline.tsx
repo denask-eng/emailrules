@@ -49,12 +49,14 @@ export function Byline({ compact = false }: { compact?: boolean }) {
         <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
           {AUTHOR.blurb}
         </p>
-        <div className="mt-2.5 flex items-center gap-4 text-[13px]">
+        {/* py on the links, negative margin on the row, so they are real tap
+            targets on a phone without pushing the byline apart. */}
+        <div className="mt-1.5 -mb-2 flex items-center gap-4 text-[13px]">
           <a
             href={AUTHOR.x}
             target="_blank"
             rel="me noopener"
-            className="inline-flex items-center gap-1.5 text-foreground underline underline-offset-2"
+            className="inline-flex items-center gap-1.5 py-3 text-foreground underline underline-offset-2 sm:py-1"
           >
             <XIcon /> {AUTHOR.xHandle}
           </a>
@@ -62,7 +64,7 @@ export function Byline({ compact = false }: { compact?: boolean }) {
             href={AUTHOR.linkedin}
             target="_blank"
             rel="me noopener"
-            className="inline-flex items-center gap-1.5 text-foreground underline underline-offset-2"
+            className="inline-flex items-center gap-1.5 py-3 text-foreground underline underline-offset-2 sm:py-1"
           >
             <LinkedInIcon /> LinkedIn
           </a>

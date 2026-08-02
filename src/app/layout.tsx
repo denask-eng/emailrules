@@ -84,7 +84,7 @@ async function Nav() {
       <div className="shell flex h-[3.25rem] items-center gap-2 sm:gap-5">
         <Link
           href="/"
-          className="shrink-0 text-[13.5px] font-semibold tracking-[-0.035em] whitespace-nowrap sm:text-[14.5px]"
+          className="inline-flex h-11 shrink-0 items-center text-[13.5px] font-semibold tracking-[-0.035em] whitespace-nowrap sm:h-auto sm:text-[14.5px]"
         >
           {/* The wordmark never loses the TLD. ".today" is the thesis, not
               decoration, and the 38px it costs comes out of a nav label
@@ -93,34 +93,48 @@ async function Nav() {
         </Link>
         {/* Everything here survives 375px. A hamburger over three destinations
             hides the site behind a gesture to save one line of type. */}
-        <nav aria-label="Primary" className="ml-auto flex items-center gap-0.5">
+        {/* One gap governs the row. The two ad-hoc margins that used to sit on
+            the search and the CTA are gone — three different spacings between
+            four items is what made this read as uneven. */}
+        <nav aria-label="Primary" className="ml-auto flex items-center gap-1">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className="rounded-lg px-1 py-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:px-2.5"
+              className="inline-flex h-11 items-center rounded-lg px-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:h-auto sm:px-2.5 sm:py-1.5"
             >
               {"short" in n && n.short ? (
                 <>
-                  <span className="min-[390px]:hidden">{n.short}</span>
-                  <span className="hidden min-[390px]:inline">{n.label}</span>
+                  <span className="min-[440px]:hidden">{n.short}</span>
+                  <span className="hidden min-[440px]:inline">{n.label}</span>
                 </>
               ) : (
                 n.label
               )}
             </Link>
           ))}
-          <div className="ml-1">
+          {/* No search in the header on a phone. The row cannot hold the
+              wordmark, two labels, a search affordance and "Check domain" at
+              390px, and of those the search is the one that loses least: the
+              palette is a ⌘K desktop habit, and on a phone /rules already
+              opens on a filter. Better than amputating a label to keep an icon
+              nobody taps. */}
+          <span className="hidden sm:inline-flex">
             <Search items={index} />
-          </div>
+          </span>
           <Link
             href="/check"
             className={cn(
               buttonVariants({ size: "sm" }),
-              "ml-1 h-8 rounded-full px-2.5 text-[12.5px] font-medium sm:ml-1.5 sm:px-3.5",
+              "h-10 rounded-full px-3 text-[12.5px] font-medium sm:h-8 sm:px-3.5",
             )}
           >
-            Check<span className="hidden sm:inline"> domain</span>
+            {/* The noun is the value, so it survives every width a current
+                phone actually has. Only below 360px — an original SE, now a
+                rounding error — does it drop, because there the row genuinely
+                cannot hold it and a header that scrolls sideways is worse than
+                a shorter label. */}
+            Check<span className="hidden min-[360px]:inline"> domain</span>
           </Link>
         </nav>
       </div>
@@ -147,15 +161,18 @@ function Footer() {
           {FOOTER_NAV.map((group) => (
             <div key={group.title}>
               <p className="label">{group.title}</p>
-              <ul className="mt-3.5 list-none space-y-2 p-0 text-muted-fg">
+              {/* Padding, not margin, carries the rhythm here: a 17px-tall link
+                  in a list of eight is a coin toss on a phone. The row is the
+                  target, so the whole line is tappable. */}
+              <ul className="mt-2 list-none p-0 text-muted-fg">
                 {group.links.map((l) => (
                   <li key={l.href}>
                     {"external" in l ? (
-                      <a href={l.href} className="hover:text-fg">
+                      <a href={l.href} className="block py-3 hover:text-fg sm:py-1.5">
                         {l.label}
                       </a>
                     ) : (
-                      <Link href={l.href} className="hover:text-fg">
+                      <Link href={l.href} className="block py-3 hover:text-fg sm:py-1.5">
                         {l.label}
                       </Link>
                     )}
@@ -168,7 +185,7 @@ function Footer() {
       </div>
 
       <div className="shell mt-12 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-t pt-6 text-[13px] text-muted-fg">
-        <a href={`mailto:${SITE.contact}`} className="hover:text-fg">
+        <a href={`mailto:${SITE.contact}`} className="inline-block py-2.5 hover:text-fg sm:py-0">
           {SITE.contact}
         </a>
         <span className="label">Not legal advice · not affiliated with any ESP</span>

@@ -148,12 +148,20 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
           unmounting this page restores it everywhere else. */}
       <style>{`#faq{display:none}`}</style>
 
-      <nav className="mb-5 flex flex-wrap items-center gap-x-2 text-[12.5px] text-dim" aria-label="Breadcrumb">
-        <Link href="/rules" className="hover:text-fg">
+      {/* -my-2 keeps the visual rhythm while the links themselves get a real
+          touch height — a 19px breadcrumb is a miss on a phone. */}
+      <nav
+        className="mb-3 -my-2 flex flex-wrap items-center gap-x-2 text-[12.5px] text-dim"
+        aria-label="Breadcrumb"
+      >
+        <Link href="/rules" className="inline-flex h-11 items-center hover:text-fg sm:h-auto">
           Rules
         </Link>
         <span aria-hidden>/</span>
-        <Link href={`/topics/${rule.topic}`} className="hover:text-fg">
+        <Link
+          href={`/topics/${rule.topic}`}
+          className="inline-flex h-11 items-center hover:text-fg sm:h-auto"
+        >
           {TOPICS[rule.topic].label}
         </Link>
       </nav>
@@ -214,8 +222,9 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
           with no script. */}
       <RuleTabs
         label="Sections of this rule"
+        /* Sits in the tab row, so it needs the tabs' own touch height. */
         trailing={
-          <Link href="/glossary" className="hover:text-fg">
+          <Link href="/glossary" className="inline-flex h-11 items-center px-1 hover:text-fg sm:h-auto">
             Glossary
           </Link>
         }

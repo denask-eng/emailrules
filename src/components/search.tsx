@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { SearchIcon } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -57,14 +58,19 @@ export function Search({ items }: { items: SearchItem[] }) {
 
   return (
     <>
+      {/* Two shapes, one control. On a phone it is a borderless icon with a
+          44px hit area: a bordered box next to the accent pill reads as a
+          broken input, and the old ⌕ was a text glyph, not an icon — tiny,
+          off-centre, and the wrong weight beside real UI. From sm up there is
+          room for the labelled pill and the shortcut. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search rules"
-        className="flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1.5 text-[13px] text-dim transition-colors hover:text-fg"
+        className="flex size-11 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-muted/80 hover:text-fg sm:size-auto sm:gap-2 sm:border sm:bg-card sm:px-2.5 sm:py-1.5 sm:text-[13px] sm:text-dim sm:hover:bg-card"
       >
+        <SearchIcon className="size-[17px] sm:size-[13px]" strokeWidth={2} aria-hidden />
         <span className="hidden sm:inline">Search</span>
-        <span className="sm:hidden">⌕</span>
         <kbd className="num hidden rounded border px-1.5 py-0.5 text-[11px] sm:inline">⌘K</kbd>
       </button>
 

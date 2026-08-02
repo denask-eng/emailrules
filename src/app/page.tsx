@@ -234,7 +234,7 @@ export default async function Home() {
       </section>
 
       <section className="shell border-t py-10 sm:py-12">
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-12">
+        <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-12">
           <div>
             <p className="label">The check</p>
             <h2 className="mt-2.5 text-[1.35rem] tracking-tight sm:text-[1.5rem]">
@@ -245,13 +245,13 @@ export default async function Home() {
               scary score out of ten. If you are clean, we say so.
             </p>
           </div>
-          <form className="flex max-w-md gap-2.5" action={runCheck}>
+          <form className="flex min-w-0 max-w-md gap-2.5" action={runCheck}>
             <input
               name="domain"
               required
               placeholder="yourbrand.com"
               aria-label="Sending domain"
-              className="num h-11 flex-1 rounded-[10px] border bg-card px-3.5 text-[14px] outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25 md:w-[14rem] md:flex-none"
+              className="num h-11 min-w-0 flex-1 rounded-[10px] border bg-card px-3.5 text-[14px] outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25 md:w-[14rem] md:flex-none"
             />
             <button
               type="submit"
