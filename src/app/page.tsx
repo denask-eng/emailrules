@@ -132,6 +132,10 @@ export default async function Home() {
             Awkward FAQ
           </Link>
           {" · "}
+          <Link href="/#why" className="underline underline-offset-3 hover:text-fg">
+            Why care
+          </Link>
+          {" · "}
           <Link href="/coverage" className="underline underline-offset-3 hover:text-fg">
             What we skip on purpose
           </Link>
@@ -139,8 +143,74 @@ export default async function Home() {
         </p>
       </section>
 
+      {/* The only value claim that holds. Not feature cards: three truths. */}
+      <section id="why" className="border-t bg-bg-2 py-16 sm:py-20">
+        <div className="shell">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="label">Why care</p>
+            <h2 className="mt-4 text-[clamp(1.75rem,4.2vw,2.65rem)] tracking-tight text-balance">
+              Why should you care?
+            </h2>
+            <p className="mx-auto mt-4 max-w-[36rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.1rem]">
+              You are busy. This is not another compliance library. The whole product is three
+              answers you cannot get from your ESP blog or a seed-score shop.
+            </p>
+          </div>
+
+          <ol className="mx-auto mt-12 max-w-2xl list-none border-t border-fg/12 p-0">
+            {[
+              {
+                t: "Whose job is this, really?",
+                d: `Of ${stats.total} rules on the shelf, about ${stats.notYours} are already handled by a mainstream email tool, shared with ops, or pure context. We name that so you stop re-implementing platform work and still catch what lands on your desk.`,
+              },
+              {
+                t: "What actually moved?",
+                d: "Gmail bulk rules, CASL clocks, ePrivacy, DMARC ladders. You usually hear months late, from legal. The ledger and optional alerts are market moves only, filtered to your setup. Re-checks and “we wrote a page” never leave the building.",
+              },
+              {
+                t: "What do I do Monday?",
+                d: "Every rule has a primary source, a verification date, and a first step you can run this week. No placement score theatre. No fake encyclopedia. A small shelf you can paste into Slack or defend in a meeting.",
+              },
+            ].map((row, i) => (
+              <Reveal key={row.t} as="li" delay={i} className="border-b border-border-soft">
+                <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 py-7 sm:gap-x-6 sm:py-8">
+                  <span className="num pt-1 text-[12px] font-medium tracking-[0.12em] text-accent">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-[1.15rem] font-semibold tracking-tight sm:text-[1.25rem]">
+                      {row.t}
+                    </h3>
+                    <p className="mt-2.5 max-w-[52ch] text-[15px] leading-relaxed text-muted-fg sm:text-[15.5px]">
+                      {row.d}
+                    </p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </ol>
+
+          <div className="mx-auto mt-10 max-w-2xl text-center">
+            <p className="text-[14.5px] leading-relaxed text-dim">
+              If that is not useful this week, leave. Quiet is allowed here.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[14px]">
+              <Link
+                href="/rules"
+                className="font-medium text-accent underline-offset-3 hover:underline"
+              >
+                Show me what applies to me →
+              </Link>
+              <Link href="/changed" className="text-muted-fg underline-offset-3 hover:text-fg hover:underline">
+                See what moved
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Market-only ledger — quiet weeks still earn a visit. */}
-      <section className="shell pb-16">
+      <section className="shell py-16">
         <Panel>
           <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-5 py-2.5">
             <span className="label">Market moves · not site edits</span>
