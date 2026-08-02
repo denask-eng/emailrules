@@ -69,12 +69,17 @@ const LEVELS: (TermLevel | "all")[] = ["all", "start", "working", "deep"];
 const STAGE_CSS = `
 .stage-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease-soft); }
 .stage-body > * { overflow: hidden; }
-details[open] > .stage-body { grid-template-rows: 1fr; }
+.stage-body[data-open="true"] { grid-template-rows: 1fr; }
 @media (min-width: 640px) {
   .stage-body { grid-template-rows: 1fr; }
   .stage-summary { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .stage-body { transition: none; } }`;
+
+/* Without JavaScript the toggle cannot run, so every stop opens. The content
+   is in the DOM either way; this only decides whether a phone with scripting
+   off can read it. */
+const STAGE_NOSCRIPT = `.stage-body { grid-template-rows: 1fr; } .stage-summary { display: none; }`;
 
 export function GlossaryBrowser({
   stages,
@@ -110,9 +115,25 @@ export function GlossaryBrowser({
 
   const filtering = level !== "all" || deferred.trim().length > 0;
 
+  /* Phone-only. From sm the panel is opened by CSS and the button is hidden,
+     so this state is simply never consulted there. Filtering opens every
+     matching stop, because a hit you cannot see is not a hit. */
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const isOpen = (id: string) => filtering || openIds.has(id);
+  const toggle = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   return (
     <>
       <style>{STAGE_CSS}</style>
+      <noscript>
+        <style>{STAGE_NOSCRIPT}</style>
+      </noscript>
       {/* Opaque, not translucent: the site header can be glassy because it is
           52px of chrome, but a second bar that lets a paragraph ghost through
           it reads as a rendering fault rather than as depth. Sticky from sm. A phone cannot fit the field and four chips on
@@ -224,9 +245,16 @@ export function GlossaryBrowser({
               </p>
             ) : null}
 
-            {/* Open on a phone only when it is the one being filtered to. */}
-            <details open={filtering || undefined} className="group">
-              <summary className="stage-summary flex cursor-pointer list-none items-center gap-x-3 border-b border-border-soft py-3.5 [&::-webkit-details-marker]:hidden">
+            {/* A button and a panel, not <details>: a closed <details> hides
+                its own content at the UA level, so the desktop media query
+                that opens the panel could never win. */}
+            <div>
+              <button
+                type="button"
+                onClick={() => toggle(s.id)}
+                aria-expanded={isOpen(s.id)}
+                aria-controls={`${s.id}-body`}
+                className="stage-summary flex w-full cursor-pointer items-center gap-x-3 border-b border-border-soft py-3.5 text-left">
                 <span className="num text-[13px] font-semibold text-accent">
                   {String(s.n).padStart(2, "0")}
                 </span>
@@ -240,13 +268,16 @@ export function GlossaryBrowser({
                 </span>
                 <span
                   aria-hidden
-                  className="shrink-0 text-[18px] leading-none text-dim transition-transform group-open:rotate-45"
+                  className={cn(
+                    "shrink-0 text-[18px] leading-none text-dim transition-transform",
+                    isOpen(s.id) && "rotate-45",
+                  )}
                 >
                   +
                 </span>
-              </summary>
+              </button>
 
-              <div className="stage-body">
+              <div className="stage-body" id={`${s.id}-body`} data-open={isOpen(s.id)}>
                 <div>
                   {/* Repeated from the summary, for sm and up where the
                       summary is hidden. */}
@@ -312,7 +343,7 @@ export function GlossaryBrowser({
                   </ul>
                 </div>
               </div>
-            </details>
+            </div>
           </section>
         );
       })}
