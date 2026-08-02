@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/domain-watch",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/esp-watch",
+      "schedule": "0 9 * * 1"
     }
   ]
 }

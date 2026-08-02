@@ -111,4 +111,46 @@ export const SCHEMA = `
     verdict     text not null
   );
   create index if not exists message_checks_expires_idx on message_checks (expires_at);
+
+  /* One row per watched ESP changelog page.
+
+     content_hash is what makes "nothing new" mean something. Without it the
+     only way to say a platform was quiet is to have found no items, which is
+     indistinguishable from an extractor that broke when the page was
+     redesigned. last_ok_at and last_error keep a failed fetch from ever being
+     read as silence — the same property the domain history turns on. */
+  create table if not exists esp_watch_sources (
+    url             text primary key,
+    esp             text not null,
+    label           text not null,
+    content_hash    text,
+    item_count      int,
+    last_checked_at timestamptz,
+    last_ok_at      timestamptz,
+    last_error      text
+  );
+
+  /* Something dated appeared on a watched page that no published entry cites.
+
+     This table is a queue for a human, never a source the site reads from. The
+     watcher records the item's own title, date and URL exactly as printed and
+     stops there. It does not summarise, classify or decide what a change means,
+     because that is the step where a corpus whose whole value is "every line is
+     sourced" would start inventing. A person reads the page and writes the row. */
+  create table if not exists esp_candidates (
+    id            text primary key,
+    esp           text not null,
+    source_url    text not null,
+    item_url      text,
+    title         text not null,
+    /* As printed on the page. Null when the publisher prints none — the same
+       refusal to guess that governs the rules corpus. */
+    published_on  date,
+    first_seen_at timestamptz not null default now(),
+    /* new | dismissed | published */
+    status        text not null default 'new',
+    note          text
+  );
+  create index if not exists esp_candidates_status_idx
+    on esp_candidates (status, first_seen_at desc);
 `;

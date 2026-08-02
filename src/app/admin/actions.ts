@@ -260,3 +260,24 @@ export async function saveRule(slug: string, formData: FormData) {
   revalidateRule(slug);
   redirect(`/admin/rules/${slug}?saved=1`);
 }
+
+/* ─────────────────────────── platform watch queue ─────────────────────── */
+
+/**
+ * The queue only ever changes state here, never content. There is no publish
+ * action on purpose: publishing an ESP change means writing the row by hand
+ * after reading the source, which is the step that keeps this shelf citable.
+ */
+export async function dismissEspCandidate(id: string) {
+  await requireAdmin();
+  const { setCandidateStatus } = await import("@/lib/esp-watch");
+  await setCandidateStatus(id, "dismissed");
+  revalidatePath("/admin/esp");
+}
+
+export async function restoreEspCandidate(id: string) {
+  await requireAdmin();
+  const { setCandidateStatus } = await import("@/lib/esp-watch");
+  await setCandidateStatus(id, "new");
+  revalidatePath("/admin/esp");
+}

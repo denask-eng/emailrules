@@ -38,6 +38,12 @@ export default async function AdminHome() {
         </div>
         <div className="flex items-center gap-2.5">
           <Link
+            href="/admin/esp"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 rounded-lg px-3.5")}
+          >
+            Platform watch
+          </Link>
+          <Link
             href="/admin/subscribers"
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 rounded-lg px-3.5")}
           >
