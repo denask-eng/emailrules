@@ -359,11 +359,11 @@ const RULES_CORE: Rule[] = [
     provider: "Gmail",
     featured: true,
     answer:
-      "Every sender to personal Gmail accounts needs at least SPF or DKIM, valid forward and reverse DNS (PTR) on sending IPs, TLS in transit, RFC 5322 formatting, and a user-reported spam rate under 0.30 percent in Postmaster Tools. Senders of about 5,000 or more messages a day to personal Gmail must use both SPF and DKIM, publish DMARC at least p=none, align the From domain, and support one-click unsubscribe for marketing mail. Google asks bulk senders to stay under 0.10 percent spam and treats 0.30 percent as the line you must never reach. ARC is required for indirect mail such as mailing-list forwards, not for ordinary direct campaigns.",
+      "Every sender to personal Gmail accounts needs at least SPF or DKIM, valid forward and reverse DNS (PTR) on sending IPs, TLS in transit, RFC 5322 formatting, and a user-reported spam rate under 0.30 percent in Postmaster Tools. Senders of about 5,000 or more messages a day to personal Gmail must use both SPF and DKIM, publish DMARC at least p=none, align the From domain, and support one-click unsubscribe for marketing mail. Google asks bulk senders to stay under 0.10 percent spam and treats 0.30 percent as the line you must never reach. Google's sender guidelines do not mention ARC at all: ARC is Apple's requirement and Yahoo's recommendation, not Gmail's.",
     appliesTo:
       "Anyone sending to personal Gmail addresses. The bulk layer applies at about 5,000 messages a day to those addresses. Shared-IP customers still need the ESP to meet PTR and TLS; branded authentication and spam rate remain your problem either way.",
     plain:
-      "Under 5,000 a day you still need authentication, reverse DNS, TLS and spam under 0.30 percent. Over 5,000 you also need SPF plus DKIM, DMARC, alignment and one-click unsubscribe. Google wants 0.10. Treat 0.30 as the cliff. ARC is for forwards, not your normal campaign path.",
+      "Under 5,000 a day you still need authentication, reverse DNS, TLS and spam under 0.30 percent. Over 5,000 you also need SPF plus DKIM, DMARC, alignment and one-click unsubscribe. Google wants 0.10. Treat 0.30 as the cliff. If a vendor tells you Gmail requires ARC, ask them to point at the line: it is not on Google's page.",
     ownership: "shared",
     handled: {
       already:
@@ -378,10 +378,10 @@ const RULES_CORE: Rule[] = [
       "Watch spam rate in Postmaster Tools and treat 0.10 percent as the ceiling, not 0.30.",
       "Publish DMARC at least p=none once you clear the bulk threshold, and actually read aggregate reports.",
       "If you use dedicated IPs, verify reverse DNS: PTR hostname must resolve back to the same public IP.",
-      "Do not invent an ARC mandate for ordinary direct campaigns. Google scopes ARC to indirect mail in its FAQ.",
+      "Do not let anyone sell you an ARC mandate for Gmail. The word does not appear on Google's sender guidelines; ARC belongs to Apple and Yahoo.",
     ],
     enforcement:
-      "Enforced silently through filtering rather than notices. Validity's 2025 benchmark measured global inbox placement falling to 83.5 percent, with Gmail showing an unexpected decline of almost five percent, so the effect is visible in aggregate even when no individual sender is told anything.",
+      "Less silent than its reputation. Google's own guidelines publish the temporary and permanent failures it returns, naming 4.7.0, 4.7.28, 5.7.1 and 5.7.26, so a rejected sender is told in the SMTP response and the reason is in your bounce logs. What stays invisible is the softer half: mail that is accepted and filed in spam, which nobody reports to you. Validity's 2025 benchmark measured global inbox placement falling to 83.5 percent, with Gmail down almost five percent, and that part shows up only in aggregate.",
     sources: [
       {
         name: "Google, Email sender guidelines",
@@ -390,7 +390,10 @@ const RULES_CORE: Rule[] = [
         actor: "mailbox-provider",
       },
       {
-        name: "Google, Email sender guidelines FAQ (ARC scoped to indirect mail)",
+        /* Same article as the row above, served under Gmail's help path rather
+           than Workspace's. Kept because senders arrive at one or the other,
+           and both were read on the date below. */
+        name: "Google, Email sender guidelines (Gmail help path)",
         url: "https://support.google.com/mail/answer/81126",
         actor: "mailbox-provider",
       },
@@ -407,7 +410,11 @@ const RULES_CORE: Rule[] = [
     changelog: [
       {
         date: "2026-08-02",
-        note: "Expanded to all-sender PTR/TLS requirements and clarified ARC is for indirect mail only.",
+        note: "Correction: this page said Gmail enforces silently and that Google scopes ARC to indirect mail. Both were wrong. Google's guidelines name the failures they return (4.7.0, 4.7.28, 5.7.1, 5.7.26), and the word ARC does not appear on the page at all. Re-read both help paths and counted; the ARC claim was traced to a citation that does not exist.",
+      },
+      {
+        date: "2026-08-02",
+        note: "Expanded to the all-sender PTR, TLS and RFC 5322 requirements that were missing.",
       },
       { date: "2026-06-20", note: "Noted the Postmaster v2 reputation dashboard retirement." },
       { date: "2026-05-02", note: "Added." },
