@@ -9,14 +9,10 @@ import { Explained } from "@/components/explained";
 import { impactOf, IMPACT_LABEL, whyItMatters } from "@/lib/rule-signals";
 import { displayPlain, displayTldr, displayWhy } from "@/content/plain-overrides";
 
-/* One column, no app shell. These pages are read by strangers who arrived from
-   a search result: the finding first, the method at the bottom for the people
-   who will check it. */
+/* Search traffic lands here cold: one column, plain first, proof last. */
 const SHELL =
-  "mx-auto max-w-[780px] px-[clamp(1.1rem,4vw,1.6rem)] pt-[clamp(1.1rem,4vw,2.4rem)] pb-16";
+  "mx-auto max-w-[40rem] px-[clamp(1.1rem,4vw,1.6rem)] pt-[clamp(1.25rem,4vw,2.2rem)] pb-20";
 
-/* New rules added in /admin must get a URL without a rebuild, so unknown
-   slugs render on demand instead of 404ing. */
 export const dynamicParams = true;
 export const revalidate = 3600;
 
@@ -33,7 +29,9 @@ export async function generateMetadata({
   const { slug } = await params;
   const rule = await getRule(slug);
   if (!rule) return {};
-  const description = `${rule.answer.slice(0, 155).trim()}…`;
+  const plain = displayPlain(rule.slug, rule.plain);
+  const tldr = displayTldr(rule.slug, plain);
+  const description = tldr.length > 155 ? `${tldr.slice(0, 152).trim()}…` : tldr;
   return {
     title: rule.question,
     description,
@@ -62,9 +60,10 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
     .filter(Boolean) as typeof all;
 
   const age = daysSince(rule.lastVerified);
+  const plain = displayPlain(rule.slug, rule.plain);
+  const tldr = displayTldr(rule.slug, plain);
+  const why = displayWhy(rule.slug, whyItMatters({ ...rule, plain }));
 
-  /* FAQPage is what gets quoted directly in an AI answer; Article gives the
-     claim a publisher and a modified date; Breadcrumb is cheap and reliable. */
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -72,16 +71,33 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         "@type": "FAQPage",
         "@id": `${SITE.url}/rules/${rule.slug}#faq`,
         mainEntity: [
-          { "@type": "Question", name: rule.question, acceptedAnswer: { "@type": "Answer", text: rule.answer } },
-          { "@type": "Question", name: `Who does this apply to?`, acceptedAnswer: { "@type": "Answer", text: rule.appliesTo } },
-          { "@type": "Question", name: `What happens if you do not comply?`, acceptedAnswer: { "@type": "Answer", text: rule.enforcement } },
+          {
+            "@type": "Question",
+            name: rule.question,
+            acceptedAnswer: { "@type": "Answer", text: rule.answer },
+          },
+          {
+            "@type": "Question",
+            name: "In plain English?",
+            acceptedAnswer: { "@type": "Answer", text: plain },
+          },
+          {
+            "@type": "Question",
+            name: "Who does this apply to?",
+            acceptedAnswer: { "@type": "Answer", text: rule.appliesTo },
+          },
+          {
+            "@type": "Question",
+            name: "What happens if you do not?",
+            acceptedAnswer: { "@type": "Answer", text: rule.enforcement },
+          },
         ],
       },
       {
         "@type": "Article",
         "@id": `${SITE.url}/rules/${rule.slug}#article`,
         headline: rule.title,
-        description: rule.answer,
+        description: tldr,
         datePublished: rule.added,
         dateModified: rule.updated,
         inLanguage: "en",
@@ -100,7 +116,12 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Rules", item: `${SITE.url}/rules` },
-          { "@type": "ListItem", position: 2, name: TOPICS[rule.topic].label, item: `${SITE.url}/topics/${rule.topic}` },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: TOPICS[rule.topic].label,
+            item: `${SITE.url}/topics/${rule.topic}`,
+          },
           { "@type": "ListItem", position: 3, name: rule.title },
         ],
       },
@@ -111,33 +132,38 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
     <article className={SHELL}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <nav className="num mb-6 text-[0.7rem] tracking-[0.08em] text-dim uppercase" aria-label="Breadcrumb">
-        <Link href="/rules" className="no-underline hover:text-fg">Rules</Link>
-        <span className="px-1.5">/</span>
-        <Link href={`/topics/${rule.topic}`} className="no-underline hover:text-fg">
+      <nav className="mb-5 flex flex-wrap items-center gap-x-2 text-[12.5px] text-dim" aria-label="Breadcrumb">
+        <Link href="/rules" className="hover:text-fg">
+          Rules
+        </Link>
+        <span aria-hidden>/</span>
+        <Link href={`/topics/${rule.topic}`} className="hover:text-fg">
           {TOPICS[rule.topic].label}
         </Link>
       </nav>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {/* Meta line — status + where, not a badge pile */}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <StatusPill status={rule.status} />
-        <span className="inline-flex rounded-full border bg-bg-2 px-2 py-0.5 text-[11px] font-medium text-muted-fg">
-          {IMPACT_LABEL[impactOf(rule)]}
-        </span>
-        <span className="num text-[0.74rem] text-dim">
-          {rule.status === "upcoming" ? "Starts " : "In force since "}
+        <span className="text-[12px] text-muted-fg">{IMPACT_LABEL[impactOf(rule)]}</span>
+        <span className="num text-[12px] text-dim">
+          {rule.status === "upcoming" ? "Starts " : "In force "}
           {fmtDate(rule.effectiveDate)}
         </span>
       </div>
 
-      <p className="mt-3 max-w-[64ch] text-[13px] leading-relaxed text-muted-fg">
-        Applies in{" "}
+      <h1 className="mt-4 text-[clamp(1.75rem,4.8vw,2.55rem)] font-semibold tracking-tight">
+        {rule.title}
+      </h1>
+      <p className="mt-2 max-w-[36rem] text-[15px] leading-snug text-muted-fg">{rule.question}</p>
+
+      <p className="mt-3 max-w-[36rem] text-[13px] leading-relaxed text-dim">
         {rule.jurisdictions.map((j, i) => (
           <span key={j}>
-            {i > 0 ? ", " : ""}
+            {i > 0 ? " · " : ""}
             <Link
               href={`/jurisdictions/${j.toLowerCase()}`}
-              className="font-medium text-fg underline underline-offset-2"
+              className="font-medium text-muted-fg underline decoration-border underline-offset-2 hover:text-fg"
             >
               {JURISDICTIONS[j]?.label ?? j}
             </Link>
@@ -145,184 +171,240 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         ))}
         {rule.provider ? (
           <>
-            {" "}
-            · about <span className="font-medium text-fg">{rule.provider}</span>
+            {" · "}
+            <span className="font-medium text-muted-fg">{rule.provider}</span>
           </>
         ) : null}
-        .{" "}
-        <Link href="/glossary" className="underline underline-offset-2">
+      </p>
+
+      {/* Jump — understand → act → prove */}
+      <nav
+        className="mt-6 flex flex-wrap gap-x-4 gap-y-1 border-y border-border-soft py-2.5 text-[12.5px]"
+        aria-label="On this page"
+      >
+        <a href="#understand" className="font-medium text-fg hover:text-accent">
+          Understand
+        </a>
+        <a href="#act" className="text-muted-fg hover:text-fg">
+          What to do
+        </a>
+        <a href="#prove" className="text-muted-fg hover:text-fg">
+          Proof &amp; sources
+        </a>
+        <Link href="/glossary" className="text-dim hover:text-fg">
           Glossary
         </Link>
-      </p>
-
-      <h1 className="mt-4 text-[clamp(1.9rem,5.2vw,2.9rem)]">{rule.title}</h1>
-
-      {/* One sentence — junior-proof */}
-      <div className="mt-6 max-w-[64ch] rounded-xl border border-accent/25 bg-accent-soft px-5 py-4">
-        <p className="label text-accent">In one sentence</p>
-        <Explained
-          as="p"
-          className="mt-2 text-[1.05rem] leading-relaxed font-medium text-fg"
-          text={displayTldr(rule.slug, rule.plain)}
-        />
-      </div>
-
-      {/* L1 — everyone */}
-      <p className="label mt-8">In plain English</p>
-      <Explained
-        as="p"
-        className="mt-2 max-w-[64ch] text-[1.12rem] leading-relaxed text-fg"
-        text={displayPlain(rule.slug, rule.plain)}
-      />
-
-      <div className="mt-5 max-w-[64ch] rounded-lg border border-border-soft bg-bg-2 px-4 py-3 text-[14px] leading-relaxed text-muted-fg">
-        <b className="text-fg">Why it matters: </b>
-        <Explained
-          as="span"
-          text={displayWhy(rule.slug, whyItMatters({ ...rule, plain: displayPlain(rule.slug, rule.plain) }))}
-        />
-      </div>
-
-      <OwnershipBlock rule={rule} />
-      <MondayMorning rule={rule} />
-
-      <p className="mt-6 text-[12.5px] text-dim">
-        Dotted words open short definitions. Full dictionary:{" "}
-        <Link href="/glossary" className="underline underline-offset-2">
-          glossary
-        </Link>
-        .
-      </p>
+      </nav>
 
       {age > 90 ? (
-        <p className="num mt-6 border border-soon/40 bg-soon-bg px-4 py-3 text-[0.78rem] leading-relaxed text-soon">
+        <p className="mt-5 rounded-xl border border-soon/35 bg-soon-bg px-4 py-3 text-[13px] leading-relaxed text-soon">
           Not re-verified in {age} days. Treat as probably current, not certainly current.
         </p>
       ) : null}
 
-      {/* L2 — at work */}
-      <div className="mt-12 border-t pt-10">
-        <p className="label">At work</p>
-        <h2 className="mt-2 text-[1.2rem] font-semibold">Details for getting it done</h2>
-      </div>
-
-      <Block title="Who this applies to">
-        <Explained as="p" className="prose-rule m-0 text-[0.96rem] leading-relaxed" text={rule.appliesTo} />
-      </Block>
-
-      <Block title="Checklist">
-        <ul className="prose-rule m-0 list-none p-0 text-[0.96rem]">
-          {rule.whatToDo.map((w) => (
-            <li key={w} className="border-b border-border-soft py-2.5 leading-relaxed last:border-b-0">
-              <Explained text={w} />
-            </li>
-          ))}
-        </ul>
-      </Block>
-
-      {rule.exempt ? (
-        <Block title="Exceptions (when this does not apply)">
-          <Explained as="p" className="prose-rule m-0 text-[0.96rem] leading-relaxed" text={rule.exempt} />
-        </Block>
-      ) : null}
-
-      {/* L3 — proof */}
-      <div className="mt-12 border-t pt-10">
-        <p className="label">For experts &amp; records</p>
-        <h2 className="mt-2 text-[1.2rem] font-semibold">Exact wording, enforcement, sources</h2>
-        <p className="mt-2 max-w-[58ch] text-[13.5px] text-muted-fg">
-          Same facts as above, written for precision and citation. Skip if you already know what to do.
-        </p>
-      </div>
-
-      <Block title="The exact position">
-        <Explained as="p" className="prose-rule m-0 text-[0.96rem] leading-relaxed" text={rule.answer} />
-      </Block>
-
-      <Block title="What happens if you do not">
+      {/* UNDERSTAND */}
+      <section id="understand" className="mt-8 scroll-mt-20">
+        <p className="label text-accent">In one sentence</p>
         <Explained
           as="p"
-          className="prose-rule m-0 text-[0.96rem] leading-relaxed"
-          text={rule.enforcement}
+          className="mt-2 text-[1.12rem] font-medium leading-relaxed tracking-tight text-fg sm:text-[1.18rem]"
+          text={tldr}
         />
-      </Block>
 
-      <Block title={rule.sources.length > 1 ? "Sources" : "Source"}>
-        <ul className="list-none p-0">
-          {rule.sources.map((s) => (
-            <li key={s.url} className="border-b border-border-soft py-3 last:border-b-0">
-              <div className="text-[0.94rem] leading-snug">{s.name}</div>
-              <div className="num mt-1.5 flex flex-wrap items-center gap-2 text-[0.72rem] text-dim">
-                <span>
-                  {s.published ? `Published ${fmtDate(s.published)}` : "Publisher states no date"}
-                </span>
-                <span aria-hidden>·</span>
-                <a
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener nofollow"
-                  className="underline underline-offset-2 hover:text-fg"
-                >
-                  Read it
-                </a>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Block>
+        <p className="label mt-8">Plain English</p>
+        <Explained as="p" className="mt-2 text-[1.05rem] leading-relaxed text-fg" text={plain} />
 
-      {related.length ? (
-        <Block title="Related">
-          <ul className="list-none p-0">
-            {related.map((r) => (
-              <li key={r.slug} className="border-b border-border-soft py-2.5 last:border-b-0">
-                <Link href={`/rules/${r.slug}`} className="text-[0.94rem] no-underline hover:underline hover:underline-offset-2">
-                  {r.title}
-                </Link>
-                <span className="num ml-2 text-[0.7rem] text-dim">{STATUS_LABEL[r.status]}</span>
+        <div className="mt-5 border-l-2 border-accent/40 pl-4">
+          <p className="text-[14.5px] leading-relaxed text-muted-fg">
+            <span className="font-semibold text-fg">Why it matters. </span>
+            <Explained as="span" text={why} />
+          </p>
+        </div>
+
+        <p className="mt-4 text-[12.5px] text-dim">
+          Dotted words open definitions.{" "}
+          <Link href="/glossary" className="underline underline-offset-2 hover:text-fg">
+            Full glossary
+          </Link>
+          .
+        </p>
+      </section>
+
+      {/* ACT */}
+      <section id="act" className="mt-12 scroll-mt-20 border-t border-fg/10 pt-10">
+        <p className="label">What to do</p>
+        <h2 className="mt-1.5 text-[1.25rem] font-semibold tracking-tight">Your move — not a lecture</h2>
+
+        <OwnershipBlock rule={rule} />
+        <MondayMorning rule={rule} />
+
+        <div className="mt-8">
+          <h3 className="text-[13px] font-semibold tracking-wide text-fg uppercase">
+            Who this applies to
+          </h3>
+          <Explained
+            as="p"
+            className="mt-2 text-[15px] leading-relaxed text-muted-fg"
+            text={rule.appliesTo}
+          />
+        </div>
+
+        <div className="mt-8">
+          <h3 className="text-[13px] font-semibold tracking-wide text-fg uppercase">Checklist</h3>
+          <ul className="mt-2 list-none p-0">
+            {rule.whatToDo.map((w, i) => (
+              <li
+                key={`${i}-${w.slice(0, 24)}`}
+                className="flex gap-3 border-b border-border-soft py-3 text-[15px] leading-relaxed last:border-b-0"
+              >
+                <span className="num shrink-0 text-[12px] text-dim">{String(i + 1).padStart(2, "0")}</span>
+                <Explained text={w} />
               </li>
             ))}
           </ul>
-        </Block>
-      ) : null}
+        </div>
 
-      <Block title="History of this page">
-        <ul className="list-none p-0">
-          {rule.changelog.map((c) => (
-            <li key={c.date} className="flex flex-wrap gap-x-3 border-b border-border-soft py-2.5 last:border-b-0">
-              <time dateTime={c.date} className="num w-[5.6rem] shrink-0 text-[0.74rem] text-dim">
-                {fmtDate(c.date)}
-              </time>
-              <span className="flex-1 text-[0.9rem] leading-relaxed text-muted-fg">{c.note}</span>
-            </li>
-          ))}
-        </ul>
-      </Block>
+        {rule.exempt ? (
+          <div className="mt-8 rounded-xl border border-border-soft bg-bg-2 px-4 py-4">
+            <h3 className="text-[13px] font-semibold text-fg">Skip if</h3>
+            <Explained
+              as="p"
+              className="mt-1.5 text-[14.5px] leading-relaxed text-muted-fg"
+              text={rule.exempt}
+            />
+          </div>
+        ) : null}
 
-      <footer className="num mt-10 border-t border-border pt-4 text-[0.68rem] leading-loose tracking-[0.04em] text-dim">
-        Added {fmtDate(rule.added)} · Updated {fmtDate(rule.updated)} · Last verified{" "}
-        {fmtDate(rule.lastVerified)}
-        <br />
-        Wrong or out of date?{" "}
-        <a
-          href={`mailto:${SITE.contact}?subject=Correction: ${rule.slug}`}
-          className="underline underline-offset-2 hover:text-fg"
-        >
-          Tell us
-        </a>
-        . Corrections are published with a date and a credit.
+        <p className="mt-8 rounded-2xl border border-ok/25 bg-ok-bg px-4 py-3.5 text-[14px] leading-relaxed text-ok">
+          <b className="font-semibold">That&rsquo;s enough to act. </b>
+          Sources and exact wording are below for counsel, bosses, or AI tools that need a citation.
+          Not legal advice.
+        </p>
+      </section>
+
+      {/* PROVE */}
+      <section id="prove" className="mt-12 scroll-mt-20 border-t border-fg/10 pt-10">
+        <p className="label">Proof</p>
+        <h2 className="mt-1.5 text-[1.25rem] font-semibold tracking-tight">
+          Exact position, enforcement, sources
+        </h2>
+        <p className="mt-2 max-w-[34rem] text-[13.5px] text-muted-fg">
+          For records and people who will check you. Skip if Monday&rsquo;s move is already clear.
+        </p>
+
+        <div className="mt-8">
+          <h3 className="text-[13px] font-semibold tracking-wide uppercase">The exact position</h3>
+          <Explained
+            as="p"
+            className="mt-2 text-[15px] leading-relaxed text-muted-fg"
+            text={rule.answer}
+          />
+        </div>
+
+        <div className="mt-8">
+          <h3 className="text-[13px] font-semibold tracking-wide uppercase">
+            What happens if you do not
+          </h3>
+          <Explained
+            as="p"
+            className="mt-2 text-[15px] leading-relaxed text-muted-fg"
+            text={rule.enforcement}
+          />
+        </div>
+
+        <div className="mt-8">
+          <h3 className="text-[13px] font-semibold tracking-wide uppercase">
+            {rule.sources.length > 1 ? "Sources" : "Source"}
+          </h3>
+          <ul className="mt-2 list-none p-0">
+            {rule.sources.map((s) => (
+              <li key={s.url} className="border-b border-border-soft py-3 last:border-b-0">
+                <div className="text-[15px] leading-snug text-fg">{s.name}</div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-dim">
+                  <span className="num">
+                    {s.published ? `Published ${fmtDate(s.published)}` : "No publisher date"}
+                  </span>
+                  <span aria-hidden>·</span>
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener nofollow"
+                    className="font-medium text-accent underline underline-offset-2"
+                  >
+                    Read primary source
+                  </a>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {related.length ? (
+          <div className="mt-8">
+            <h3 className="text-[13px] font-semibold tracking-wide uppercase">Related</h3>
+            <ul className="mt-2 list-none p-0">
+              {related.map((r) => (
+                <li key={r.slug} className="border-b border-border-soft py-2.5 last:border-b-0">
+                  <Link
+                    href={`/rules/${r.slug}`}
+                    className="text-[15px] font-medium underline-offset-2 hover:underline"
+                  >
+                    {r.title}
+                  </Link>
+                  <span className="num ml-2 text-[11px] text-dim">{STATUS_LABEL[r.status]}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <div className="mt-8">
+          <h3 className="text-[13px] font-semibold tracking-wide uppercase">History of this page</h3>
+          <ul className="mt-2 list-none p-0">
+            {rule.changelog.map((c, i) => (
+              <li
+                key={`${c.date}-${i}-${c.note.slice(0, 20)}`}
+                className="flex flex-wrap gap-x-3 border-b border-border-soft py-2.5 last:border-b-0"
+              >
+                <time dateTime={c.date} className="num w-[5.5rem] shrink-0 text-[12px] text-dim">
+                  {fmtDate(c.date)}
+                </time>
+                <span className="min-w-0 flex-1 text-[14px] leading-relaxed text-muted-fg">
+                  {c.note}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <footer className="mt-12 border-t pt-5 text-[12.5px] leading-relaxed text-dim">
+        <p>
+          Added {fmtDate(rule.added)} · Updated {fmtDate(rule.updated)} · Last verified{" "}
+          {fmtDate(rule.lastVerified)}
+        </p>
+        <p className="mt-2">
+          Wrong or stale?{" "}
+          <a
+            href={`mailto:${SITE.contact}?subject=Correction: ${rule.slug}`}
+            className="text-fg underline underline-offset-2"
+          >
+            Tell us
+          </a>
+          . Corrections publish with a date. Not legal advice.
+        </p>
+        <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
+          <Link href="/rules" className="font-medium text-accent hover:underline">
+            ← Back to my rules
+          </Link>
+          <Link href="/brief" className="hover:text-fg hover:underline">
+            Team brief
+          </Link>
+          <Link href="/changed" className="hover:text-fg hover:underline">
+            What changed
+          </Link>
+        </p>
       </footer>
     </article>
-  );
-}
-
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-10">
-      <h2 className="num border-b border-fg pb-2.5 text-[0.7rem] font-bold tracking-[0.11em] text-fg uppercase">
-        {title}
-      </h2>
-      <div className="mt-3">{children}</div>
-    </section>
   );
 }

@@ -5,6 +5,8 @@ import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
 import { ChangeRow, Panel, SectionHead, Figures, StatusDot } from "@/components/bits";
 import { TrustStrip } from "@/components/trust-strip";
+import { SiteFaqJsonLd } from "@/components/site-faq";
+import { Reveal } from "@/components/reveal";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { displayTldr } from "@/content/plain-overrides";
@@ -28,6 +30,7 @@ export default async function Home() {
 
   return (
     <>
+      <SiteFaqJsonLd />
       <section className="shell pt-12 pb-12 text-center sm:pt-20 sm:pb-16">
         <Link
           href="/rules"
@@ -99,15 +102,16 @@ export default async function Home() {
               t: "What moved",
               d: "Market only. Quiet weeks stay honest.",
             },
-          ].map((x) => (
-            <Link
-              key={x.href}
-              href={x.href}
-              className="rounded-2xl border border-border-soft bg-card/80 px-4 py-3.5 hover:border-border hover:bg-card"
-            >
-              <span className="block text-[14px] font-semibold tracking-tight">{x.t}</span>
-              <span className="mt-1 block text-[12.5px] leading-snug text-muted-fg">{x.d}</span>
-            </Link>
+          ].map((x, i) => (
+            <Reveal key={x.href} delay={i} className="h-full">
+              <Link
+                href={x.href}
+                className="lift-hover block h-full rounded-2xl border border-border-soft bg-card/80 px-4 py-3.5 hover:border-border hover:bg-card"
+              >
+                <span className="block text-[14px] font-semibold tracking-tight">{x.t}</span>
+                <span className="mt-1 block text-[12.5px] leading-snug text-muted-fg">{x.d}</span>
+              </Link>
+            </Reveal>
           ))}
         </div>
 
@@ -230,7 +234,7 @@ export default async function Home() {
             .map((t, i) => {
               const n = counts[t] ?? 0;
               return (
-                <li key={t} className="border-b border-border-soft last:border-b-0">
+                <Reveal key={t} as="li" delay={i} className="border-b border-border-soft last:border-b-0">
                   <Link
                     href={`/topics/${t}`}
                     className="group grid grid-cols-[2.5rem_minmax(0,1fr)] items-baseline gap-x-3 py-5 sm:grid-cols-[2.75rem_minmax(0,1fr)_auto] sm:gap-x-6 sm:py-[1.35rem]"
@@ -257,13 +261,13 @@ export default async function Home() {
                       </div>
                       <span
                         aria-hidden
-                        className="text-[15px] text-dim transition-transform group-hover:translate-x-0.5 group-hover:text-accent"
+                        className="text-[15px] text-dim transition-transform duration-300 group-hover:translate-x-1 group-hover:text-accent"
                       >
                         →
                       </span>
                     </div>
                   </Link>
-                </li>
+                </Reveal>
               );
             })}
         </ol>

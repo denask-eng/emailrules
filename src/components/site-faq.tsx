@@ -1,28 +1,12 @@
 import { SITE_FAQ } from "@/content/faq";
 
 /**
- * Sitewide FAQ — minimal accordion, not a second product surface.
- * - First answer open (who it's for)
- * - Exclusive open (name=) so the page never balloons
- * - Large hit target, no card chrome, no explanatory lede
+ * Sitewide FAQ UI. Schema is emitted only on the homepage (see page.tsx)
+ * so every URL does not claim the same FAQPage for Google.
  */
 export function SiteFaq() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: SITE_FAQ.map((item) => ({
-      "@type": "Question",
-      name: item.q,
-      acceptedAnswer: { "@type": "Answer", text: item.a },
-    })),
-  };
-
   return (
     <section id="faq" className="no-print border-t" aria-labelledby="site-faq-heading">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
       <div className="shell py-12 sm:py-14">
         <div className="mx-auto max-w-[36rem]">
           <p className="label">FAQ</p>
@@ -38,7 +22,7 @@ export function SiteFaq() {
               <details
                 key={item.q}
                 name="site-faq"
-                className="group border-b border-border-soft"
+                className="faq-item group border-b border-border-soft"
                 open={i === 0}
               >
                 <summary className="flex cursor-pointer list-none items-center gap-3 py-3.5 text-left outline-none marker:content-none focus-visible:bg-muted/60 [&::-webkit-details-marker]:hidden">
@@ -47,19 +31,40 @@ export function SiteFaq() {
                   </span>
                   <span
                     aria-hidden
-                    className="num shrink-0 text-[13px] text-dim transition-transform duration-200 ease-out group-open:rotate-45"
+                    className="num shrink-0 text-[13px] text-dim transition-transform duration-300 ease-out group-open:rotate-45"
                   >
                     +
                   </span>
                 </summary>
-                <p className="pb-4 pr-8 text-[14px] leading-relaxed text-muted-fg sm:text-[14.5px]">
-                  {item.a}
-                </p>
+                <div className="faq-body">
+                  <p className="pb-4 pr-8 text-[14px] leading-relaxed text-muted-fg sm:text-[14.5px]">
+                    {item.a}
+                  </p>
+                </div>
               </details>
             ))}
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+/** Homepage-only FAQ schema — do not put this on every route. */
+export function SiteFaqJsonLd() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: SITE_FAQ.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
   );
 }

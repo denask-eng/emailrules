@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllRules, getRulesByJurisdiction } from "@/lib/rules";
 import { JURISDICTIONS } from "@/lib/types";
@@ -80,7 +81,17 @@ export default async function JurisdictionPage({
     <div className={"shell shell-tight py-12 sm:py-16"}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SectionHead label="Jurisdiction" title={meta.label} lede={meta.blurb} />
-      <ul className="list-none border-t p-0">
+      <p className="mt-2 text-[13.5px] text-muted-fg">
+        {rules.length} {rules.length === 1 ? "rule" : "rules"} with sources for this place ·{" "}
+        <Link href="/rules" className="font-medium text-fg underline underline-offset-2">
+          Filter by role and geo
+        </Link>
+        {" · "}
+        <Link href="/coverage" className="underline underline-offset-2 hover:text-fg">
+          Full map
+        </Link>
+      </p>
+      <ul className="mt-8 list-none border-t border-fg/10 p-0">
         {rules.map((rule) => (
           <RuleRow key={rule.slug} rule={rule} />
         ))}

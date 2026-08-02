@@ -25,6 +25,7 @@ import {
 } from "@/lib/audience";
 import { briefCounts, sortForMarketer, topForYou } from "@/lib/rule-signals";
 import Link from "next/link";
+import { Reveal } from "@/components/reveal";
 
 const listeners = new Set<() => void>();
 let memory: Audience = EMPTY_AUDIENCE;
@@ -130,7 +131,7 @@ function RoleGate({
             key={p.id}
             type="button"
             onClick={() => onPick(p.audience)}
-            className="rounded-2xl border bg-bg px-4 py-4 text-left hover:border-accent hover:bg-accent-soft"
+            className="lift-hover pressable rounded-2xl border bg-bg px-4 py-4 text-left hover:border-accent hover:bg-accent-soft"
           >
             <span className="block text-[15px] font-semibold tracking-tight">{p.label}</span>
             <span className="mt-1.5 block text-[12.5px] leading-snug text-muted-fg">{p.blurb}</span>
@@ -250,7 +251,7 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
                   apply({ ...p.audience, onlyMine: a.onlyMine && p.audience.onlyMine })
                 }
                 className={cn(
-                  "rounded-full border px-3.5 py-2 text-[13px] font-medium",
+                  "pressable rounded-full border px-3.5 py-2 text-[13px] font-medium",
                   a.role === p.audience.role
                     ? "border-accent bg-accent-soft text-fg"
                     : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
@@ -273,7 +274,7 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
                 aria-pressed={!!a[q.key]}
                 onClick={() => set({ [q.key]: !a[q.key] })}
                 className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-[13.5px]",
+                  "pressable rounded-full border px-3.5 py-1.5 text-[13.5px]",
                   a[q.key]
                     ? q.key === "onlyMine"
                       ? "border-fg bg-fg text-bg"
@@ -375,8 +376,8 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               Highest signal for your role. Read, act or skip — then you&rsquo;re done for today.
             </p>
             <ul className="mt-4 list-none border-t border-fg/12 p-0">
-              {top.map((r) => (
-                <RuleRow key={r.slug} rule={r} />
+              {top.map((r, i) => (
+                <RuleRow key={r.slug} rule={r} index={i} />
               ))}
             </ul>
             <div className="mt-6 rounded-2xl border border-border-soft bg-bg-2 px-5 py-4 text-[14px] leading-relaxed text-muted-fg">
@@ -398,8 +399,8 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
                 {rest.length} more · lower urgency. Skim when you have time.
               </p>
               <ul className="mt-4 list-none border-t p-0">
-                {rest.map((r) => (
-                  <RuleRow key={r.slug} rule={r} />
+                {rest.map((r, i) => (
+                  <RuleRow key={r.slug} rule={r} index={i} />
                 ))}
               </ul>
             </section>

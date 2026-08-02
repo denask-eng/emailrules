@@ -30,10 +30,11 @@ export const TOPIC_BRIEFS: Record<
       "What you promise in the subject must match the email and the landing experience. Some US states treat misleading subjects as automatic violations.",
   },
   "ai-disclosure": {
-    who: "Teams using AI for copy or product imagery into the EU.",
-    watch: "Assuming every AI sentence needs a label — the real line is often about synthetic media, not draft copy.",
+    who: "Anyone shipping AI-written copy or AI product imagery into the EU — marketers, freelancers, agencies.",
+    watch:
+      "Slapping “AI generated” on every newsletter (theatre) or ignoring photoreal synthetic product shots (real risk). Draft text a human could reject is not the same as a fake product photo.",
     newbie:
-      "Rules about AI labels are newer and narrow. Read the rule: marketing text and product images are not always treated the same.",
+      "AI rules here are not “ban ChatGPT.” They are about when the law wants people to know something synthetic is in the message. Read the one EU AI Act page; most of the panic is vendor marketing.",
   },
   measurement: {
     who: "Anyone reporting opens, revenue, or “email drove this” to a founder.",

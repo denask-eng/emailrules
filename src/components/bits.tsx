@@ -16,6 +16,7 @@ import {
   type Impact,
 } from "@/lib/rule-signals";
 import { displayTldr, displayWhy, displayPlain } from "@/content/plain-overrides";
+import { Reveal } from "@/components/reveal";
 
 export const SHELL = "shell";
 
@@ -190,13 +191,14 @@ export function OwnershipTag({ ownership }: { ownership: Ownership }) {
 }
 
 /** Index row: ownership first, one sentence, minimal chrome. */
-export function RuleRow({ rule }: { rule: Rule }) {
+export function RuleRow({ rule, index = 0 }: { rule: Rule; index?: number }) {
   const f = freshness(rule);
   const impact = impactOf(rule);
   return (
+    <Reveal as="div" delay={Math.min(index, 6)} className="border-b border-border-soft last:border-b-0">
     <Link
       href={`/rules/${rule.slug}`}
-      className="group block border-b border-border-soft px-1 py-5 last:border-b-0 sm:px-2"
+      className="group block px-1 py-5 transition-colors hover:bg-muted/40 sm:px-2"
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <OwnershipTag ownership={rule.ownership} />
@@ -231,6 +233,7 @@ export function RuleRow({ rule }: { rule: Rule }) {
         </div>
       ) : null}
     </Link>
+    </Reveal>
   );
 }
 

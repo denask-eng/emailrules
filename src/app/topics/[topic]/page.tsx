@@ -68,30 +68,33 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
       <SectionHead label="Topic" title={meta.label} lede={meta.blurb} />
 
       {TOPIC_BRIEFS[topic as Topic] ? (
-        <div className="mt-8 max-w-[64ch] rounded-xl border bg-bg-2 px-5 py-5 text-[14px] leading-relaxed">
-          <p>
-            <b className="text-fg">Who should care: </b>
-            <span className="text-muted-fg">{TOPIC_BRIEFS[topic as Topic].who}</span>
+        <div className="mt-8 max-w-[36rem] border-l-2 border-accent/35 pl-4 sm:pl-5">
+          <p className="text-[14.5px] leading-relaxed text-muted-fg">
+            <span className="font-semibold text-fg">Who should care. </span>
+            {TOPIC_BRIEFS[topic as Topic].who}
           </p>
-          <p className="mt-3">
-            <b className="text-fg">If you are new: </b>
-            <span className="text-muted-fg">{TOPIC_BRIEFS[topic as Topic].newbie}</span>
+          <p className="mt-3 text-[14.5px] leading-relaxed text-muted-fg">
+            <span className="font-semibold text-fg">If you are new. </span>
+            {TOPIC_BRIEFS[topic as Topic].newbie}
           </p>
-          <p className="mt-3">
-            <b className="text-fg">Common mistake: </b>
-            <span className="text-muted-fg">{TOPIC_BRIEFS[topic as Topic].watch}</span>
+          <p className="mt-3 text-[14.5px] leading-relaxed text-muted-fg">
+            <span className="font-semibold text-fg">Common mistake. </span>
+            {TOPIC_BRIEFS[topic as Topic].watch}
           </p>
           <p className="mt-3 text-[12.5px] text-dim">
-            Stuck on a word?{" "}
-            <Link href="/glossary" className="underline underline-offset-2">
+            {rules.length} {rules.length === 1 ? "rule" : "rules"} below ·{" "}
+            <Link href="/glossary" className="underline underline-offset-2 hover:text-fg">
               Glossary
             </Link>
-            .
+            {" · "}
+            <Link href="/rules" className="underline underline-offset-2 hover:text-fg">
+              Filter to your desk
+            </Link>
           </p>
         </div>
       ) : null}
 
-      <ul className="mt-10 list-none border-t p-0">
+      <ul className="mt-10 list-none border-t border-fg/10 p-0">
         {rules.map((r) => (
           <RuleRow key={r.slug} rule={r} />
         ))}
