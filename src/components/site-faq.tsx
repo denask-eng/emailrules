@@ -35,8 +35,8 @@ export function SiteFaq() {
             The awkward questions, answered like a human.
           </h2>
           <p className="mt-2 max-w-[52ch] text-[14.5px] leading-relaxed text-muted-fg">
-            Why it isn&rsquo;t a law library, a score app, or an AI content farm — and what we
-            refuse on purpose.
+            Who it&rsquo;s for first — then what it is, what it isn&rsquo;t, and why we refuse the
+            usual marketing tricks.
           </p>
         </div>
 
