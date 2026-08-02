@@ -43,14 +43,14 @@ export function OwnershipSplit() {
   const max = Math.max(...counts.map((c) => c.n));
 
   return (
-    <section className="mt-20 border-t pt-12">
+    <section className="mt-14 border-t pt-9 sm:mt-20 sm:pt-12">
       <style>{MOTION}</style>
       <p className="label">Before you read any of it</p>
 
       {/* One element at real scale. A page where the largest thing after the
           h1 is 15px has no subject; the count is the subject here, and it is
           the most shareable true sentence this site owns. */}
-      <div className="mt-5 grid gap-x-10 gap-y-4 lg:grid-cols-[auto_1fr] lg:items-start">
+      <div className="mt-5 grid gap-x-10 gap-y-2 lg:grid-cols-[auto_1fr] lg:items-start">
         <p
           className="num leading-[0.82] font-semibold tracking-[-0.05em] text-accent"
           style={{ fontSize: "clamp(4rem,11vw,7rem)" }}
@@ -69,7 +69,7 @@ export function OwnershipSplit() {
         </div>
       </div>
 
-      <dl className="mt-12">
+      <dl className="mt-8 sm:mt-12">
         {counts.map((c, i) => (
           <div
             key={c.owner}

@@ -113,7 +113,7 @@ export default function GlossaryPage() {
       <OwnershipSplit />
 
       {/* ── The reading path ────────────────────────────────────────────── */}
-      <section className="mt-16 border-t pt-10">
+      <section className="mt-12 border-t pt-8 sm:mt-16 sm:pt-10">
         <p className="label">If you are new</p>
         <h2 className="mt-2.5 text-[clamp(1.3rem,3vw,1.7rem)] font-semibold tracking-tight">
           The words that explain the rest, in order
@@ -122,12 +122,12 @@ export default function GlossaryPage() {
           Each one makes the next one obvious. Ten minutes, and the rest of this page reads itself.
         </p>
 
-        <ol className="mt-7 grid list-none gap-x-8 gap-y-0 p-0 sm:grid-cols-2">
+        <ol className="mt-6 grid list-none grid-cols-2 gap-x-6 gap-y-0 p-0 sm:mt-7 sm:gap-x-8">
           {starters.map((t, i) => (
             <li key={t.id} className="border-b border-border-soft last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0">
               <Link
                 href={`/how-email-works/${t.id}`}
-                className="group grid grid-cols-[1.75rem_1fr] items-baseline gap-x-3 py-3.5 transition-colors hover:bg-muted/40"
+                className="group grid grid-cols-[1.75rem_1fr] items-baseline gap-x-3 py-3 transition-colors hover:bg-muted/40 sm:py-3.5"
               >
                 <span className="num text-[11.5px] text-dim">
                   {String(i + 1).padStart(2, "0")}
@@ -136,7 +136,7 @@ export default function GlossaryPage() {
                   <span className="text-[15px] font-semibold tracking-tight decoration-1 underline-offset-[5px] group-hover:underline">
                     {t.term}
                   </span>
-                  <span className="mt-1 block max-w-[46ch] text-[13.5px] leading-relaxed text-muted-fg">
+                  <span className="mt-1 hidden max-w-[46ch] text-[13.5px] leading-relaxed text-muted-fg sm:block">
                     {t.short}
                   </span>
                 </span>
@@ -154,7 +154,7 @@ export default function GlossaryPage() {
       />
 
       {/* ── A–Z, for people who came for one word ───────────────────────── */}
-      <section id="a-z" className="mt-20 scroll-mt-[7.5rem] border-t pt-10">
+      <section id="a-z" className="mt-14 scroll-mt-[7.5rem] border-t pt-8 sm:mt-20 sm:pt-10">
         <p className="label">Alphabetical</p>
         <h2 className="mt-2.5 text-[1.4rem] font-semibold tracking-tight">
           All {GLOSSARY.length}, if you came for one word
@@ -181,7 +181,7 @@ export default function GlossaryPage() {
       </section>
 
       {/* ── Legend ──────────────────────────────────────────────────────── */}
-      <section className="mt-16 border-t pt-8">
+      <section className="mt-12 border-t pt-8 sm:mt-16">
         <div className="grid gap-8 sm:grid-cols-2">
           <div>
             <p className="label">Whose job it is</p>

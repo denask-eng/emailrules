@@ -55,6 +55,27 @@ const OWNER_TONE: Record<TermOwner, string> = {
 
 const LEVELS: (TermLevel | "all")[] = ["all", "start", "working", "deep"];
 
+/**
+ * On a phone the eight sections open at once are roughly fifteen thousand
+ * pixels of stacked text, and you can never see one whole unit. Each stop
+ * becomes a <details> there, so the page is eight tappable stops you can take
+ * in at a glance. From sm the body is forced open and the summary chrome is
+ * dropped, because a desktop column has the room and folding it would be
+ * hiding content for no reason.
+ *
+ * Pure CSS: the content is always in the DOM for crawlers and for ⌘F, it is
+ * only collapsed to a zero-height grid row.
+ */
+const STAGE_CSS = `
+.stage-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease-soft); }
+.stage-body > * { overflow: hidden; }
+details[open] > .stage-body { grid-template-rows: 1fr; }
+@media (min-width: 640px) {
+  .stage-body { grid-template-rows: 1fr; }
+  .stage-summary { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .stage-body { transition: none; } }`;
+
 export function GlossaryBrowser({
   stages,
   terms,
@@ -91,6 +112,7 @@ export function GlossaryBrowser({
 
   return (
     <>
+      <style>{STAGE_CSS}</style>
       {/* Opaque, not translucent: the site header can be glassy because it is
           52px of chrome, but a second bar that lets a paragraph ghost through
           it reads as a rendering fault rather than as depth. Sticky from sm. A phone cannot fit the field and four chips on
@@ -191,49 +213,74 @@ export function GlossaryBrowser({
             className={cn(
               "scroll-mt-[7.5rem]",
               theirs
-                ? "mt-8 rounded-2xl border border-border bg-bg-2 px-5 py-10 first:mt-16 sm:px-8"
-                : "pt-16",
+                ? "mt-3 rounded-xl border border-border bg-bg-2 px-4 py-4 sm:mt-8 sm:rounded-2xl sm:px-8 sm:py-10 sm:first:mt-16"
+                : "sm:pt-16",
             )}
           >
             {theirs ? (
-              <p className="label mb-5 flex items-center gap-2 text-muted-fg">
+              <p className="label mb-2 flex items-center gap-2 text-muted-fg sm:mb-5">
                 <span aria-hidden className="h-px w-6 bg-fg/25" />
-                Their building — none of this is in your platform
+                Their building — not in your platform
               </p>
             ) : null}
 
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="num text-[13px] font-semibold text-accent">
-                {String(s.n).padStart(2, "0")}
-              </span>
-              <h2 className="text-[clamp(1.45rem,3vw,1.85rem)] leading-tight font-semibold tracking-tight">
-                {s.name}
-              </h2>
-              <span className="num text-[11.5px] text-dim">{s.when}</span>
-            </div>
-
-            <p className="mt-2.5 max-w-[58ch] text-[1.02rem] leading-relaxed text-fg">{s.what}</p>
-
-            {/* Folded by default. Eight of these open at once was the second
-                wall of text on a page whose entire argument is that email is
-                simpler than it looks. */}
-            <details className="faq-item mt-3 max-w-[58ch]">
-              <summary className="inline-flex h-11 cursor-pointer list-none items-center text-[13.5px] font-medium text-muted-fg hover:text-fg sm:h-auto sm:py-1 [&::-webkit-details-marker]:hidden">
-                Why this stop decides things
-                <span aria-hidden className="ml-1.5 text-dim">
+            {/* Open on a phone only when it is the one being filtered to. */}
+            <details open={filtering || undefined} className="group">
+              <summary className="stage-summary flex cursor-pointer list-none items-center gap-x-3 border-b border-border-soft py-3.5 [&::-webkit-details-marker]:hidden">
+                <span className="num text-[13px] font-semibold text-accent">
+                  {String(s.n).padStart(2, "0")}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[1.2rem] leading-tight font-semibold tracking-tight">
+                    {s.name}
+                  </span>
+                  <span className="num mt-1 block text-[11px] text-dim">
+                    {s.when} · {list.length} word{list.length === 1 ? "" : "s"}
+                  </span>
+                </span>
+                <span
+                  aria-hidden
+                  className="shrink-0 text-[18px] leading-none text-dim transition-transform group-open:rotate-45"
+                >
                   +
                 </span>
               </summary>
-              <div className="faq-body">
+
+              <div className="stage-body">
                 <div>
-                  <p className="pt-1 text-[14.5px] leading-relaxed text-muted-fg">{s.intro}</p>
-                </div>
-              </div>
-            </details>
+                  {/* Repeated from the summary, for sm and up where the
+                      summary is hidden. */}
+                  <div className="hidden flex-wrap items-baseline gap-x-3 gap-y-1 sm:flex">
+                    <span className="num text-[13px] font-semibold text-accent">
+                      {String(s.n).padStart(2, "0")}
+                    </span>
+                    <h2 className="text-[clamp(1.45rem,3vw,1.85rem)] leading-tight font-semibold tracking-tight">
+                      {s.name}
+                    </h2>
+                    <span className="num text-[11.5px] text-dim">{s.when}</span>
+                  </div>
 
-            {slots?.[s.id] ? <div className="mt-7">{slots[s.id]}</div> : null}
+                  <p className="mt-3 max-w-[58ch] text-[1.02rem] leading-relaxed text-fg sm:mt-2.5">
+                    {s.what}
+                  </p>
 
-            <ul className="mt-7 list-none border-t border-border-soft p-0">
+                  <details className="faq-item mt-3 max-w-[58ch]">
+                    <summary className="inline-flex h-11 cursor-pointer list-none items-center text-[13.5px] font-medium text-muted-fg hover:text-fg sm:h-auto sm:py-1 [&::-webkit-details-marker]:hidden">
+                      Why this stop decides things
+                      <span aria-hidden className="ml-1.5 text-dim">
+                        +
+                      </span>
+                    </summary>
+                    <div className="faq-body">
+                      <div>
+                        <p className="pt-1 text-[14.5px] leading-relaxed text-muted-fg">{s.intro}</p>
+                      </div>
+                    </div>
+                  </details>
+
+                  {slots?.[s.id] ? <div className="mt-6 sm:mt-7">{slots[s.id]}</div> : null}
+
+                  <ul className="mt-6 list-none border-t border-border-soft p-0 sm:mt-7">
               {list.map((t) => (
                 <li key={t.id} className="border-b border-border-soft">
                   <Link
@@ -262,7 +309,10 @@ export function GlossaryBrowser({
                   </Link>
                 </li>
               ))}
-            </ul>
+                  </ul>
+                </div>
+              </div>
+            </details>
           </section>
         );
       })}
