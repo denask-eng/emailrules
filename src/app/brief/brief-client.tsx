@@ -8,6 +8,7 @@ import {
   STORAGE_KEY,
   ROLE_PRESETS,
   audienceActive,
+  audienceToSearch,
   matchesAudience,
   parseAudienceParam,
   roleTopicBoost,
@@ -81,13 +82,24 @@ function toSortable(r: LightRule): Rule {
 
 export function BriefClient({ rules }: { rules: LightRule[] }) {
   const [a, setA] = useState<Audience>(EMPTY_AUDIENCE);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"link" | "slack" | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setA(readAudience());
     setReady(true);
   }, []);
+
+  /* Keep the address bar shareable so “copy link” always includes setup. */
+  useEffect(() => {
+    if (!ready || typeof window === "undefined") return;
+    const qs = audienceToSearch(a);
+    const next = `${window.location.pathname}${qs}`;
+    const cur = `${window.location.pathname}${window.location.search}`;
+    if (next !== cur) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [a, ready]);
 
   const filtered = useMemo(() => {
     return rules.filter((r) => matchesAudience(r, a)).map(toSortable);
@@ -105,11 +117,33 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
   const counts = briefCounts(filtered);
   const today = new Date().toISOString().slice(0, 10);
 
-  const copyLink = async () => {
+  const shareUrl = () => {
+    if (typeof window === "undefined") return "https://emailrules.today/brief";
+    return `${window.location.origin}/brief${audienceToSearch(a)}`;
+  };
+
+  const slackText = () => {
+    const lines = [
+      `*Email rules brief* · ${roleLabel(a)} · as of ${today}`,
+      `${counts.act} need a person · ${counts.shared} shared with ESP · ${counts.handled + counts.fyi} handled/FYI · ${counts.upcoming} upcoming`,
+      ``,
+      `*Open these five first:*`,
+      ...top.map((r, i) => {
+        const tldr = displayTldr(r.slug, r.plain);
+        return `${i + 1}. <https://emailrules.today/rules/${r.slug}|${r.title}>\n   ${tldr}\n   _Do first:_ ${r.mondayMorning}`;
+      }),
+      ``,
+      `Full one-pager: ${shareUrl()}`,
+      `_Not legal advice · emailrules.today_`,
+    ];
+    return lines.join("\n");
+  };
+
+  const copy = async (kind: "link" | "slack") => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(kind === "link" ? shareUrl() : slackText());
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 2000);
     } catch {
       /* */
     }
@@ -137,10 +171,17 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={copyLink}
+            onClick={() => copy("link")}
             className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-[10px] px-4")}
           >
-            {copied ? "Link copied" : "Copy page link"}
+            {copied === "link" ? "Link copied" : "Copy share link"}
+          </button>
+          <button
+            type="button"
+            onClick={() => copy("slack")}
+            className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-[10px] px-4")}
+          >
+            {copied === "slack" ? "Slack text copied" : "Copy for Slack"}
           </button>
           <button
             type="button"
@@ -216,8 +257,8 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
       <section className="mt-10 rounded-xl border bg-bg-2 px-5 py-5 text-[13.5px] leading-relaxed text-muted-fg">
         <p>
           <b className="text-fg">How to use: </b>
-          Paste in Slack, export PDF via print, or walk the five links in a stand-up. Each full rule
-          has plain English, whose job, and primary sources.
+          Copy for Slack (formatted), share the link (keeps your role filters), or Print / PDF for a
+          stand-up. Each full rule has plain English, whose job, and primary sources.
         </p>
         <p className="mt-2">
           Not legal advice. Independent — no tracking pixels, seed tests, or ESP for sale.

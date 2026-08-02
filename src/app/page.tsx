@@ -64,7 +64,7 @@ export default async function Home() {
             {
               href: "/brief",
               t: "One-page team brief",
-              d: "Print or paste in Slack: counts + top five + do-first lines.",
+              d: "Shareable link + Slack paste: top five, counts, do-first lines.",
             },
             {
               href: "/check",

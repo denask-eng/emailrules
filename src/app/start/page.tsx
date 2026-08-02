@@ -43,13 +43,20 @@ export default async function StartHere() {
           },
           {
             n: "03",
+            t: "Share a one-page brief",
+            d: "Turn your setup into five “do first” rules with counts. Copy a link that keeps the filters, paste into Slack, or print PDF for the stand-up.",
+            href: "/brief",
+            cta: "Open team brief",
+          },
+          {
+            n: "04",
             t: "Check your sending domain",
             d: "Free live check of SPF, DKIM keys, and DMARC — the public records inboxes use to trust you. No score out of 100. Paste headers if you want alignment on a real message.",
             href: "/check",
             cta: "Check a domain",
           },
           {
-            n: "04",
+            n: "05",
             t: "Come back when the market moves",
             d: "The homepage ledger is market moves only. Quiet means nothing material changed — that is good. Optional: subscribe for one email per real change.",
             href: "/changed",
