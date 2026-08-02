@@ -2,20 +2,20 @@
 
 import {
   useCallback,
-  useLayoutEffect,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
+import Link from "next/link";
 import type { Rule } from "@/lib/types";
-import { RuleRow } from "@/components/bits";
 import { cn } from "@/lib/utils";
 import {
   type Audience,
   type EspId,
   EMPTY_AUDIENCE,
   STORAGE_KEY,
-  ONBOARD_KEY,
   AUDIENCE_CHIPS,
   ESP_OPTIONS,
   ROLE_PRESETS,
@@ -28,29 +28,11 @@ import {
   espLabel,
 } from "@/lib/audience";
 import { briefCounts, sortForMarketer, topForYou } from "@/lib/rule-signals";
-import Link from "next/link";
-import { Reveal } from "@/components/reveal";
+import { RuleRow } from "@/components/rules/rule-row";
 
 const listeners = new Set<() => void>();
 let memory: Audience = EMPTY_AUDIENCE;
 let hydrated = false;
-
-function isOnboarded(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(ONBOARD_KEY) === "1" || audienceActive(readStoredAudience());
-  } catch {
-    return false;
-  }
-}
-
-function markOnboarded() {
-  try {
-    window.localStorage.setItem(ONBOARD_KEY, "1");
-  } catch {
-    /* */
-  }
-}
 
 function readAudience(): Audience {
   if (typeof window === "undefined") return EMPTY_AUDIENCE;
@@ -66,7 +48,6 @@ function persist(next: Audience, pushUrl: boolean) {
   try {
     if (audienceActive(next)) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      markOnboarded();
     } else {
       window.localStorage.removeItem(STORAGE_KEY);
     }
@@ -82,7 +63,7 @@ function persist(next: Audience, pushUrl: boolean) {
 function subscribe(cb: () => void) {
   listeners.add(cb);
   const onStorage = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY || e.key === ONBOARD_KEY || e.key === null) {
+    if (e.key === STORAGE_KEY || e.key === null) {
       hydrated = false;
       cb();
     }
@@ -94,81 +75,66 @@ function subscribe(cb: () => void) {
   };
 }
 
-const serverSnapshot = () => EMPTY_AUDIENCE;
+type GeoKey = "eu" | "us" | "ca" | "uk" | "au";
 
-function RoleGate({
-  rulesCount,
-  onPick,
-  onSkip,
+/** The five geographies. Gmail volume and “only my desk” are not places. */
+const GEO_CHIPS = AUDIENCE_CHIPS.filter(
+  (c) => c.key !== "gmailBulk" && c.key !== "onlyMine",
+) as { key: GeoKey; label: string; explain: string }[];
+
+/**
+ * Selection is ink; ownership is the accent. Keeping those apart is what lets a
+ * reader take “solid blue” to mean one thing only: this one is on your desk.
+ */
+function Chip({
+  on,
+  onClick,
+  title,
+  className,
+  children,
 }: {
-  rulesCount: number;
-  onPick: (a: Audience) => void;
-  onSkip: () => void;
+  on: boolean;
+  onClick: () => void;
+  title?: string;
+  className?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div
-      className="rounded-2xl border bg-card px-5 py-10 sm:px-10 sm:py-12"
-      style={{ boxShadow: "var(--lift-2)" }}
+    <button
+      type="button"
+      title={title}
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "pressable inline-flex min-h-11 items-center rounded-full border px-4 text-[13.5px]",
+        on
+          ? "border-fg bg-fg font-medium text-bg"
+          : "border-border bg-bg text-muted-fg hover:border-input hover:bg-muted hover:text-fg",
+        className,
+      )}
     >
-      <p className="label text-center">Start here · 10 seconds</p>
-      <h2 className="mx-auto mt-3 max-w-[20ch] text-center text-[clamp(1.5rem,4vw,2rem)] font-semibold tracking-tight">
-        What kind of email work do you do?
-      </h2>
-      <p className="mx-auto mt-3 max-w-[40ch] text-center text-[15px] leading-relaxed text-muted-fg">
-        One tap. You get five rules that matter — not all {rulesCount}. Dotted words explain
-        themselves.
-      </p>
-      <div className="mx-auto mt-8 grid max-w-2xl gap-2.5 sm:grid-cols-2">
-        {ROLE_PRESETS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onPick(p.audience)}
-            className="lift-hover pressable rounded-2xl border bg-bg px-4 py-4 text-left hover:border-accent hover:bg-accent-soft"
-          >
-            <span className="block text-[15px] font-semibold tracking-tight">{p.label}</span>
-            <span className="mt-1.5 block text-[12.5px] leading-snug text-muted-fg">{p.blurb}</span>
-          </button>
-        ))}
-      </div>
-      <div className="mx-auto mt-8 flex max-w-md flex-col items-center gap-3 text-center">
-        <Link href="/check" className="text-[14px] font-medium text-fg underline underline-offset-3">
-          I only want to check my domain →
-        </Link>
-        <button
-          type="button"
-          onClick={onSkip}
-          className="text-[13px] text-muted-fg underline underline-offset-3 hover:text-fg"
-        >
-          Browse everything (I&rsquo;ll filter later)
-        </button>
-      </div>
-    </div>
+      {children}
+    </button>
   );
 }
 
-export function RuleFilter({ rules }: { rules: Rule[] }) {
+export function RuleFilter({ rules, initial }: { rules: Rule[]; initial: Audience }) {
+  /* The server already answered with `initial`, so hydration has nothing to
+     re-decide and the first paint is the real list, not a spinner-shaped gate. */
+  const serverSnapshot = useCallback(() => initial, [initial]);
   const a = useSyncExternalStore(subscribe, readAudience, serverSnapshot);
   const [copied, setCopied] = useState(false);
-  /** null = not hydrated; true = show gate; false = show list */
-  const [gate, setGate] = useState<boolean | null>(null);
+  const results = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
+  /* Module state outlives a client-side navigation, so coming back to /rules
+     must re-read the URL rather than trust what the last visit left behind. */
+  useEffect(() => {
     hydrated = false;
     readAudience();
     listeners.forEach((l) => l());
-    const has =
-      audienceActive(readAudience()) ||
-      !!parseAudienceParam(window.location.search) ||
-      isOnboarded();
-    setGate(!has);
   }, []);
 
-  const apply = useCallback((next: Audience) => {
-    persist(next, true);
-    markOnboarded();
-    setGate(false);
-  }, []);
+  const apply = useCallback((next: Audience) => persist(next, true), []);
 
   const set = useCallback(
     (patch: Partial<Audience>) => {
@@ -177,24 +143,57 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
     [apply],
   );
 
+  const pickRole = (preset: (typeof ROLE_PRESETS)[number]) => {
+    const already = a.role === preset.audience.role;
+    apply(already ? EMPTY_AUDIENCE : preset.audience);
+    /* The answer is below the question, so take the reader to it. */
+    if (already) return;
+    const el = results.current;
+    if (!el) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
+  };
+
   const boost = useCallback((topic: string) => roleTopicBoost(topic, a.role), [a.role]);
 
-  const shown = useMemo(() => {
-    const filtered = rules.filter((r) => matchesAudience(r, a));
-    return sortForMarketer(filtered, boost);
-  }, [rules, a, boost]);
-
+  const shown = useMemo(
+    () => sortForMarketer(rules.filter((r) => matchesAudience(r, a)), boost),
+    [rules, a, boost],
+  );
   const top = useMemo(() => topForYou(shown, 5, boost), [shown, boost]);
   const topSlugs = useMemo(() => new Set(top.map((r) => r.slug)), [top]);
   const rest = useMemo(() => shown.filter((r) => !topSlugs.has(r.slug)), [shown, topSlugs]);
-  const brief = briefCounts(shown);
+
+  /* Work still on a person, then the reassurance. Both stay on the page. */
+  const needsAPerson = (r: Rule) =>
+    r.ownership === "yours" || r.ownership === "shared" || r.status === "upcoming";
+  const restOpen = rest.filter(needsAPerson);
+  const restDone = rest.filter((r) => !needsAPerson(r));
+
+  const count = briefCounts(shown);
   const filtered = audienceActive(a);
+  const geoOn = GEO_CHIPS.filter((c) => a[c.key]);
+
+  /* Closed, the disclosure has to say what it is hiding. */
+  const summary = [
+    a.esp ? espLabel(a.esp) : "Any tool",
+    geoOn.length ? geoOn.map((c) => c.label).join(", ") : "Everywhere",
+    ...(a.gmailBulk ? ["big Gmail volume"] : []),
+    ...(a.onlyMine ? ["only my desk"] : []),
+  ].join(" · ");
+
+  const espNote =
+    a.esp === "klaviyo"
+      ? "Klaviyo product pages — attribution, holdouts — stay in your list."
+      : a.esp === "other"
+        ? "Other or custom: no invented product screens. Global auth, consent and hygiene still apply."
+        : a.esp
+          ? `${espLabel(a.esp)}: the same inbox laws as everyone. Product pages written for other tools drop out.`
+          : "Any tool hides nothing — every product page is in. Naming yours drops the ones written for somebody else.";
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/rules${audienceToSearch(a)}`,
-      );
+      await navigator.clipboard.writeText(`${window.location.origin}/rules${audienceToSearch(a)}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -202,237 +201,273 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
     }
   };
 
-  if (gate === null || gate === true) {
-    return (
-      <RoleGate
-        rulesCount={rules.length}
-        onPick={apply}
-        onSkip={() => {
-          markOnboarded();
-          persist(EMPTY_AUDIENCE, true);
-          setGate(false);
-        }}
-      />
-    );
-  }
-
   return (
     <>
-      <div className="rounded-2xl border bg-card p-5 sm:p-6" style={{ boxShadow: "var(--lift)" }}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-[1.05rem] font-semibold tracking-tight">Your setup</h2>
-            <p className="mt-1 max-w-[36rem] text-[13.5px] leading-relaxed text-muted-fg">
-              Role + where you send. Saved here and in the URL. That&rsquo;s the whole system.
-            </p>
-          </div>
-          {filtered ? (
-            <p className="rounded-full border border-ok/30 bg-ok-bg px-2.5 py-1 text-[11px] font-medium text-ok">
-              Saved
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mt-5">
-          <p className="label mb-2">Your role</p>
-          <div className="flex flex-wrap gap-2">
-            {ROLE_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() =>
-                  apply({ ...p.audience, onlyMine: a.onlyMine && p.audience.onlyMine })
-                }
-                className={cn(
-                  "pressable rounded-full border px-3.5 py-2 text-[13px] font-medium",
-                  a.role === p.audience.role
-                    ? "border-accent bg-accent-soft text-fg"
-                    : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <p className="label mb-2">Your email tool</p>
-          <div className="flex flex-wrap gap-2">
-            {ESP_OPTIONS.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                title={o.explain}
-                aria-pressed={a.esp === o.id}
-                onClick={() =>
-                  set({ esp: (a.esp === o.id ? "" : o.id) as EspId })
-                }
-                className={cn(
-                  "pressable rounded-full border px-3.5 py-1.5 text-[13.5px]",
-                  a.esp === o.id
-                    ? "border-accent bg-accent text-accent-fg"
-                    : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
-                )}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 max-w-[50ch] text-[12.5px] leading-relaxed text-dim">
-            {a.esp === "klaviyo"
-              ? "Klaviyo-specific pages (attribution, holdouts) stay in your list."
-              : a.esp && a.esp !== "other"
-                ? `${espLabel(a.esp)}: same inbox laws as everyone — Klaviyo-only product pages stay out of your way.`
-                : a.esp === "other"
-                  ? "Other / custom: no fake product pages. Global auth, consent, and hygiene still apply."
-                  : "Pick your ESP so product-specific pages only show when they match. Most rules are tool-agnostic."}
-          </p>
-        </div>
-
-        <div className="mt-5">
-          <p className="label mb-2">Where you send</p>
-          <div className="flex flex-wrap gap-2">
-            {AUDIENCE_CHIPS.map((q) => (
-              <button
-                key={q.key}
-                type="button"
-                title={q.explain}
-                aria-pressed={!!a[q.key]}
-                onClick={() => set({ [q.key]: !a[q.key] })}
-                className={cn(
-                  "pressable rounded-full border px-3.5 py-1.5 text-[13.5px]",
-                  a[q.key]
-                    ? q.key === "onlyMine"
-                      ? "border-fg bg-fg text-bg"
-                      : "border-accent bg-accent text-accent-fg"
-                    : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
-                )}
-              >
-                {q.label}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 max-w-[48ch] text-[12.5px] leading-relaxed text-dim">
-            EU / Europe pulls ePrivacy plus FR, DE, IT pages tagged EU. UK is separate.{" "}
-            <Link href="/coverage" className="underline underline-offset-2 hover:text-fg">
-              Coverage map
-            </Link>
-            .
-          </p>
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4 text-[13px]">
-          <button
-            type="button"
-            onClick={() => apply(EMPTY_AUDIENCE)}
-            className="text-muted-fg underline underline-offset-3 hover:text-fg"
-          >
-            Clear
-          </button>
-          {filtered ? (
-            <button
-              type="button"
-              onClick={copyLink}
-              className="text-muted-fg underline underline-offset-3 hover:text-fg"
+      {/* One question on arrival. Everything else is opt-in, below, and closed. */}
+      <section aria-labelledby="role-question" className="border-t border-fg/12 pt-9 sm:pt-11">
+        <h2
+          id="role-question"
+          className="text-[clamp(1.4rem,3.4vw,1.9rem)] font-semibold tracking-tight"
+        >
+          What kind of email work do you do?
+        </h2>
+        <p className="mt-2.5 max-w-[52ch] text-[15px] leading-relaxed text-muted-fg">
+          One tap opens the five that matter — not all <span className="num">{rules.length}</span>.
+          Tap the same chip again to go back to everything.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-2.5">
+          {ROLE_PRESETS.map((p) => (
+            <Chip
+              key={p.id}
+              on={a.role === p.audience.role}
+              onClick={() => pickRole(p)}
+              title={p.blurb}
+              className="text-[14.5px]"
             >
-              {copied ? "Link copied" : "Copy setup link"}
-            </button>
-          ) : null}
-          <Link
-            href="/brief"
-            className="font-medium text-accent underline underline-offset-3 hover:text-fg"
-          >
-            One-page brief
-          </Link>
-          <Link href="/glossary" className="text-muted-fg underline underline-offset-3 hover:text-fg">
-            Glossary
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              try {
-                window.localStorage.removeItem(ONBOARD_KEY);
-                window.localStorage.removeItem(STORAGE_KEY);
-              } catch {
-                /* */
-              }
-              hydrated = false;
-              persist(EMPTY_AUDIENCE, true);
-              setGate(true);
-            }}
-            className="text-dim underline underline-offset-3 hover:text-fg"
-          >
-            Start over
-          </button>
+              {p.label}
+            </Chip>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* One glance — not a dashboard of metrics */}
-      <p className="mt-6 text-[14px] leading-relaxed text-muted-fg">
-        In this filter:{" "}
-        <b className="font-medium text-fg">{brief.act}</b> need you
+      {/* Closed by default, and honest about its own state while closed. */}
+      <details className="faq-item group mt-7 rounded-xl border bg-card">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-3 outline-none marker:content-none focus-visible:bg-muted/60 [&::-webkit-details-marker]:hidden">
+          <span className="shrink-0 text-[13.5px] font-medium">Refine</span>
+          {/* Narrow screens get the state, not the descriptor — the state is the point. */}
+          <span className="min-w-0 flex-1 truncate text-[13px] text-muted-fg">
+            <span className="hidden sm:inline">email tool, where you send — </span>
+            <span className="text-fg">{summary}</span>
+          </span>
+          <span
+            aria-hidden
+            className="num shrink-0 text-[13px] text-dim transition-transform duration-300 ease-out group-open:rotate-45"
+          >
+            +
+          </span>
+        </summary>
+        <div className="faq-body">
+          <div className="border-t px-4 pt-4 pb-5">
+            <div role="group" aria-label="Email tool">
+              <p className="label mb-2.5">Email tool</p>
+              <div className="flex flex-wrap gap-2">
+                <Chip on={!a.esp} onClick={() => set({ esp: "" })} title="No tool filter">
+                  Any tool
+                </Chip>
+                {ESP_OPTIONS.map((o) => (
+                  <Chip
+                    key={o.id}
+                    on={a.esp === o.id}
+                    title={o.explain}
+                    onClick={() => set({ esp: (a.esp === o.id ? "" : o.id) as EspId })}
+                  >
+                    {o.label}
+                  </Chip>
+                ))}
+              </div>
+              <p className="mt-2.5 max-w-[54ch] text-[12.5px] leading-relaxed text-dim">{espNote}</p>
+            </div>
+
+            <div className="mt-6" role="group" aria-label="Where you send">
+              <p className="label mb-2.5">Where you send</p>
+              <div className="flex flex-wrap gap-2">
+                <Chip
+                  on={geoOn.length === 0}
+                  onClick={() => set({ eu: false, us: false, ca: false, uk: false, au: false })}
+                  title="No geography filter — every place we cover"
+                >
+                  Everywhere
+                </Chip>
+                {GEO_CHIPS.map((c) => (
+                  <Chip
+                    key={c.key}
+                    on={a[c.key]}
+                    title={c.explain}
+                    onClick={() => set({ [c.key]: !a[c.key] })}
+                  >
+                    {c.label}
+                  </Chip>
+                ))}
+              </div>
+              <p className="mt-2.5 max-w-[54ch] text-[12.5px] leading-relaxed text-dim">
+                Everywhere is the default and it hides nothing. Naming a place narrows the list to
+                it plus the provider rules that apply wherever you send. EU pulls ePrivacy and the
+                French, German and Italian pages; the UK is its own.{" "}
+                <Link href="/coverage" className="underline underline-offset-2 hover:text-fg">
+                  Coverage map
+                </Link>
+                .
+              </p>
+            </div>
+
+            <div className="mt-6" role="group" aria-label="Also true of your programme">
+              <p className="label mb-2.5">Also true of you</p>
+              <div className="flex flex-wrap gap-2">
+                <Chip
+                  on={a.gmailBulk}
+                  onClick={() => set({ gmailBulk: !a.gmailBulk })}
+                  title="Roughly 5,000 or more messages a day to Gmail addresses"
+                >
+                  {/* One flex child: a flex container drops whitespace between items. */}
+                  <span>
+                    <span className="num">5,000+</span>
+                    {" a day to Gmail"}
+                  </span>
+                </Chip>
+                <Chip
+                  on={a.onlyMine}
+                  onClick={() => set({ onlyMine: !a.onlyMine })}
+                  title="Drop the rules your email tool already handles"
+                >
+                  Only my desk
+                </Chip>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 border-t pt-3 text-[13px]">
+              <button
+                type="button"
+                onClick={() => apply(EMPTY_AUDIENCE)}
+                className="min-h-11 text-muted-fg underline underline-offset-3 hover:text-fg"
+              >
+                Clear everything
+              </button>
+              {filtered ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={copyLink}
+                    className="min-h-11 text-muted-fg underline underline-offset-3 hover:text-fg"
+                  >
+                    {copied ? "Link copied" : "Copy setup link"}
+                  </button>
+                  <span className="label">Saved here and in the URL</span>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <p className="mt-7 text-[14px] leading-relaxed text-muted-fg" aria-live="polite">
+        {filtered ? (
+          <>
+            <b className="num font-medium text-fg">{shown.length}</b> of{" "}
+            <span className="num">{rules.length}</span> rules match your setup
+          </>
+        ) : (
+          <>
+            All <b className="num font-medium text-fg">{rules.length}</b> rules, nothing filtered
+            out yet
+          </>
+        )}
         <span className="text-dim"> · </span>
-        <b className="font-medium text-fg">{brief.shared}</b> shared with your ESP
+        <b className="num font-medium text-fg">{count.act}</b> need you
         <span className="text-dim"> · </span>
-        <b className="font-medium text-fg">{brief.handled + brief.fyi}</b> handled or FYI
-        {brief.upcoming > 0 ? (
+        <b className="num font-medium text-fg">{count.shared}</b> shared with your tool
+        <span className="text-dim"> · </span>
+        <b className="num font-medium text-fg">{count.handled + count.fyi}</b> your tool already
+        handles
+        {count.upcoming > 0 ? (
           <>
             <span className="text-dim"> · </span>
-            <b className="font-medium text-fg">{brief.upcoming}</b> upcoming
+            <b className="num font-medium text-fg">{count.upcoming}</b> not in force yet
           </>
         ) : null}
       </p>
 
-      {shown.length === 0 ? (
-        <p className="mt-8 rounded-2xl border bg-bg-2 px-5 py-6 text-[0.95rem] text-muted-fg">
-          Nothing matches.{" "}
-          <button type="button" className="text-fg underline" onClick={() => apply(EMPTY_AUDIENCE)}>
-            Clear filters
-          </button>
-          .
-        </p>
-      ) : (
-        <>
-          <section className="mt-8">
-            <h2 className="text-[1.2rem] font-semibold tracking-tight">
-              Open these {top.length} first
-            </h2>
-            <p className="mt-1 max-w-[52ch] text-[14px] text-muted-fg">
-              Highest signal for your role. Read, act or skip — then you&rsquo;re done for today.
-            </p>
-            <ul className="mt-4 list-none border-t border-fg/12 p-0">
-              {top.map((r, i) => (
-                <RuleRow key={r.slug} rule={r} index={i} />
-              ))}
-            </ul>
-            <div className="mt-6 rounded-2xl border border-border-soft bg-bg-2 px-5 py-4 text-[14px] leading-relaxed text-muted-fg">
-              <b className="font-semibold text-fg">Done for today?</b> If the five above are handled
-              or honestly skipped, you&rsquo;re ahead of most programmes.{" "}
-              <Link href="/brief" className="font-medium text-accent underline underline-offset-2">
-                Share a one-page brief
-              </Link>
-              {" · "}
-              <Link href="/changed" className="underline underline-offset-2 hover:text-fg">
-                What moved
-              </Link>
-            </div>
-          </section>
-          {rest.length > 0 ? (
-            <section className="mt-12">
-              <h2 className="text-[1.05rem] font-semibold tracking-tight">The rest in your filter</h2>
-              <p className="mt-1 text-[13.5px] text-muted-fg">
-                {rest.length} more · lower urgency. Skim when you have time.
+      <div ref={results} className="scroll-mt-20">
+        {shown.length === 0 ? (
+          <p className="mt-8 rounded-xl border bg-bg-2 px-5 py-6 text-[15px] text-muted-fg">
+            Nothing matches this setup.{" "}
+            <button
+              type="button"
+              className="font-medium text-fg underline underline-offset-3"
+              onClick={() => apply(EMPTY_AUDIENCE)}
+            >
+              Clear everything
+            </button>{" "}
+            and start again.
+          </p>
+        ) : (
+          <>
+            <section className="mt-8">
+              <h2 className="text-[1.2rem] font-semibold tracking-tight">
+                Open these <span className="num">{top.length}</span> first
+              </h2>
+              <p className="mt-1 max-w-[52ch] text-[14px] text-muted-fg">
+                Highest signal for {a.role ? "your role" : "anyone sending email"}. Read, act or
+                skip — then you&rsquo;re done for today.
               </p>
-              <ul className="mt-4 list-none border-t p-0">
-                {rest.map((r, i) => (
-                  <RuleRow key={r.slug} rule={r} index={i} />
+              <ul className="mt-4 list-none border-t border-fg/12 p-0">
+                {top.map((r) => (
+                  <RuleRow key={r.slug} rule={r} />
                 ))}
               </ul>
+              <div className="mt-6 rounded-xl border border-border-soft bg-bg-2 px-5 py-4 text-[14px] leading-relaxed text-muted-fg">
+                <b className="font-semibold text-fg">Done for today?</b>{" "}
+                If the five above are handled or honestly skipped, you&rsquo;re ahead of most
+                programmes.{" "}
+                <Link href="/brief" className="font-medium text-accent underline underline-offset-2">
+                  Share a one-page brief
+                </Link>
+                {" · "}
+                <Link href="/changed" className="underline underline-offset-2 hover:text-fg">
+                  What moved
+                </Link>
+              </div>
             </section>
-          ) : null}
-        </>
-      )}
+
+            {restOpen.length > 0 ? (
+              <section className="mt-12">
+                <h2 className="text-[1.05rem] font-semibold tracking-tight">
+                  The rest that still needs a person
+                </h2>
+                <p className="mt-1 text-[13.5px] text-muted-fg">
+                  <span className="num">{restOpen.length}</span> more, lower urgency. Skim when you
+                  have time.
+                </p>
+                <ul className="mt-4 list-none border-t p-0">
+                  {restOpen.map((r) => (
+                    <RuleRow key={r.slug} rule={r} />
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {/* Reassurance, not homework — present, indexable, and folded away. */}
+            {restDone.length > 0 ? (
+              <details className="faq-item group mt-10 border-t pt-4">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 outline-none marker:content-none focus-visible:bg-muted/60 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0 flex-1 text-[14px] text-muted-fg">
+                    <span className="num font-medium text-fg">{restDone.length}</span> more your
+                    email tool already handles, or that change nothing today
+                  </span>
+                  <span
+                    aria-hidden
+                    className="num shrink-0 text-[13px] text-dim transition-transform duration-300 ease-out group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+                <div className="faq-body">
+                  <div>
+                    <p className="max-w-[58ch] pt-2 pb-3 text-[13px] leading-relaxed text-dim">
+                      Kept on the shelf because &ldquo;already covered&rdquo; is a real answer, and
+                      the day someone asks, you want the dated page. Nothing here is on your desk.
+                    </p>
+                    <ul className="list-none border-t border-border-soft p-0">
+                      {restDone.map((r) => (
+                        <RuleRow key={r.slug} rule={r} compact />
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </details>
+            ) : null}
+          </>
+        )}
+      </div>
     </>
   );
 }

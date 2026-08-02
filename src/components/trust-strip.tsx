@@ -33,7 +33,7 @@ export function TrustStrip({ className = "" }: { className?: string }) {
           , email geek — too busy to chase every PDF, so this shelf is dated, sourced, and filtered
           to your desk.{" "}
           <Link href="/start" className="underline underline-offset-3 hover:text-fg">
-            15‑minute path
+            How to use this site
           </Link>
           .
         </p>

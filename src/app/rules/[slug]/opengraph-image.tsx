@@ -13,8 +13,11 @@ export const contentType = "image/png";
  * date and whose job it is, because those are the two facts that make someone
  * click: currency, and whether it is their problem.
  */
-export default async function Image({ params }: { params: { slug: string } }) {
-  const rule = await getRule(params.slug);
+/* `params` is a Promise in this version of Next. Reading `.slug` off the Promise
+   silently yielded undefined, so every one of these cards fell through to the
+   blank wordmark fallback — a broken share card that still returned 200. */
+export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+  const rule = await getRule((await params).slug);
 
   const accent = "#2347d9";
   const ink = "#0e0f13";

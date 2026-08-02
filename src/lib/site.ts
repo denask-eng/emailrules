@@ -31,8 +31,44 @@ export const AUTHOR = {
   linkedin: "https://www.linkedin.com/in/denaskulinicius",
 } as const;
 
+/**
+ * Two text links, plus /check as the accented button in the header. Sources and
+ * Brief used to sit here and no longer do: a rule page already carries its own
+ * citations, and Brief is offered where a brief is the obvious next move — on
+ * the rules setup and in the "Done for today?" bar. Permanent navigation is for
+ * destinations you want on every page, not for everything that exists.
+ */
 export const NAV = [
   { href: "/rules", label: "Rules" },
   { href: "/changed", label: "What changed" },
-  { href: "/sources", label: "Sources" },
+] as const;
+
+/**
+ * Eight flat links in one row read as a sitemap dump: nothing tells you which
+ * are the shelf and which are the paperwork about the shelf. Two named groups
+ * do that with no extra ink. /start and /coverage live under "About" because
+ * they explain the shelf — they are no longer a second and third way into it.
+ */
+export const FOOTER_NAV = [
+  {
+    title: "The shelf",
+    links: [
+      { href: "/rules", label: "Rules" },
+      { href: "/changed", label: "What changed" },
+      { href: "/sources", label: "Sources" },
+      { href: "/glossary", label: "Glossary" },
+      { href: "/coverage", label: "Coverage map" },
+    ],
+  },
+  {
+    title: "About this site",
+    links: [
+      { href: "/methodology", label: "Methodology" },
+      { href: "/corrections", label: "Corrections" },
+      { href: "/start", label: "How to use this site" },
+      { href: "/connect", label: "Connect roadmap" },
+      /** Plain <a>: a route handler, not a page — Link would prefetch RSC for it. */
+      { href: "/llms.txt", label: "llms.txt", external: true },
+    ],
+  },
 ] as const;

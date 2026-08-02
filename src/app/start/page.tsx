@@ -6,77 +6,95 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Start here — 15 minutes",
+  title: "How to use this site",
   description:
-    "How to use emailrules.today if you are new to email marketing or just want the shortest path to value.",
+    "How emailrules.today works in four lines: pick your role, get five rules, act or skip, come back when the market moves.",
   alternates: { canonical: "/start" },
 };
 
-export default async function StartHere() {
+/**
+ * This used to be a five-step wizard that walked you to the same place the
+ * homepage and /rules already take you in one tap. Three onboarding paths for
+ * one product is two too many, and the duplicate had to be kept in sync by hand.
+ *
+ * The URL stays — it is in the sitemap and linked from the byline strip, and a
+ * 404 is worse than a short page. What it no longer does is compete: it explains
+ * the shape of the thing in a screen, then hands off.
+ */
+export default async function HowToUse() {
   const stats = await getStats();
 
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <SectionHead
-        label="Start here"
-        title="Fifteen minutes to useful."
-        lede="Whether you started email last month or run deliverability for a portfolio — same site, different depth. Follow the path once."
+        label="How to use this site"
+        title="Pick your role. Get five rules. That is the whole method."
+        lede="There is no course and no onboarding to complete. The shelf is small on purpose, and it filters itself to your desk."
       />
 
-      <ol className="mt-10 list-none space-y-0 border-t p-0">
+      <div className="mt-2 flex flex-wrap gap-2.5">
+        <Link
+          href="/rules"
+          className={cn(buttonVariants({ size: "lg" }), "h-11 rounded-full px-6 font-medium")}
+        >
+          Show me what applies to me
+        </Link>
+        <Link
+          href="/check"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "lg" }),
+            "h-11 rounded-full px-5",
+          )}
+        >
+          Check a domain
+        </Link>
+      </div>
+
+      <ul className="mt-12 list-none border-t p-0">
         {[
           {
-            n: "01",
-            t: "Say what kind of work you do",
+            t: "The filter is the product",
             d:
-              "On Rules, pick a role (newer marketer, campaigns & flows, inbox & auth, or multi-country). Toggle where you send — EU / Europe, UK, US, Canada, Australia. Five rules first — not all " +
+              "Say what kind of work you do and where you send. You get five rules to open first, not all " +
               stats.total +
-              " at once.",
-            href: "/rules",
-            cta: "Open rules",
+              ". Of those " +
+              stats.total +
+              ", your email tool already covers " +
+              stats.notYours +
+              " — the site says so on every page rather than letting you worry about them.",
           },
           {
-            n: "02",
-            t: "Read plain English, then act",
-            d: "Every rule leads with plain English. Dotted words open definitions. Then: whose job, what to do first, and when you can skip it.",
-            href: "/glossary",
-            cta: "Skim the glossary",
+            t: "Every rule answers the same four questions",
+            d: "Plain English first. Then whose job it is, the one thing to do first on a named screen, and who can stop reading. Dotted words open a definition in place.",
           },
           {
-            n: "03",
-            t: "Share a one-page brief",
-            d: "Turn your setup into five “do first” rules with counts. Copy a link that keeps the filters, paste into Slack, or print PDF for the stand-up.",
-            href: "/brief",
-            cta: "Open team brief",
+            t: "Dates are the substance",
+            d: "Every rule carries an effective date, a last-verified date and its own changelog. Nothing goes on the shelf without a primary source you can open. Pages older than ninety days say so instead of pretending.",
           },
           {
-            n: "04",
-            t: "Check your sending domain",
-            d: "Free live check of SPF, DKIM keys, and DMARC — the public records inboxes use to trust you. No score out of 100. Paste headers if you want alignment on a real message.",
-            href: "/check",
-            cta: "Check a domain",
-          },
-          {
-            n: "05",
-            t: "Come back when the market moves",
-            d: "The homepage ledger is market moves only. Quiet means nothing material changed — that is good. Optional: subscribe for one email per real change.",
-            href: "/changed",
-            cta: "What changed",
+            t: "Come back only when something moves",
+            d: "What changed is market moves, not housekeeping. A quiet month means nothing material happened, which is the honest result and the one no newsletter will give you.",
           },
         ].map((s) => (
-          <li key={s.n} className="border-b py-8">
-            <p className="label">{s.n}</p>
-            <h2 className="mt-2 text-[1.2rem] font-semibold">{s.t}</h2>
-            <p className="mt-2 max-w-[58ch] text-[0.98rem] leading-relaxed text-muted-fg">{s.d}</p>
-            <Link
-              href={s.href}
-              className={cn(buttonVariants({ size: "lg" }), "mt-4 h-10 rounded-[10px] px-5 font-medium")}
-            >
-              {s.cta}
-            </Link>
+          <li key={s.t} className="border-b py-6">
+            <h2 className="text-[1.05rem] font-semibold tracking-tight">{s.t}</h2>
+            <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-fg">{s.d}</p>
           </li>
         ))}
-      </ol>
+      </ul>
+
+      <p className="mt-10 max-w-[62ch] text-[14px] leading-relaxed text-muted-fg">
+        Sharing with a team? The{" "}
+        <Link href="/brief" className="text-fg underline underline-offset-3">
+          one-page brief
+        </Link>{" "}
+        turns your filter into something you can paste into Slack or print. What is on the shelf and
+        what we refuse to put on it is on the{" "}
+        <Link href="/coverage" className="text-fg underline underline-offset-3">
+          coverage map
+        </Link>
+        .
+      </p>
     </div>
   );
 }

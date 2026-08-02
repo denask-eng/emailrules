@@ -29,13 +29,15 @@ export default async function Check({
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <h1 className="text-[clamp(1.9rem,5.2vw,2.9rem)]">Check a sending domain</h1>
-      <p className="mt-5 max-w-[62ch] text-[1.04rem] leading-relaxed text-muted-fg">
-        One domain, no signup. Live DNS for SPF, DKIM selectors, DMARC, BIMI and MX — plain findings
-        with sources. If nothing is wrong, we say so. For alignment on a real message, paste headers
-        below.
+
+      {/* One line, then the box. Nobody arrives here to read about a checker
+          they have not run yet; the case for the method belongs after the
+          result is on its way, not in front of the only control on the page. */}
+      <p className="mt-4 max-w-[54ch] text-[1.04rem] leading-relaxed text-muted-fg">
+        Live DNS for SPF, DKIM, DMARC, BIMI and MX. If nothing is wrong, we say so.
       </p>
 
-      <form action={run} className="mt-7 flex max-w-[520px] gap-2.5">
+      <form action={run} className="mt-6 flex max-w-[520px] gap-2.5">
         <input
           name="domain"
           required
@@ -53,33 +55,38 @@ export default async function Check({
         </p>
       ) : (
         <p className="mt-2.5 text-[0.86rem] text-dim">
-          Results get a shareable URL. Nothing is stored and no account is created.
+          One domain, no signup. Results get a shareable URL. Nothing is stored and no account is
+          created.
         </p>
       )}
 
-      <div className="mt-7 max-w-[68ch] rounded-lg border border-border bg-bg-2 p-4 text-[0.9rem] leading-relaxed text-muted-fg">
-        <b className="text-fg">Why not a score?</b> We have watched two different tools score the
-        same campaign at 85 percent and 40 percent inbox placement. Scores are why nobody trusts
-        this category. You get findings, each one traceable to a rule with a date.
-      </div>
-
-      <div className="mt-7 max-w-[68ch] rounded-lg border p-4 text-[0.9rem] leading-relaxed text-muted-fg">
-        <b className="text-fg">What it can and cannot see.</b> DNS shows what you have published:
-        SPF, its lookup count, DMARC and its policy, DKIM keys on the selectors the major platforms
-        use, BIMI and MX. It cannot see your consent records, your subject lines, or whether DKIM
-        aligns on a real message, and it says so rather than guessing. Have a real message?{" "}
-        <Link href="/check/headers" className="text-fg underline decoration-1 underline-offset-3">
-          Paste its headers
-        </Link>{" "}
-        and get the alignment verdict DNS cannot give.
-      </div>
-
       <section className="mt-14 border-t pt-10">
+        <h2 className="text-[1.3rem]">What you get, and what we refuse to give you</h2>
+
+        <div className="mt-6 max-w-[68ch] rounded-lg border border-border bg-bg-2 p-4 text-[0.9rem] leading-relaxed text-muted-fg">
+          <b className="text-fg">Why not a score?</b> We have watched two different tools score the
+          same campaign at 85 percent and 40 percent inbox placement. Scores are why nobody trusts
+          this category. You get findings, each one traceable to a rule with a date.
+        </div>
+
+        <div className="mt-4 max-w-[68ch] rounded-lg border p-4 text-[0.9rem] leading-relaxed text-muted-fg">
+          <b className="text-fg">What it can and cannot see.</b> DNS shows what you have published:
+          SPF, its lookup count, DMARC and its policy, DKIM keys on the selectors the major platforms
+          use, BIMI and MX. It cannot see your consent records, your subject lines, or whether DKIM
+          aligns on a real message, and it says so rather than guessing. Have a real message?{" "}
+          <Link href="/check/headers" className="text-fg underline decoration-1 underline-offset-3">
+            Paste its headers
+          </Link>{" "}
+          and get the alignment verdict DNS cannot give.
+        </div>
+      </section>
+
+      <section className="mt-12 border-t pt-10">
         <h2 className="text-[1.3rem]">Two free checks. Nothing priced yet.</h2>
         <ul className="mt-4 max-w-[58ch] list-none space-y-3 p-0 text-[0.95rem] leading-relaxed text-muted-fg">
           <li>
             <b className="text-fg">Domain (DNS)</b> — SPF, DMARC, common DKIM selectors, BIMI, MX.
-            Shareable result URL. Above.
+            Shareable result URL. The box above.
           </li>
           <li>
             <b className="text-fg">Headers (a real message)</b> —{" "}
@@ -91,8 +98,8 @@ export default async function Check({
         </ul>
         <p className="mt-5 max-w-[58ch] text-[0.95rem] leading-relaxed text-muted-fg">
           Continuous monitoring against these rules, Klaviyo send scans, and a paid plan are not
-          built. Today this site sells nothing. The free check is the product; the alert list below
-          is how you hear when a rule moves.
+          built. Today this site sells nothing. The free check is the product; the alert list is how
+          you hear when a rule moves.
         </p>
         <Link
           href="/#subscribe"
