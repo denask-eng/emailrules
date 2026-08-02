@@ -33,6 +33,30 @@ export type Actor =
   | "regulator" | "court" | "mailbox-provider" | "esp" | "standards-body";
 
 /**
+ * Named email *tools* (ESPs) for personalization — not mailbox providers.
+ * Keep this list short; add only when we have sourced product pages or
+ * mainstream applicability language.
+ */
+export type EspProductId =
+  | "klaviyo"
+  | "mailchimp"
+  | "braze"
+  | "hubspot"
+  | "sfmc"
+  | "omnisend"
+  | "activecampaign";
+
+/**
+ * Which email tools this page is written for.
+ * - undefined | "all" — every programme (default)
+ * - "mainstream" — any major ESP; still true for “other” (same physics)
+ * - EspProductId[] — product-specific UI/settings (only those tools)
+ *
+ * Separate from `provider` (Gmail / Apple / Microsoft mailbox stack).
+ */
+export type EspApplicability = "all" | "mainstream" | EspProductId[];
+
+/**
  * Who actually has to do the work.
  *
  * This is the field that stops the site becoming another compliance scare
@@ -92,8 +116,16 @@ export interface Rule {
   effectiveDate: string;
   jurisdictions: Jurisdiction[];
   topic: Topic;
-  /** Optional: which provider this concerns, e.g. "Gmail", "Klaviyo" */
+  /**
+   * Mailbox / infrastructure this page is about (Gmail, Apple, Microsoft, Yahoo).
+   * Not your ESP brand — use `esp` for product-specific tools.
+   */
   provider?: string;
+  /**
+   * ESP product applicability. Prefer this over stuffing "Klaviyo" into provider.
+   * Durable filter target for multi-ESP personalization.
+   */
+  esp?: EspApplicability;
 
   /** The plain answer, 2-4 sentences. No preamble. */
   answer: string;

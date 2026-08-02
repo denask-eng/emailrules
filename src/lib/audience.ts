@@ -1,18 +1,14 @@
 /**
  * Audience filters for the rules index.
  * Role-first; geo + ESP fine-tune. URL + localStorage.
+ *
+ * ESP matching uses Rule.esp (EspApplicability) — durable, not string-guessing on provider.
  */
 
-export type EspId =
-  | ""
-  | "klaviyo"
-  | "mailchimp"
-  | "braze"
-  | "hubspot"
-  | "sfmc"
-  | "omnisend"
-  | "activecampaign"
-  | "other";
+import type { EspApplicability, EspProductId } from "@/lib/types";
+
+/** Selected tool in the UI. "" = unspecified. "other" = non-catalog / multi / custom. */
+export type EspId = "" | EspProductId | "other";
 
 export type Audience = {
   eu: boolean;
@@ -182,20 +178,51 @@ export const PRESETS = ROLE_PRESETS;
 const EU = new Set(["EU", "FR", "IT", "DE"]);
 const US = new Set(["US", "US-WA", "US-CA", "US-MD", "US-CO"]);
 
-/** Rule.provider is usually mailbox (Gmail) or a named ESP when the page is product-specific. */
-const ESP_PROVIDER_NAMES: Record<Exclude<EspId, "" | "other">, string[]> = {
-  klaviyo: ["Klaviyo"],
-  mailchimp: ["Mailchimp"],
-  braze: ["Braze"],
-  hubspot: ["HubSpot"],
-  sfmc: ["Salesforce", "Salesforce Marketing Cloud", "SFMC"],
-  omnisend: ["Omnisend"],
-  activecampaign: ["ActiveCampaign"],
-};
-
 export function espLabel(esp: EspId): string {
   if (!esp) return "";
   return ESP_OPTIONS.find((o) => o.id === esp)?.label ?? esp;
+}
+
+/**
+ * Resolve durable ESP applicability from rule fields.
+ * Falls back from legacy provider: "Klaviyo" when `esp` is unset (old corpus / Neon rows).
+ */
+export function resolveEspApplicability(rule: {
+  esp?: EspApplicability;
+  provider?: string;
+}): EspApplicability {
+  if (rule.esp !== undefined && rule.esp !== null) return rule.esp;
+  if (rule.provider) {
+    const p = rule.provider.toLowerCase();
+    if (p === "klaviyo") return ["klaviyo"];
+    if (p === "mailchimp") return ["mailchimp"];
+    if (p === "braze") return ["braze"];
+    if (p.includes("hubspot")) return ["hubspot"];
+    if (p.includes("salesforce") || p === "sfmc") return ["sfmc"];
+    if (p === "omnisend") return ["omnisend"];
+    if (p.includes("activecampaign")) return ["activecampaign"];
+  }
+  return "all";
+}
+
+/** True if this rule should appear for the user's selected ESP. */
+export function matchesEspSelection(
+  rule: { esp?: EspApplicability; provider?: string },
+  selected: EspId,
+): boolean {
+  const scope = resolveEspApplicability(rule);
+
+  if (scope === "all") return true;
+
+  if (scope === "mainstream") {
+    /* Product physics of major ESPs — still true for “other” (they use a tool). */
+    return true;
+  }
+
+  /* Product-specific pages */
+  if (!selected) return true; /* browse without tool: show so people see the gap */
+  if (selected === "other") return false; /* no fake “your ESP” product UI */
+  return scope.includes(selected);
 }
 
 export function audienceActive(a: Audience): boolean {
@@ -302,8 +329,7 @@ export function audienceToSearch(a: Audience): string {
 
 /**
  * Does this rule belong in the filtered list?
- * ESP-specific pages (provider: Klaviyo) only when that tool is selected.
- * Everyone else still sees shared/global/auth/consent — not a Klaviyo-only shelf.
+ * ESP: Rule.esp (or legacy provider fallback). Geo: jurisdictions. Mailbox: provider Gmail/etc.
  */
 export function matchesAudience(
   rule: {
@@ -312,6 +338,7 @@ export function matchesAudience(
     provider?: string;
     topic?: string;
     slug?: string;
+    esp?: EspApplicability;
   },
   a: Audience,
 ): boolean {
@@ -323,24 +350,17 @@ export function matchesAudience(
     }
   }
 
+  if (!matchesEspSelection(rule, a.esp)) return false;
+
   const geoOrStack =
     a.eu || a.us || a.ca || a.uk || a.au || a.gmailBulk || !!a.esp;
   if (!geoOrStack) return true;
-
-  /* Named ESP product pages — only when that ESP is selected (or no ESP yet). */
-  if (rule.provider && isEspProductProvider(rule.provider)) {
-    if (!a.esp) return true; /* browsing without tool: still show so people learn gaps */
-    if (a.esp === "other") return false; /* no fake “your ESP” pages */
-    const names = ESP_PROVIDER_NAMES[a.esp as Exclude<EspId, "" | "other">];
-    if (!names) return true;
-    return names.some((n) => rule.provider === n || rule.provider?.includes(n));
-  }
 
   if (rule.jurisdictions.includes("Global")) {
     if (rule.provider === "Gmail") {
       return a.gmailBulk || a.us || a.eu || a.ca || a.uk || a.au || !!a.esp;
     }
-    /* Apple, Microsoft, Yahoo, generic global — always relevant when any filter is on */
+    /* Apple, Microsoft, Yahoo, generic global */
     return true;
   }
   if (rule.jurisdictions.some((j) => EU.has(j))) return a.eu;
@@ -349,19 +369,6 @@ export function matchesAudience(
   if (rule.jurisdictions.includes("UK")) return a.uk;
   if (rule.jurisdictions.includes("AU")) return a.au;
   return false;
-}
-
-function isEspProductProvider(provider: string): boolean {
-  const p = provider.toLowerCase();
-  return (
-    p.includes("klaviyo") ||
-    p.includes("mailchimp") ||
-    p.includes("braze") ||
-    p.includes("hubspot") ||
-    p.includes("salesforce") ||
-    p.includes("omnisend") ||
-    p.includes("activecampaign")
-  );
 }
 
 export function roleTopicBoost(topic: string, role: Audience["role"]): number {

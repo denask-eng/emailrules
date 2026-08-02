@@ -9,7 +9,7 @@
     "lint": "eslint",
     "admin:hash": "node scripts/admin-hash.mjs",
     "db:migrate": "dotenv -e .env.local -- tsx scripts/db-migrate.ts",
-    "test": "tsx --test src/lib/header-check.test.ts"
+    "test": "tsx --test src/lib/header-check.test.ts src/lib/audience-esp.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

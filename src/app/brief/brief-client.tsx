@@ -30,6 +30,7 @@ type LightRule = {
   topic: Topic;
   jurisdictions: Jurisdiction[];
   provider?: string;
+  esp?: import("@/lib/types").EspApplicability;
   ignoreIf?: string;
   mondayMorning: string;
   effectiveDate: string;

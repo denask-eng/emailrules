@@ -16,6 +16,8 @@ export const RULES_EXPANSION: Rule[] = [
     effectiveDate: "2026-04-30",
     jurisdictions: ["Global"],
     topic: "bounces-hygiene",
+    /** Multi-tool product truth — not one vendor’s folklore */
+    esp: ["klaviyo", "mailchimp", "braze"],
     featured: true,
     answer:
       "Hard and soft bounce labels are interpretive classifications, not a shared industry standard. Klaviyo automatically suppresses after one classified hard bounce and documents a multi-bounce soft path whose exact seventh-versus-eighth boundary is inconsistent on its own help page. Mailchimp documents allowing 7 soft bounces before conversion on some paths and up to 15 on others, and says it must guess. Braze treats hard bounces as permanent failures that suppress, while soft-bounced addresses can remain eligible for later campaigns. You cannot port one ESP's number to another.",

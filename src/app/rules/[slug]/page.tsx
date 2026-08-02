@@ -8,6 +8,7 @@ import { StatusPill, OwnershipBlock, MondayMorning } from "@/components/bits";
 import { Explained } from "@/components/explained";
 import { impactOf, IMPACT_LABEL, whyItMatters } from "@/lib/rule-signals";
 import { displayPlain, displayTldr, displayWhy } from "@/content/plain-overrides";
+import { resolveEspApplicability, espLabel, type EspId } from "@/lib/audience";
 
 /* Search traffic lands here cold: one column, plain first, proof last. */
 const SHELL =
@@ -63,6 +64,13 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
   const plain = displayPlain(rule.slug, rule.plain);
   const tldr = displayTldr(rule.slug, plain);
   const why = displayWhy(rule.slug, whyItMatters({ ...rule, plain }));
+  const espScope = resolveEspApplicability(rule);
+  const espNote =
+    Array.isArray(espScope)
+      ? espScope.map((id) => espLabel(id as EspId)).filter(Boolean).join(" · ")
+      : espScope === "mainstream"
+        ? "Mainstream ESPs (Klaviyo, Mailchimp, Braze, HubSpot, SFMC, and similar)"
+        : null;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -169,10 +177,16 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
             </Link>
           </span>
         ))}
-        {rule.provider ? (
+        {rule.provider && !espNote ? (
           <>
             {" · "}
             <span className="font-medium text-muted-fg">{rule.provider}</span>
+          </>
+        ) : null}
+        {espNote ? (
+          <>
+            {" · "}
+            <span className="font-medium text-muted-fg">Tool: {espNote}</span>
           </>
         ) : null}
       </p>

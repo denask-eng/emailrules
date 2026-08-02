@@ -21,6 +21,7 @@ export default async function BriefPage() {
     topic: r.topic,
     jurisdictions: r.jurisdictions,
     provider: r.provider,
+    esp: r.esp,
     ignoreIf: r.ignoreIf,
     mondayMorning: r.mondayMorning,
     effectiveDate: r.effectiveDate,

@@ -429,6 +429,7 @@ const RULES_CORE: Rule[] = [
     effectiveDate: "2024-06-01",
     jurisdictions: ["Global"],
     topic: "provider-rules",
+    esp: "mainstream",
     answer:
       "Gmail and Yahoo require bulk senders to implement RFC 8058 one-click unsubscribe: a List-Unsubscribe header plus List-Unsubscribe-Post, so the mail client can unsubscribe the user with a single POST and no landing page. Yahoo requires the request to be honoured within two days.",
     appliesTo: "Bulk senders to Gmail and Yahoo. In practice, everyone.",
@@ -587,6 +588,7 @@ const RULES_CORE: Rule[] = [
     jurisdictions: ["Global"],
     topic: "measurement",
     provider: "Klaviyo",
+    esp: ["klaviyo"],
     featured: true,
     answer:
       "By default Klaviyo attributes a conversion if someone opens or clicks within five days, and its documentation states that an automatic Apple MPP open counts. Klaviyo also states it has no way of distinguishing a true human open from an automated one. Separately, Klaviyo does not subtract cancelled or refunded orders while Shopify does.",
@@ -658,6 +660,7 @@ const RULES_CORE: Rule[] = [
     jurisdictions: ["Global"],
     topic: "measurement",
     provider: "Klaviyo",
+    esp: ["klaviyo"],
     answer:
       "Klaviyo ships native holdout groups free, and they are the methodologically correct way to answer whether your email caused the revenue. They require at least 400,000 total profiles, apply across all channels at once, allow only one active holdout, and the percentage cannot be changed once set.",
     appliesTo:
