@@ -86,10 +86,10 @@ async function Nav() {
           href="/"
           className="shrink-0 text-[13.5px] font-semibold tracking-[-0.035em] whitespace-nowrap sm:text-[14.5px]"
         >
-          {/* On the narrowest phones the TLD is the one thing here the URL bar
-              already shows, so it yields the 38px that keeps all three
-              destinations on the row instead of behind a hamburger. */}
-          emailrules<span className="hidden text-accent min-[390px]:inline">.today</span>
+          {/* The wordmark never loses the TLD. ".today" is the thesis, not
+              decoration, and the 38px it costs comes out of a nav label
+              instead — see NAV.short in lib/site.ts. */}
+          emailrules<span className="text-accent">.today</span>
         </Link>
         {/* Everything here survives 375px. A hamburger over three destinations
             hides the site behind a gesture to save one line of type. */}
@@ -100,7 +100,14 @@ async function Nav() {
               href={n.href}
               className="rounded-lg px-1 py-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:px-2.5"
             >
-              {n.label}
+              {"short" in n && n.short ? (
+                <>
+                  <span className="min-[390px]:hidden">{n.short}</span>
+                  <span className="hidden min-[390px]:inline">{n.label}</span>
+                </>
+              ) : (
+                n.label
+              )}
             </Link>
           ))}
           <div className="ml-1">

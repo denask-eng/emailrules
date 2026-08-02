@@ -38,9 +38,16 @@ export const AUTHOR = {
  * the rules setup and in the "Done for today?" bar. Permanent navigation is for
  * destinations you want on every page, not for everything that exists.
  */
+/**
+ * `short` is used on the narrowest phones. Something has to give at 360px, and
+ * the choice is between a nav label and the wordmark. The label loses: the
+ * domain is the brand, and ".today" is the whole thesis — a shelf that is true
+ * right now. A wordmark that changes shape at a breakpoint is one people stop
+ * recognising.
+ */
 export const NAV = [
   { href: "/rules", label: "Rules" },
-  { href: "/changed", label: "What changed" },
+  { href: "/changed", label: "What changed", short: "Changed" },
 ] as const;
 
 /**
