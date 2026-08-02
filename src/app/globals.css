@@ -126,21 +126,13 @@
       transform 220ms var(--ease-soft);
   }
 
-  /* Page settles in once — calm, not a splash */
-  main {
-    animation: page-in 0.55s var(--ease-soft) both;
-  }
-
-  @keyframes page-in {
-    from {
-      opacity: 0;
-      transform: translateY(6px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
+  /* No entrance animation on `main`.
+     It used to run `page-in` — a 0.55s opacity+translateY on the whole page
+     body. It bought a fade nobody asked for and cost two real things: the
+     content was `opacity: 0` until it finished, so any context that throttles
+     or defers animations showed an empty page; and on mobile the translate
+     produced visible ghosting as the text repainted mid-flight. Content does
+     not get gated behind an animation here. */
 }
 
 @layer components {
@@ -257,7 +249,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pulse::before { animation: none; }
-  main { animation: none; }
+  /* main no longer animates at all — see the note above the keyframes. */
   .reveal {
     opacity: 1;
     transform: none;
@@ -278,6 +270,86 @@
 }
 
 @media print {
+  @page { margin: 14mm 15mm; }
+
   body { background: #fff; color: #000; }
   .no-print { display: none !important; }
+
+  /* The site footer carries no class this file can add to it, and it printed
+     whole as page two: both nav groups, the byline, the social links, the
+     contact line. Structure is the only handle a print sheet gets on chrome it
+     does not own. The header already opts out; it is named here so a future
+     class change on it cannot quietly put the nav back on paper. */
+  body > header,
+  body > footer { display: none !important; }
+
+  /* The brief is the one page on this site that promises to BE one page.
+     Screen sizes and screen rhythm cost it three, so on paper it gets its own
+     scale — same hierarchy, tighter leading, points instead of pixels. */
+  .brief-sheet {
+    max-width: none;
+    padding: 0 !important;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+  .brief-sheet header {
+    padding-bottom: 8px;
+    break-after: avoid;
+  }
+  .brief-sheet header > p:first-child { font-size: 8pt; }
+  .brief-sheet .brief-label { font-size: 14pt; margin-top: 4px; }
+  .brief-sheet header h2 { font-size: 12.5pt; margin-top: 3px; }
+  .brief-sheet header > p:last-child {
+    font-size: 9.5pt;
+    line-height: 1.4;
+    max-width: 92ch;
+    margin-top: 5px;
+  }
+  .brief-sheet section { margin-top: 15px; }
+  .brief-sheet section h3 {
+    font-size: 11pt;
+    break-after: avoid;
+  }
+  .brief-sheet section > p { font-size: 8.5pt; margin-top: 1px; }
+  .brief-sheet ol { margin-top: 7px; }
+
+  /* Rule 05's heading used to sit alone at the foot of page one with its rule
+     on page two. A row is one unit or it is nothing. */
+  .brief-row {
+    break-inside: avoid;
+    padding: 7px 0;
+  }
+  .brief-row span { font-size: 7.5pt; }
+  .brief-row a {
+    font-size: 10.5pt;
+    line-height: 1.25;
+    margin-top: 3px;
+  }
+  .brief-row p {
+    font-size: 9pt;
+    line-height: 1.4;
+    max-width: 96ch;
+    margin-top: 3px;
+  }
+
+  /* The screen greys are calibrated against a lit panel. On paper the lightest
+     of them prints as a rumour, so the sheet darkens a step without flattening
+     the hierarchy — the bold label stays the darkest thing in a row. */
+  .brief-sheet header > p:first-child,
+  .brief-row .num { color: #6b6b64; }
+  .brief-sheet header > p:last-child,
+  .brief-row p { color: #45453f; }
+  .brief-row p b { color: #141416; }
+
+  /* Where the sheet came from, in one line, instead of the site's whole footer.
+     Chrome prints its own date and URL along the paper edge when the reader
+     asks for it — this is the filter and the link, which Chrome cannot know. */
+  .brief-print-footer {
+    display: block !important;
+    margin-top: 14px;
+    border-top: 1px solid #d9d9d2;
+    padding-top: 7px;
+    font-size: 8pt;
+    color: #63635e;
+  }
 }

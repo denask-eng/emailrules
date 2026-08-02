@@ -68,6 +68,33 @@ function roleLabel(a: Audience): string {
   return bits.join(" · ") || "Custom setup";
 }
 
+/**
+ * The move, cut to its first sentence and capped.
+ *
+ * `mondayMorning` runs to three hundred characters on some rules — right for a
+ * rule page, wrong for a stand-up. A line that wraps four times in Slack is a
+ * paragraph, and nobody skims a paragraph. The full text is one click away.
+ */
+function firstMove(s: string): string {
+  const one = (s.trim().split(/(?<=[.!?])\s+/)[0] ?? s.trim()).trim();
+  if (one.length <= 120) return one;
+  const cut = one.slice(0, 120);
+  /* Prefer the last clause boundary. A cut left hanging on "and" reads as a bug
+     rather than a summary. */
+  const clause = Math.max(cut.lastIndexOf(", "), cut.lastIndexOf("; "));
+  const at = clause > 70 ? clause : cut.replace(/[\s,;:—–-]+\S*$/, "").length;
+  return `${one.slice(0, at).trimEnd()}…`;
+}
+
+/** Titles carry ampersands and quotes; a share message is not a place to trust them. */
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function toSortable(r: LightRule): Rule {
   return {
     ...r,
@@ -143,35 +170,101 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
 
   const titleLine = label.trim() || "Email rules brief";
 
-  const slackText = () => {
-    const lines = [
-      `*${titleLine}* · ${roleLabel(a)} · as of ${today}`,
-      `${counts.act} need a person · ${counts.shared} shared with ESP · ${counts.handled + counts.fyi} handled/FYI · ${counts.upcoming} upcoming`,
-      ``,
-      `*Open these five first:*`,
-      ...top.map((r, i) => {
-        const tldr = displayTldr(r.slug, r.plain);
-        return `${i + 1}. <https://emailrules.today/rules/${r.slug}|${r.title}>\n   ${tldr}\n   _Do first:_ ${r.mondayMorning}`;
-      }),
-      ``,
-      `Full one-pager: ${shareUrl()}`,
-      `_Not legal advice · emailrules.today_`,
-    ];
-    return lines.join("\n");
+  /**
+   * One message, two renderings.
+   *
+   * Both come off this model so the rich version and the plain one can never
+   * say different things. Five items, one line each, and exactly one bare URL
+   * in the whole message: Slack unfurls bare links, not linked text, so five
+   * rule URLs bought five previews and a "Only the first 5 link previews are
+   * shown" apology. The brief is the link worth previewing.
+   */
+  const briefMessage = () => ({
+    title: titleLine,
+    filter: roleLabel(a),
+    date: today,
+    tally: `Of ${counts.total} rules in this filter: ${counts.act} need a person, ${counts.shared} shared with your email tool, ${counts.handled + counts.fyi} handled or FYI, ${counts.upcoming} upcoming.`,
+    items: top.map((r, i) => ({
+      n: i + 1,
+      title: r.title,
+      href: `https://emailrules.today/rules/${r.slug}`,
+      move: firstMove(r.mondayMorning),
+    })),
+    tail: "Full brief, sources and dates — not legal advice:",
+    url: shareUrl(),
+  });
+
+  /**
+   * Slack's composer only parses mrkdwn for messages posted through the API.
+   * This one is pasted, so `<url|Title>` reached the channel as a literal angle
+   * bracket, a bare link and an orphaned title. Pasted HTML it does convert —
+   * into its own rich text, with real hyperlinks and real bold.
+   */
+  const shareHtml = () => {
+    const m = briefMessage();
+    const line = (html: string) => `<div>${html}</div>`;
+    const gap = "<div><br></div>";
+    return [
+      "<div>",
+      line(`<b>${esc(m.title)}</b> · ${esc(m.filter)} · as of ${esc(m.date)}`),
+      line(esc(m.tally)),
+      gap,
+      line("<b>Open these five first</b>"),
+      ...m.items.map((it) =>
+        line(
+          `${it.n}. <a href="${esc(it.href)}">${esc(it.title)}</a> — <b>Do first:</b> ${esc(it.move)}`,
+        ),
+      ),
+      gap,
+      line(`${esc(m.tail)} ${esc(m.url)}`),
+      "</div>",
+    ].join("");
   };
 
-  const copy = async (kind: "link" | "slack") => {
-    try {
-      await navigator.clipboard.writeText(kind === "link" ? shareUrl() : slackText());
+  /** The same message for anywhere that is not Slack. No markup syntax in it. */
+  const sharePlain = () => {
+    const m = briefMessage();
+    return [
+      `${m.title} · ${m.filter} · as of ${m.date}`,
+      m.tally,
+      "",
+      "Open these five first",
+      ...m.items.map((it) => `${it.n}. ${it.title} — Do first: ${it.move}`),
+      "",
+      `${m.tail} ${m.url}`,
+    ].join("\n");
+  };
+
+  const copy = (kind: "link" | "slack") => {
+    const done = () => {
       setCopied(kind);
       setTimeout(() => setCopied(null), 2000);
-    } catch {
-      /* */
+    };
+    const plain = kind === "link" ? shareUrl() : sharePlain();
+    const fallback = () => {
+      /* A copy button that throws is worse than one that pastes plain text. */
+      navigator.clipboard?.writeText?.(plain).then(done, () => {});
+    };
+
+    /* Nothing may be awaited before the write or Safari drops the user gesture
+       with it, and neither ClipboardItem nor clipboard.write is universal. */
+    if (kind === "slack" && typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+      try {
+        const item = new ClipboardItem({
+          "text/html": new Blob([shareHtml()], { type: "text/html" }),
+          "text/plain": new Blob([plain], { type: "text/plain" }),
+        });
+        navigator.clipboard.write([item]).then(done, fallback);
+        return;
+      } catch {
+        /* The constructor exists but refused the types — plain text still works. */
+      }
     }
+    fallback();
   };
 
   return (
-    <div className="shell shell-tight py-10 sm:py-14">
+    <div className="brief-sheet shell shell-tight py-10 sm:py-14">
       <div className="no-print mb-8 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="label">One-page brief</p>
@@ -241,7 +334,9 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
       <header className="border-b pb-6">
         <p className="num text-[12px] text-dim">emailrules.today · as of {today}</p>
         {label.trim() ? (
-          <p className="mt-2 text-[1.5rem] font-semibold tracking-tight">{label.trim()}</p>
+          <p className="brief-label mt-2 text-[1.5rem] font-semibold tracking-tight">
+            {label.trim()}
+          </p>
         ) : null}
         <h2
           className={cn(
@@ -265,7 +360,7 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
         <p className="mt-1 text-[13px] text-muted-fg">Highest signal — not the full shelf.</p>
         <ol className="mt-5 list-none space-y-0 border-t p-0">
           {top.map((r, i) => (
-            <li key={r.slug} className="border-b py-4">
+            <li key={r.slug} className="brief-row border-b py-4">
               <div className="flex flex-wrap items-baseline gap-2">
                 <span className="num text-[12px] text-dim">{String(i + 1).padStart(2, "0")}</span>
                 <span className="rounded-full border bg-bg-2 px-2 py-0.5 text-[10.5px] font-medium">
@@ -293,7 +388,11 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
         </ol>
       </section>
 
-      <section className="mt-10 rounded-xl border bg-bg-2 px-5 py-5 text-[13.5px] leading-relaxed text-muted-fg">
+      {/* Instructions for using the website are dead weight on paper, and the
+          sheet only earns the name "one-page brief" if the five rules and the
+          counts fit on the page. The line below carries what a printed handout
+          actually needs from this box. */}
+      <section className="no-print mt-10 rounded-xl border bg-bg-2 px-5 py-5 text-[13.5px] leading-relaxed text-muted-fg">
         <p>
           <b className="text-fg">How to use: </b>
           Slack, print, or walk the five links. Full rules have plain English, whose job, and
@@ -301,6 +400,17 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
         </p>
         <p className="mt-2">Not legal advice. Independent — no scores, no seed tests for sale.</p>
       </section>
+
+      {/* Our own footer, so the sheet says where it came from without printing
+          the site's nav, byline and contact block as a second page. Hidden on
+          screen; the print block turns it back on. */}
+      <p className="brief-print-footer hidden">
+        <span className="num">{today}</span> · {roleLabel(a)} ·{" "}
+        <span className="num">
+          {hydrated ? shareUrl().replace(/^https?:\/\//, "") : "emailrules.today/brief"}
+        </span>{" "}
+        · <span className="whitespace-nowrap">Not legal advice</span>
+      </p>
     </div>
   );
 }

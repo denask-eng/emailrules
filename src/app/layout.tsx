@@ -97,31 +97,25 @@ async function Nav() {
             the search and the CTA are gone — three different spacings between
             four items is what made this read as uneven. */}
         <nav aria-label="Primary" className="ml-auto flex items-center gap-1">
+          {/* Five things do not fit at 390px, so one destination gives up its
+              slot rather than search. "What changed" is a page, and it is
+              already linked from the homepage ledger and the footer; search is
+              a function with no other route on a phone. Losing it means
+              hunting a named rule by scrolling, which is the thing this site
+              exists to prevent. It returns at 440px. */}
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className="inline-flex h-11 items-center rounded-lg px-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:h-auto sm:px-2.5 sm:py-1.5"
-            >
-              {"short" in n && n.short ? (
-                <>
-                  <span className="min-[440px]:hidden">{n.short}</span>
-                  <span className="hidden min-[440px]:inline">{n.label}</span>
-                </>
-              ) : (
-                n.label
+              className={cn(
+                "inline-flex h-11 items-center rounded-lg px-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:h-auto sm:px-2.5 sm:py-1.5",
+                "short" in n && n.short && "hidden min-[440px]:inline-flex",
               )}
+            >
+              {n.label}
             </Link>
           ))}
-          {/* No search in the header on a phone. The row cannot hold the
-              wordmark, two labels, a search affordance and "Check domain" at
-              390px, and of those the search is the one that loses least: the
-              palette is a ⌘K desktop habit, and on a phone /rules already
-              opens on a filter. Better than amputating a label to keep an icon
-              nobody taps. */}
-          <span className="hidden sm:inline-flex">
-            <Search items={index} />
-          </span>
+          <Search items={index} />
           <Link
             href="/check"
             className={cn(
