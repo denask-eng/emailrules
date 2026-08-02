@@ -12,11 +12,8 @@ import {
 } from "@/components/ui/command";
 
 /**
- * ⌘K over the corpus.
- *
- * Takes a flattened index as a prop rather than fetching: seventeen rules is
- * a few kilobytes, and a search box that needs a round trip before it can
- * answer is not a search box a practitioner will use twice.
+ * ⌘K / / search over the corpus.
+ * Index is passed as props — no round trip.
  */
 
 export interface SearchItem {
@@ -36,10 +33,13 @@ export function Search({ items }: { items: SearchItem[] }) {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setOpen((v) => !v);
+        return;
       }
       if (e.key === "/" && !open) {
         const t = e.target as HTMLElement | null;
-        const typing = t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+        const typing =
+          t &&
+          (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
         if (!typing) {
           e.preventDefault();
           setOpen(true);
@@ -61,31 +61,32 @@ export function Search({ items }: { items: SearchItem[] }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search rules"
-        className="hidden items-center gap-2 rounded-lg border bg-card px-2.5 py-1.5 text-[13px] text-dim transition-colors hover:text-fg sm:flex"
+        className="flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1.5 text-[13px] text-dim transition-colors hover:text-fg"
       >
-        <span>Search</span>
-        <kbd className="num rounded border px-1.5 py-0.5 text-[11px]">⌘K</kbd>
+        <span className="hidden sm:inline">Search</span>
+        <span className="sm:hidden">⌕</span>
+        <kbd className="num hidden rounded border px-1.5 py-0.5 text-[11px] sm:inline">⌘K</kbd>
       </button>
 
       <CommandDialog
         open={open}
         onOpenChange={setOpen}
         title="Search rules"
-        description="Search every rule by title, question or jurisdiction"
+        description="Search by title, question, jurisdiction or ownership"
       >
-        <CommandInput placeholder="Search rules, questions, jurisdictions…" />
+        <CommandInput placeholder="Klaviyo, DMARC, France, spam trap…" />
         <CommandList>
-          <CommandEmpty>Nothing matches. Try &ldquo;Klaviyo&rdquo;, &ldquo;DMARC&rdquo; or &ldquo;France&rdquo;.</CommandEmpty>
-          <CommandGroup heading="Rules">
+          <CommandEmpty>
+            Nothing matches. Try “Klaviyo”, “DMARC”, “France” or “open rate”.
+          </CommandEmpty>
+          <CommandGroup heading={`${items.length} rules`}>
             {items.map((it) => (
               <CommandItem
                 key={it.slug}
-                /* cmdk matches on `value`, so everything searchable goes in it
-                   while the visible label stays clean. */
-                value={`${it.title} ${it.question} ${it.jurisdictions} ${it.ownership}`}
+                value={`${it.title} ${it.question} ${it.jurisdictions} ${it.ownership} ${it.slug}`}
                 onSelect={() => go(it.slug)}
               >
-                <div className="flex min-w-0 flex-col gap-0.5">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-[14px] font-medium">{it.title}</span>
                   <span className="truncate text-[12.5px] text-muted-fg">{it.question}</span>
                 </div>
