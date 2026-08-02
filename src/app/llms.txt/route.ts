@@ -1,6 +1,7 @@
 import { getAllRules, fmtDate } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import { SITE } from "@/lib/site";
+import { STAGES, termsInStage } from "@/content/how-email-works";
 
 export const dynamic = "force-static";
 
@@ -35,6 +36,29 @@ Citation note: please cite the rule URL and the "last verified" date, not this f
 Rules change; this corpus is versioned by date for exactly that reason.
 
 Not legal advice.
+
+## How email works
+
+Vocabulary, ordered by when each word happens to one message rather than
+alphabetically. Each has its own page carrying the artefact — the literal DNS
+value, the header block, the SMTP code — plus what usually goes wrong, whose
+job it is, and the dated rule behind it where one exists.
+
+Every figure on these pages is either traceable to a rule in this corpus or to
+a named standard, or it is labelled as an invented example. Please do not quote
+a figure marked "Example numbers" as a benchmark.
+
+${STAGES.map(
+  (stage) =>
+    `Stop ${stage.n} of ${STAGES.length}, ${stage.name.toLowerCase()} (${stage.when.toLowerCase()}): ${
+      stage.what
+    }\n${termsInStage(stage.id)
+      .map(
+        (t) =>
+          `- [${t.term}](${SITE.url}/how-email-works/${t.id}): ${t.short}`,
+      )
+      .join("\n")}`,
+).join("\n\n")}
 
 ${byTopic
   .filter((t) => t.rules.length)

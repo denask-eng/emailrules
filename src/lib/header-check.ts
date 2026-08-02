@@ -63,6 +63,24 @@ const RULE = {
   oneClick: "one-click-unsubscribe-rfc-8058",
 } as const;
 
+/**
+ * The glossary term behind each rule, used as a default.
+ *
+ * A finding tells someone what is wrong and the rule tells them what they are
+ * obliged to do. Neither shows them the thing — the header block where
+ * dkim=pass sits next to dmarc=fail, or the two headers that make an
+ * unsubscribe RFC 8058. This is the one moment on the site where a reader has
+ * already been told something is broken, so it is the moment the artefact is
+ * worth most. Individual findings override it where a more precise word
+ * exists.
+ */
+const TERM_BY_RULE: Record<string, string> = {
+  [RULE.gmail]: "spf",
+  [RULE.dkimAlignment]: "alignment",
+  [RULE.outlook]: "dmarc",
+  [RULE.oneClick]: "one-click-unsub",
+};
+
 const MULTI_LABEL_SUFFIXES = new Set([
   "co.uk",
   "org.uk",
@@ -331,6 +349,7 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       detail:
         "Authentication-Results is the receiving system's recorded result and the ground truth, so it takes precedence over the alignment inference below.",
       rule: RULE.outlook,
+      term: "headers",
       evidence: `Authentication-Results: ${facts.auth.raw}`,
     });
 
@@ -344,6 +363,7 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
         title: `${label}=${method.result} at ${facts.auth!.authservId}`,
         detail: `This is ${facts.auth!.authservId}'s recorded ${label} result, not our inference.`,
         rule,
+        term: label.toLowerCase(),
         evidence: method.raw,
       });
     };
@@ -630,6 +650,11 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
         "They are required for bulk mail. Transactional mail is exempt, and headers alone cannot tell us which this is.",
       rule: RULE.oneClick,
     });
+  }
+
+  /* Anything that did not name its own word inherits its rule's. */
+  for (const finding of findings) {
+    if (!finding.term && finding.rule) finding.term = TERM_BY_RULE[finding.rule];
   }
 
   findings.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);

@@ -245,7 +245,7 @@ export const STAGE_BY_ID = new Map(STAGES.map((s) => [s.id, s]));
 export const OWNER_LABEL: Record<TermOwner, { short: string; long: string }> = {
   yours: { short: "Yours", long: "Nobody does this for you" },
   esp: { short: "Your platform", long: "Klaviyo, Mailchimp and friends do this automatically" },
-  shared: { short: "Shared", long: "The platform does part; the rest is genuinely yours" },
+  shared: { short: "Part yours", long: "The platform does part; the rest is genuinely yours" },
   context: { short: "Nobody's", long: "Nothing to action — it changes a number or a risk you report" },
 };
 
@@ -899,31 +899,44 @@ export const GLOSSARY: GlossaryTerm[] = [
   },
   {
     id: "dedicated-ip",
-    term: "Dedicated IP",
+    term: "Shared vs dedicated IP",
     stage: "send",
     level: "deep",
     owner: "shared",
-    short: "A sending IP address used only by you — you own its reputation; setup is more work.",
-    sayIt: "Our own sending address, with our own reputation. It only helps above a certain volume, and it needs warming up.",
-    long: "On a dedicated IP your traffic alone shapes the reputation. Shared IPs pool many senders and the platform manages the neighbours. Dedicated means no bad neighbours and no borrowed goodwill either: you start from zero and have to build history, which is what warming is.",
-    aliases: ["dedicated ip", "shared ip"],
+    short: "Whether your mail leaves on an address shared with other senders, which is the default, or one only you use.",
+    sayIt: "Almost everyone sends from a shared address the platform manages. Our own only helps above real volume, and it has to be warmed first.",
+    long: "On a shared IP your mail leaves alongside other customers of the same platform, and the platform manages who it lets in. On a dedicated IP your traffic alone shapes the reputation: no bad neighbours, and no borrowed goodwill either, because you start from no history at all. Shared is the right answer for most senders and the one you already have unless somebody deliberately changed it.",
+    aliases: ["dedicated ip", "shared ip", "dedicated ips", "shared ips", "sending ip"],
     specimen: {
-      basis: "example",
-      kind: "The arithmetic",
-      label: "A warm-up ramp, roughly",
+      basis: "ours",
+      kind: "The test",
+      label: "Which one are you on, and which should you be?",
       lines: [
-        { text: "DAY     VOLUME    SEND TO", muted: true },
-        { text: "1           50    clicked or bought in the [[last 30 days]]", note: "Clicks and orders, never opens. An open-based warm segment is half machines since 2021, which is the opposite of what warming needs." },
-        { text: "3          500    clicked or bought in the last 30 days", muted: false },
-        { text: "7        5,000    clicked or bought in the last 90 days", muted: false },
-        { text: "14      50,000    clicked or bought in the last 180 days", note: "Only if the complaint rate held. If it moved you hold at this step; you do not push through it." },
+        { text: "You never chose            →  [[shared]], and that is fine", note: "Every mainstream platform puts you on a shared pool by default. If nobody has told you otherwise, this is you." },
         { text: "", muted: true },
-        { text: "Enough volume to send [[consistently]], or stay shared", note: "There is no published threshold and we are not inventing one. The test is whether you send often enough to keep a pattern alive; a dedicated IP that sends twice a month has no reputation, only a gap." },
+        { text: "SHARED", muted: true },
+        { text: "  Reputation      pooled, and the platform polices the pool", muted: false },
+        { text: "  Bad neighbours  possible, and [[not your problem to fix]]", note: "This is the fear people cite. In practice mainstream platforms suspend bad senders faster than you would notice them." },
+        { text: "  Volume          works at any volume, including tiny", muted: false },
+        { text: "  Setup           none", muted: false },
+        { text: "", muted: true },
+        { text: "DEDICATED", muted: true },
+        { text: "  Reputation      [[entirely yours]], good and bad", muted: false },
+        { text: "  Bad neighbours  none", muted: false },
+        { text: "  Volume          needs enough, [[consistently]], to hold a pattern", note: "A dedicated IP that sends twice a month has no reputation, only a gap. There is no published threshold and we are not inventing one." },
+        { text: "  Setup           warm-up, PTR, and monitoring that is now yours", muted: false },
       ],
+      caption:
+        "Shared is not the beginner option. It is the correct option until your own volume is steady enough to say something about you.",
     },
     goesWrong:
-      "Moving to a dedicated IP to fix a spam-folder problem. It does the opposite in the short term: you have discarded the shared pool's accumulated goodwill and replaced it with an unknown address, and the underlying cause — usually list quality — is untouched.",
-    seeAlso: ["ptr", "complaint-rate", "sunset"],
+      "Moving to a dedicated IP to fix a spam-folder problem. It does the opposite at first: you have discarded the shared pool's accumulated goodwill and replaced it with an address nobody has ever seen, while the actual cause — usually list quality — is untouched.",
+    myth: {
+      claim: "A dedicated IP improves deliverability.",
+      truth:
+        "It gives you control over your reputation, which is not the same as a better one. Below steady volume it is strictly worse, because there is not enough traffic for a provider to form an opinion, and an address with no opinion attached gets the benefit of no doubt.",
+    },
+    seeAlso: ["warmup", "reputation", "ptr", "complaint-rate"],
   },
 
   /* ───────────────────────── 4 · The interrogation ─────────────────────── */
@@ -1539,7 +1552,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     short: "Sending to a panel of test inboxes to guess placement — scores vary wildly between tools.",
     sayIt: "Sending to a panel of test inboxes to guess where mail lands. Two tools will give two different answers.",
     long: "A seed test drops your campaign into a panel of provider inboxes and reports where it landed. The panels are small, they are not your recipients, and they have no engagement history — which is most of what placement is actually decided by. Two vendors routinely disagree about the same send.",
-    aliases: ["seed test", "seed list", "seed panel", "inbox placement"],
+    aliases: ["seed test", "seed list", "seed panel", "seed address"],
     specimen: {
       basis: "example",
       kind: "The arithmetic",

@@ -43,6 +43,21 @@ const RULE = {
   transactional: "transactional-vs-commercial-email-is-not-a-subject-line-trick",
 } as const;
 
+/**
+ * The glossary word behind each rule. A finding says what is wrong and the
+ * rule says what you are obliged to do; the word shows the artefact — the
+ * literal footer block, the pixel in the HTML, the four-question test that
+ * decides whether a message is transactional.
+ */
+const TERM_BY_RULE: Record<string, string> = {
+  [RULE.canSpam]: "can-spam",
+  [RULE.apple]: "mpp",
+  [RULE.france]: "tracking-pixel",
+  [RULE.italy]: "tracking-pixel",
+  [RULE.washington]: "cema",
+  [RULE.transactional]: "transactional",
+};
+
 /* Inbound mail is untrusted input from anyone on the internet, so every stage
    has a ceiling. A message that exceeds one is truncated and analysed anyway
    rather than rejected: the interesting headers and the footer are both inside
@@ -543,6 +558,7 @@ export function messageFindings(input: MessageInput): Finding[] {
     if (!hasOptOutWording(text, content.html)) {
       findings.push({
         severity: declaresBulk ? "warn" : "info",
+        term: "opt-out",
         title: "No opt-out wording is readable in the message",
         detail:
           "CAN-SPAM wants a clear and conspicuous explanation of how to stop the mail inside the message itself, not only in a header a recipient never sees. No unsubscribe or preferences wording was found in the text.",
@@ -671,6 +687,10 @@ export function messageFindings(input: MessageInput): Finding[] {
         rule: RULE.transactional,
       });
     }
+  }
+
+  for (const finding of findings) {
+    if (!finding.term && finding.rule) finding.term = TERM_BY_RULE[finding.rule];
   }
 
   findings.sort((left, right) => SEVERITY_ORDER[left.severity] - SEVERITY_ORDER[right.severity]);

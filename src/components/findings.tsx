@@ -84,15 +84,34 @@ export function FindingList({
                 {finding.evidence}
               </pre>
             ) : null}
-            {finding.rule ? (
-              <p className="mt-3 text-[0.84rem] text-dim">
-                From{" "}
-                <Link
-                  href={`/rules/${finding.rule}`}
-                  className="text-fg underline decoration-1 underline-offset-3 hover:text-accent"
-                >
-                  {ruleTitles[finding.rule] ?? "the rule this comes from"}
-                </Link>
+            {/* Two different questions, so two different destinations. The
+                rule answers "what am I obliged to do", which is what a boss or
+                counsel asks for. The word answers "what does that even look
+                like" — the literal record, the header block, the SMTP code —
+                and that is the question the person reading a broken finding
+                actually has first. */}
+            {finding.rule || finding.term ? (
+              <p className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[0.84rem] text-dim">
+                {finding.rule ? (
+                  <span>
+                    From{" "}
+                    <Link
+                      href={`/rules/${finding.rule}`}
+                      className="text-fg underline decoration-1 underline-offset-3 hover:text-accent"
+                    >
+                      {ruleTitles[finding.rule] ?? "the rule this comes from"}
+                    </Link>
+                  </span>
+                ) : null}
+                {finding.rule && finding.term ? <span aria-hidden>·</span> : null}
+                {finding.term ? (
+                  <Link
+                    href={`/how-email-works/${finding.term}`}
+                    className="font-medium text-accent underline decoration-1 underline-offset-3"
+                  >
+                    See what this looks like →
+                  </Link>
+                ) : null}
               </p>
             ) : null}
             {showsOwnership[index] && finding.rule && ownership?.[finding.rule] ? (

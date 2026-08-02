@@ -1,6 +1,14 @@
 "use client";
 
-import { useDeferredValue, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
@@ -115,11 +123,26 @@ export function GlossaryBrowser({
 
   const filtering = level !== "all" || deferred.trim().length > 0;
 
+  /* Anything linking to #judge has to arrive at an open #judge. Every "the N
+     words that live here" link in the player, and every breadcrumb on a term
+     page, targets a stop that is collapsed on a phone — so without this you
+     tap the link, the page scrolls, and you are looking at a closed heading.
+     Read as an external store rather than set in an effect, so there is no
+     synchronous setState on mount and no hydration mismatch. */
+  const hash = useSyncExternalStore(
+    useCallback((onChange: () => void) => {
+      window.addEventListener("hashchange", onChange);
+      return () => window.removeEventListener("hashchange", onChange);
+    }, []),
+    () => window.location.hash.slice(1),
+    () => "",
+  );
+
   /* Phone-only. From sm the panel is opened by CSS and the button is hidden,
      so this state is simply never consulted there. Filtering opens every
      matching stop, because a hit you cannot see is not a hit. */
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
-  const isOpen = (id: string) => filtering || openIds.has(id);
+  const isOpen = (id: string) => filtering || openIds.has(id) || hash === id;
   const toggle = (id: string) =>
     setOpenIds((prev) => {
       const next = new Set(prev);
