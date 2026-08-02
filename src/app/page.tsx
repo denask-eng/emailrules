@@ -203,18 +203,20 @@ export default async function Home() {
                         {TOPICS[t].blurb}
                       </p>
                     </div>
-                    <div className="col-start-2 mt-3 flex items-baseline gap-2 sm:col-start-auto sm:mt-0 sm:flex-col sm:items-end sm:gap-0 sm:self-center sm:pl-4">
-                      <span className="num text-[1.4rem] font-semibold tracking-tight tabular-nums leading-none text-fg sm:text-[1.65rem]">
-                        {n}
-                      </span>
-                      <span className="text-[11.5px] tracking-wide text-dim sm:mt-1">
-                        {n === 1 ? "rule" : "rules"}
-                        <span
-                          aria-hidden
-                          className="ml-2 inline-block text-dim transition-transform group-hover:translate-x-0.5 group-hover:text-accent sm:ml-0 sm:mt-2 sm:block sm:text-center"
-                        >
-                          →
+                    <div className="col-start-2 mt-3 flex items-baseline gap-2.5 sm:col-start-auto sm:mt-0 sm:self-center sm:pl-6">
+                      <div className="flex items-baseline gap-1.5 sm:flex-col sm:items-end sm:gap-0.5">
+                        <span className="num text-[1.4rem] font-semibold tracking-tight tabular-nums leading-none text-fg sm:text-[1.65rem]">
+                          {n}
                         </span>
+                        <span className="text-[11.5px] tracking-wide text-dim">
+                          {n === 1 ? "rule" : "rules"}
+                        </span>
+                      </div>
+                      <span
+                        aria-hidden
+                        className="text-[15px] text-dim transition-transform group-hover:translate-x-0.5 group-hover:text-accent"
+                      >
+                        →
                       </span>
                     </div>
                   </Link>
