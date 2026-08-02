@@ -22,10 +22,26 @@ import {
 /**
  * The stage sections, filterable.
  *
- * Two controls, and the second one is the point. Typing narrows; the level
- * switch collapses the whole corpus to the handful a week-one hire actually
- * needs, which is the single kindest thing this page does and something no
- * other glossary in this industry offers.
+ * Two controls, and the second one is the point. Typing narrows; the switch
+ * collapses the whole corpus to the handful a week-one hire actually needs,
+ * which is the single kindest thing this page does and something no other
+ * glossary in this industry offers.
+ *
+ * That switch has two positions, not one per level, and the reason is worth
+ * keeping. The levels are a ladder — start, then working, then deep — so the
+ * only honest views are a prefix of it. One chip per level made them exclusive
+ * instead: "deep" handed you nine specialist words with SPF and DKIM removed,
+ * which is a view of the taxonomy rather than a way to read. Two of the four
+ * chips produced something nobody wanted.
+ *
+ * It is also phrased as a claim about the list rather than about the reader.
+ * "Week one / Working / Deep" asked you to grade your own expertise before
+ * you had read a line, which is a question you cannot answer on arrival and
+ * whose humblest answer nobody wants to click. LEVEL_LABEL keeps those names
+ * for the badge on a term page, where describing the word is exactly right.
+ *
+ * If the corpus outgrows two positions, add the middle rung back as a
+ * cumulative one (start+working) — never as an exclusive one.
  *
  * The rows are a two-column reference layout rather than cards. Forty
  * identically-sized cards is a wall; a term column and a sentence column can
@@ -61,7 +77,8 @@ const OWNER_TONE: Record<TermOwner, string> = {
   context: "border-border bg-bg-2 text-muted-fg",
 };
 
-const LEVELS: (TermLevel | "all")[] = ["all", "start", "working", "deep"];
+/** The rung the switch keeps. Everything else on the ladder sits above it. */
+const ESSENTIAL: TermLevel = "start";
 
 /**
  * On a phone the eight sections open at once are roughly fifteen thousand
@@ -100,16 +117,35 @@ export function GlossaryBrowser({
   slots?: Partial<Record<StageId, ReactNode>>;
 }) {
   const [q, setQ] = useState("");
-  const [level, setLevel] = useState<TermLevel | "all">("all");
+  const [essentialsOnly, setEssentialsOnly] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const deferred = useDeferredValue(q);
 
-  const shown = useMemo(() => {
+  const essentialCount = useMemo(
+    () => terms.filter((t) => t.level === ESSENTIAL).length,
+    [terms],
+  );
+
+  /* Typed and switched are kept apart on purpose. A word can match the search
+     and still be withheld by the switch, and the reader has to be told that —
+     see `withheld` below. Collapsing these into one predicate is what let the
+     old control answer "DMARC" with "nothing matches". */
+  const matched = useMemo(() => {
     const needle = deferred.trim().toLowerCase();
-    return terms.filter(
-      (t) => (level === "all" || t.level === level) && (!needle || t.hay.includes(needle)),
-    );
-  }, [terms, deferred, level]);
+    return needle ? terms.filter((t) => t.hay.includes(needle)) : terms;
+  }, [terms, deferred]);
+
+  const shown = useMemo(
+    () => (essentialsOnly ? matched.filter((t) => t.level === ESSENTIAL) : matched),
+    [matched, essentialsOnly],
+  );
+
+  const searching = deferred.trim().length > 0;
+
+  /* Words the search found that the switch is holding back. Only meaningful
+     while something is typed: with an empty box every non-essential word is
+     "withheld", which is the switch working, not a result being kept from you. */
+  const withheld = searching ? matched.length - shown.length : 0;
 
   const byStage = useMemo(() => {
     const m = new Map<StageId, BrowserTerm[]>();
@@ -121,7 +157,7 @@ export function GlossaryBrowser({
     return m;
   }, [shown]);
 
-  const filtering = level !== "all" || deferred.trim().length > 0;
+  const filtering = essentialsOnly || searching;
 
   /* Anything linking to #judge has to arrive at an open #judge. Every "the N
      words that live here" link in the player, and every breadcrumb on a term
@@ -176,27 +212,37 @@ export function GlossaryBrowser({
             />
           </div>
 
+          {/* One track, two positions — so it reads as a switch with a state
+              rather than as chips you tick. The active half is lifted out of
+              the recess; the inactive half stays flush in it. */}
           <div
             role="group"
-            aria-label="How much detail"
-            className="flex items-center gap-1 overflow-x-auto"
+            aria-label="How many words to show"
+            /* self-start or the column layout on a phone stretches the track
+               to full width and leaves dead rail after the second segment.
+               Back to centre from sm, where it sits beside the field — the two
+               are the same height today, so this only matters if one changes. */
+            className="flex shrink-0 self-start items-center gap-0.5 rounded-lg border border-border bg-bg-2 p-0.5 sm:self-center"
           >
-            {LEVELS.map((l) => {
-              const on = level === l;
+            {[
+              { on: true, label: "Essentials", count: essentialCount },
+              { on: false, label: "All", count: terms.length },
+            ].map((seg) => {
+              const active = essentialsOnly === seg.on;
               return (
                 <button
-                  key={l}
+                  key={seg.label}
                   type="button"
-                  onClick={() => setLevel(l)}
-                  aria-pressed={on}
+                  onClick={() => setEssentialsOnly(seg.on)}
+                  aria-pressed={active}
                   className={cn(
-                    "pressable h-11 shrink-0 rounded-lg border px-3 text-[13px] whitespace-nowrap transition-colors sm:h-9 sm:px-2.5 sm:text-[12.5px]",
-                    on
-                      ? "border-accent/35 bg-accent-soft font-medium text-accent"
-                      : "border-border-soft bg-card text-muted-fg hover:text-fg",
+                    "pressable h-10 rounded-[0.4rem] px-3 text-[13px] whitespace-nowrap transition-colors sm:h-8 sm:px-3 sm:text-[12.5px]",
+                    active
+                      ? "bg-card font-medium text-fg shadow-sm"
+                      : "text-muted-fg hover:text-fg",
                   )}
                 >
-                  {l === "all" ? "Everything" : LEVEL_LABEL[l].short}
+                  {seg.label} <span className="num text-dim">{seg.count}</span>
                 </button>
               );
             })}
@@ -207,38 +253,74 @@ export function GlossaryBrowser({
           </p>
         </div>
 
-        {level !== "all" ? (
+        {/* A search hit the switch is sitting on has to be admitted to, or the
+            empty state tells the reader a word they can see on this site does
+            not exist. This line outranks the standing explanation. */}
+        {/* Suppressed at zero results: the empty-state panel below makes the
+            same offer, and printing it twice reads as a stutter. */}
+        {withheld > 0 && shown.length > 0 ? (
           <p className="mt-2 text-[12.5px] leading-snug text-muted-fg">
-            {LEVEL_LABEL[level].long}.{" "}
+            {withheld} more {withheld === 1 ? "word matches" : "words match"} outside the
+            essentials.{" "}
             <button
               type="button"
-              onClick={() => setLevel("all")}
+              onClick={() => setEssentialsOnly(false)}
               className="font-medium text-accent underline underline-offset-2"
             >
-              Show all {terms.length}
+              Search all {terms.length}
             </button>
+          </p>
+        ) : essentialsOnly ? (
+          <p className="mt-2 text-[12.5px] leading-snug text-muted-fg">
+            {LEVEL_LABEL[ESSENTIAL].long} — the other {terms.length - essentialCount} you meet
+            later.
           </p>
         ) : null}
       </div>
 
+      {/* Two different nothings. The word may genuinely not be in the corpus,
+          or it may be sitting one switch-position away — and telling somebody
+          "nothing matches BIMI" on a page that defines BIMI is the worst thing
+          this component could say. */}
       {shown.length === 0 ? (
         <div className="mt-16 rounded-xl border border-border-soft bg-bg-2 px-5 py-10 text-center">
-          <p className="text-[15px] text-fg">Nothing matches “{q.trim()}”.</p>
-          <p className="mx-auto mt-2 max-w-[42ch] text-[13.5px] leading-relaxed text-muted-fg">
-            {terms.length} words, chosen because a working marketer meets them. If something is
-            missing that you actually hit this week, that is a gap worth telling us about.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setQ("");
-              setLevel("all");
-              inputRef.current?.focus();
-            }}
-            className="mt-4 text-[13px] font-medium text-accent underline underline-offset-2"
-          >
-            Clear the filter
-          </button>
+          {withheld > 0 ? (
+            <>
+              <p className="text-[15px] text-fg">
+                “{q.trim()}” is here — just not in the essentials.
+              </p>
+              <p className="mx-auto mt-2 max-w-[42ch] text-[13.5px] leading-relaxed text-muted-fg">
+                {withheld === 1 ? "One word matches" : `${withheld} words match`} further up the
+                ladder — things you meet after the first week rather than during it.
+              </p>
+              <button
+                type="button"
+                onClick={() => setEssentialsOnly(false)}
+                className="mt-4 text-[13px] font-medium text-accent underline underline-offset-2"
+              >
+                Search all {terms.length}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-[15px] text-fg">Nothing matches “{q.trim()}”.</p>
+              <p className="mx-auto mt-2 max-w-[42ch] text-[13.5px] leading-relaxed text-muted-fg">
+                {terms.length} words, chosen because a working marketer meets them. If something is
+                missing that you actually hit this week, that is a gap worth telling us about.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setQ("");
+                  setEssentialsOnly(false);
+                  inputRef.current?.focus();
+                }}
+                className="mt-4 text-[13px] font-medium text-accent underline underline-offset-2"
+              >
+                Clear the filter
+              </button>
+            </>
+          )}
         </div>
       ) : null}
 
