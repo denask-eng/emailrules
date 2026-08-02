@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import { segmentWithTerms, type GlossaryTerm } from "@/content/glossary";
+import { segmentWithTerms, type GlossaryTerm } from "@/content/how-email-works";
 import { cn } from "@/lib/utils";
 
 /**
@@ -46,12 +46,16 @@ function TermChip({
         >
           <span className="block text-[12px] font-semibold text-fg">{term.term}</span>
           <span className="mt-1 block">{term.short}</span>
+          {/* Straight to the term's own page, not to an anchor on a long index.
+              The page carries the artefact — the real DNS value, the header
+              line, the arithmetic — which is the part that settles the
+              question the tooltip only names. */}
           <Link
-            href={`/glossary#${term.id}`}
+            href={`/how-email-works/${term.id}`}
             className="mt-2 inline-block text-[11.5px] font-medium text-accent underline underline-offset-2"
             onClick={(e) => e.stopPropagation()}
           >
-            More in the glossary
+            See what it looks like →
           </Link>
         </span>
       ) : null}

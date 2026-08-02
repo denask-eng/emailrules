@@ -224,8 +224,14 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         label="Sections of this rule"
         /* Sits in the tab row, so it needs the tabs' own touch height. */
         trailing={
-          <Link href="/glossary" className="inline-flex h-11 items-center px-1 hover:text-fg sm:h-auto">
-            Glossary
+          <Link
+            href="/how-email-works"
+            className="inline-flex h-11 items-center gap-1.5 px-1 hover:text-fg sm:h-auto"
+          >
+            How email works
+            <span aria-hidden className="relative inline-flex h-1.5 w-1.5 shrink-0">
+              <span className="pulse h-1.5 w-1.5 rounded-full bg-accent" />
+            </span>
           </Link>
         }
         tabs={[
@@ -255,8 +261,8 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
 
                   <p className="mt-4 text-[12.5px] text-dim">
                     Dotted words open definitions.{" "}
-                    <Link href="/glossary" className="underline underline-offset-2 hover:text-fg">
-                      Full glossary
+                    <Link href="/how-email-works" className="underline underline-offset-2 hover:text-fg">
+                      See how email actually works
                     </Link>
                     .
                   </p>

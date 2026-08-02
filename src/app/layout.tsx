@@ -6,6 +6,7 @@ import { SITE, NAV, FOOTER_NAV } from "@/lib/site";
 import { Byline, AuthorJsonLd } from "@/components/byline";
 import { SiteFaq } from "@/components/site-faq";
 import { Search } from "@/components/search";
+import { GLOSSARY_AZ } from "@/content/how-email-works";
 import { getAllRules } from "@/lib/rules";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -79,6 +80,12 @@ async function Nav() {
     ownership: r.ownership,
     jurisdictions: r.jurisdictions.join(" "),
   }));
+  const terms = GLOSSARY_AZ.map((t) => ({
+    id: t.id,
+    term: t.term,
+    short: t.short,
+    aliases: t.aliases.join(" "),
+  }));
   return (
     <header className="no-print sticky top-0 z-50 border-b border-border/70 bg-bg/80 backdrop-blur-xl supports-[backdrop-filter]:bg-bg/72">
       <div className="shell flex h-[3.25rem] items-center gap-2 sm:gap-5">
@@ -108,14 +115,20 @@ async function Nav() {
               key={n.href}
               href={n.href}
               className={cn(
-                "inline-flex h-11 items-center rounded-lg px-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:h-auto sm:px-2.5 sm:py-1.5",
-                "short" in n && n.short && "hidden min-[440px]:inline-flex",
+                "inline-flex h-11 items-center gap-1.5 rounded-lg px-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:h-auto sm:px-2.5 sm:py-1.5",
+                "at" in n && n.at === "min-[440px]" && "hidden min-[440px]:inline-flex",
+                "at" in n && n.at === "min-[620px]" && "hidden min-[620px]:inline-flex",
               )}
             >
               {n.label}
+              {"flag" in n && n.flag ? (
+                <span aria-hidden className="relative inline-flex h-1.5 w-1.5 shrink-0">
+                  <span className="pulse h-1.5 w-1.5 rounded-full bg-accent" />
+                </span>
+              ) : null}
             </Link>
           ))}
-          <Search items={index} />
+          <Search items={index} terms={terms} />
           <Link
             href="/check"
             className={cn(

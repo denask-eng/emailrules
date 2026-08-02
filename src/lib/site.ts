@@ -45,9 +45,20 @@ export const AUTHOR = {
  * right now. A wordmark that changes shape at a breakpoint is one people stop
  * recognising.
  */
+/**
+ * `at` is the width below which a link gives up its slot. The header holds a
+ * wordmark, search and the check button on a 390px phone with about forty
+ * pixels spare, so a third and fourth text label have to earn their space by
+ * viewport rather than by importance.
+ *
+ * `flag` puts a quiet accent dot on the link. The explainer is the best page
+ * on this site and "Glossary" was the least clickable word in the footer, so
+ * it gets one marker until people have found it.
+ */
 export const NAV = [
   { href: "/rules", label: "Rules" },
-  { href: "/changed", label: "What changed", short: "Changed" },
+  { href: "/how-email-works", label: "How email works", at: "min-[620px]", flag: true },
+  { href: "/changed", label: "What changed", short: "Changed", at: "min-[440px]" },
 ] as const;
 
 /**
@@ -63,7 +74,7 @@ export const FOOTER_NAV = [
       { href: "/rules", label: "Rules" },
       { href: "/changed", label: "What changed" },
       { href: "/sources", label: "Sources" },
-      { href: "/glossary", label: "Glossary" },
+      { href: "/how-email-works", label: "How email works" },
       { href: "/esp", label: "Your platform" },
       { href: "/coverage", label: "Coverage map" },
       { href: "/embed", label: "Embed the check" },

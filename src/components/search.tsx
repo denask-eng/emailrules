@@ -25,7 +25,15 @@ export interface SearchItem {
   jurisdictions: string;
 }
 
-export function Search({ items }: { items: SearchItem[] }) {
+/** A vocabulary entry. Someone typing "DMARC" wants the word, not only the rule. */
+export interface SearchTerm {
+  id: string;
+  term: string;
+  short: string;
+  aliases: string;
+}
+
+export function Search({ items, terms = [] }: { items: SearchItem[]; terms?: SearchTerm[] }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -51,9 +59,9 @@ export function Search({ items }: { items: SearchItem[] }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const go = (slug: string) => {
+  const go = (href: string) => {
     setOpen(false);
-    router.push(`/rules/${slug}`);
+    router.push(href);
   };
 
   return (
@@ -66,7 +74,7 @@ export function Search({ items }: { items: SearchItem[] }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Search rules"
+        aria-label="Search"
         className="flex size-11 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-muted/80 hover:text-fg sm:size-auto sm:gap-2 sm:border sm:bg-card sm:px-2.5 sm:py-1.5 sm:text-[13px] sm:text-dim sm:hover:bg-card"
       >
         <SearchIcon className="size-[17px] sm:size-[13px]" strokeWidth={2} aria-hidden />
@@ -77,20 +85,41 @@ export function Search({ items }: { items: SearchItem[] }) {
       <CommandDialog
         open={open}
         onOpenChange={setOpen}
-        title="Search rules"
-        description="Search by title, question, jurisdiction or ownership"
+        title="Search"
+        description="Search the vocabulary and the dated rules"
       >
         <CommandInput placeholder="Klaviyo, DMARC, France, spam trap…" />
         <CommandList>
           <CommandEmpty>
             Nothing matches. Try “Klaviyo”, “DMARC”, “France” or “open rate”.
           </CommandEmpty>
-          <CommandGroup heading={`${items.length} rules`}>
+
+          {/* Vocabulary first. Someone hitting ⌘K and typing "DMARC" wants to
+              know what the word means far more often than they want a dated
+              obligation, and the definition is one hop from the rule anyway. */}
+          {terms.length ? (
+            <CommandGroup heading={`${terms.length} words, in plain English`}>
+              {terms.map((t) => (
+                <CommandItem
+                  key={t.id}
+                  value={`${t.term} ${t.aliases} ${t.short} ${t.id}`}
+                  onSelect={() => go(`/how-email-works/${t.id}`)}
+                >
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate text-[14px] font-medium">{t.term}</span>
+                    <span className="truncate text-[12.5px] text-muted-fg">{t.short}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ) : null}
+
+          <CommandGroup heading={`${items.length} dated rules`}>
             {items.map((it) => (
               <CommandItem
                 key={it.slug}
                 value={`${it.title} ${it.question} ${it.jurisdictions} ${it.ownership} ${it.slug}`}
-                onSelect={() => go(it.slug)}
+                onSelect={() => go(`/rules/${it.slug}`)}
               >
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-[14px] font-medium">{it.title}</span>

@@ -83,7 +83,7 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
           </p>
           <p className="mt-3 text-[12.5px] text-dim">
             {rules.length} {rules.length === 1 ? "rule" : "rules"} below ·{" "}
-            <Link href="/glossary" className="underline underline-offset-2 hover:text-fg">
+            <Link href="/how-email-works" className="underline underline-offset-2 hover:text-fg">
               Glossary
             </Link>
             {" · "}
