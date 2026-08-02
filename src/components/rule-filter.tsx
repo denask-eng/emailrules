@@ -316,6 +316,9 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
               {copied ? "Link copied" : "Copy link with this setup"}
             </button>
           ) : null}
+          <Link href="/brief" className="text-muted-fg underline underline-offset-3 hover:text-fg">
+            One-page brief
+          </Link>
           <Link href="/glossary" className="text-muted-fg underline underline-offset-3 hover:text-fg">
             Glossary
           </Link>

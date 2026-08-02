@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { getAllRules, getRule, fmtDate, daysSince } from "@/lib/rules";
 import { TOPICS, STATUS_LABEL, JURISDICTIONS } from "@/lib/types";
 import { SITE } from "@/lib/site";
-import { StatusPill, OwnershipBlock, MondayMorning, WhyOnRadar } from "@/components/bits";
+import { StatusPill, OwnershipBlock, MondayMorning } from "@/components/bits";
 import { Explained } from "@/components/explained";
-import { impactOf, IMPACT_LABEL } from "@/lib/rule-signals";
+import { impactOf, IMPACT_LABEL, whyItMatters } from "@/lib/rule-signals";
+import { displayPlain, displayTldr, displayWhy } from "@/content/plain-overrides";
 
 /* One column, no app shell. These pages are read by strangers who arrived from
    a search result: the finding first, the method at the bottom for the people
@@ -156,15 +157,32 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
 
       <h1 className="mt-4 text-[clamp(1.9rem,5.2vw,2.9rem)]">{rule.title}</h1>
 
-      {/* L1 — everyone, especially newbies */}
+      {/* One sentence — junior-proof */}
+      <div className="mt-6 max-w-[64ch] rounded-xl border border-accent/25 bg-accent-soft px-5 py-4">
+        <p className="label text-accent">In one sentence</p>
+        <Explained
+          as="p"
+          className="mt-2 text-[1.05rem] leading-relaxed font-medium text-fg"
+          text={displayTldr(rule.slug, rule.plain)}
+        />
+      </div>
+
+      {/* L1 — everyone */}
       <p className="label mt-8">In plain English</p>
       <Explained
         as="p"
         className="mt-2 max-w-[64ch] text-[1.12rem] leading-relaxed text-fg"
-        text={rule.plain}
+        text={displayPlain(rule.slug, rule.plain)}
       />
 
-      <WhyOnRadar rule={rule} />
+      <div className="mt-5 max-w-[64ch] rounded-lg border border-border-soft bg-bg-2 px-4 py-3 text-[14px] leading-relaxed text-muted-fg">
+        <b className="text-fg">Why it matters: </b>
+        <Explained
+          as="span"
+          text={displayWhy(rule.slug, whyItMatters({ ...rule, plain: displayPlain(rule.slug, rule.plain) }))}
+        />
+      </div>
+
       <OwnershipBlock rule={rule} />
       <MondayMorning rule={rule} />
 

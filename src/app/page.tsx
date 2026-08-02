@@ -54,12 +54,17 @@ export default async function Home() {
           {stats.notYours}. Dotted words explain themselves. No scores. No fear-selling.
         </p>
 
-        <div className="mx-auto mt-9 grid max-w-2xl gap-2.5 text-left sm:grid-cols-3">
+        <div className="mx-auto mt-9 grid max-w-3xl gap-2.5 text-left sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               href: "/rules",
               t: "What applies to me",
               d: "Pick your role. Get five rules first — not a law library.",
+            },
+            {
+              href: "/brief",
+              t: "One-page team brief",
+              d: "Print or paste in Slack: counts + top five + do-first lines.",
             },
             {
               href: "/check",

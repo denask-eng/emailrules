@@ -16,6 +16,7 @@ import {
   type ChangeKind,
   type Impact,
 } from "@/lib/rule-signals";
+import { displayTldr, displayWhy, displayPlain } from "@/content/plain-overrides";
 
 export const SHELL = "shell";
 
@@ -170,8 +171,17 @@ export function RuleRow({ rule }: { rule: Rule }) {
         {rule.title}
       </div>
       <div className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-muted-fg">
-        <span className="font-medium text-fg/80">Why it matters: </span>
-        <Explained text={whyItMatters(rule)} />
+        <span className="font-medium text-fg/80">In one sentence: </span>
+        <Explained text={displayTldr(rule.slug, rule.plain)} />
+      </div>
+      <div className="mt-1 max-w-[68ch] text-[12.5px] leading-relaxed text-dim">
+        <span className="font-medium text-muted-fg">Why it matters: </span>
+        <Explained
+          text={displayWhy(
+            rule.slug,
+            whyItMatters({ ...rule, plain: displayPlain(rule.slug, rule.plain) }),
+          )}
+        />
       </div>
       {rule.ignoreIf ? (
         <div className="mt-1.5 max-w-[68ch] text-[12.5px] leading-relaxed text-dim">
