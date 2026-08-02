@@ -76,8 +76,10 @@ export const FOOTER_NAV = [
       { href: "/corrections", label: "Corrections" },
       { href: "/start", label: "How to use this site" },
       { href: "/connect", label: "Connect roadmap" },
-      /** Plain <a>: a route handler, not a page — Link would prefetch RSC for it. */
-      { href: "/llms.txt", label: "llms.txt", external: true },
+      /* /llms.txt is deliberately NOT linked here. The file stays and still
+         does its job — assistants find it by convention at the root, no link
+         required — but a footer that advertises a machine-readable manifest
+         reads as developer tooling rather than a publication with an author. */
     ],
   },
 ] as const;
