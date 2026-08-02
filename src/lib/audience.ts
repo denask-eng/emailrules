@@ -1,8 +1,18 @@
 /**
  * Audience filters for the rules index.
- * Role-first for newbies; geo/stack fine-tune for everyone.
- * URL + localStorage so tomorrow feels the same.
+ * Role-first; geo + ESP fine-tune. URL + localStorage.
  */
+
+export type EspId =
+  | ""
+  | "klaviyo"
+  | "mailchimp"
+  | "braze"
+  | "hubspot"
+  | "sfmc"
+  | "omnisend"
+  | "activecampaign"
+  | "other";
 
 export type Audience = {
   eu: boolean;
@@ -11,9 +21,9 @@ export type Audience = {
   uk: boolean;
   au: boolean;
   gmailBulk: boolean;
-  klaviyo: boolean;
+  /** Primary ESP — empty means “any / not specified” */
+  esp: EspId;
   onlyMine: boolean;
-  /** Role biases which rules sort into Top 5 */
   role: "newbie" | "lifecycle" | "deliverability" | "multi" | "check" | "";
 };
 
@@ -24,15 +34,68 @@ export const EMPTY_AUDIENCE: Audience = {
   uk: false,
   au: false,
   gmailBulk: false,
-  klaviyo: false,
+  esp: "",
   onlyMine: false,
   role: "",
 };
 
-export const STORAGE_KEY = "emailrules.audience.v3";
+/** Bump when shape changes so stale localStorage does not lie. */
+export const STORAGE_KEY = "emailrules.audience.v4";
 export const ONBOARD_KEY = "emailrules.onboarded.v2";
 
-export const AUDIENCE_CHIPS: { key: keyof Audience; label: string; explain: string }[] = [
+/** Tools people actually pick — not a vendor catalog of 40. */
+export const ESP_OPTIONS: {
+  id: EspId;
+  label: string;
+  explain: string;
+}[] = [
+  {
+    id: "klaviyo",
+    label: "Klaviyo",
+    explain: "Ecommerce flows; we have Klaviyo-specific measurement pages",
+  },
+  {
+    id: "mailchimp",
+    label: "Mailchimp",
+    explain: "Campaigns & audiences; bounce and unsub paths differ by product",
+  },
+  {
+    id: "braze",
+    label: "Braze",
+    explain: "Lifecycle / CRM at scale; platform-specific bounce rules",
+  },
+  {
+    id: "hubspot",
+    label: "HubSpot",
+    explain: "Marketing Hub email; shared desk vs tool ownership still applies",
+  },
+  {
+    id: "sfmc",
+    label: "Salesforce Marketing Cloud",
+    explain: "Enterprise journeys; auth and list hygiene still land on you",
+  },
+  {
+    id: "omnisend",
+    label: "Omnisend",
+    explain: "Ecommerce automation — same inbox laws as everyone else",
+  },
+  {
+    id: "activecampaign",
+    label: "ActiveCampaign",
+    explain: "Automations & CRM — filter still personalizes ownership",
+  },
+  {
+    id: "other",
+    label: "Other / custom",
+    explain: "SendGrid, Postmark, home-grown, or multi-ESP — no fake product pages",
+  },
+];
+
+export const AUDIENCE_CHIPS: {
+  key: keyof Pick<Audience, "eu" | "us" | "ca" | "uk" | "au" | "gmailBulk" | "onlyMine">;
+  label: string;
+  explain: string;
+}[] = [
   {
     key: "eu",
     label: "EU / Europe",
@@ -47,7 +110,6 @@ export const AUDIENCE_CHIPS: { key: keyof Audience; label: string; explain: stri
     label: "Big Gmail volume",
     explain: "Roughly 5,000+ messages a day to Gmail — bulk sender rules apply",
   },
-  { key: "klaviyo", label: "Klaviyo", explain: "You send mainly through Klaviyo" },
   {
     key: "onlyMine",
     label: "Only my desk",
@@ -55,7 +117,6 @@ export const AUDIENCE_CHIPS: { key: keyof Audience; label: string; explain: stri
   },
 ];
 
-/** Role cards — human jobs, not protocol names. */
 export const ROLE_PRESETS: {
   id: string;
   label: string;
@@ -77,14 +138,13 @@ export const ROLE_PRESETS: {
   {
     id: "lifecycle",
     label: "I run campaigns & flows",
-    blurb: "Lifecycle / CRM / Klaviyo-style — consent, metrics, subject lines.",
+    blurb: "Lifecycle / CRM — consent, metrics, subject lines, any major ESP.",
     audience: {
       ...EMPTY_AUDIENCE,
       role: "lifecycle",
       eu: true,
       us: true,
       gmailBulk: true,
-      klaviyo: true,
     },
   },
   {
@@ -116,11 +176,27 @@ export const ROLE_PRESETS: {
   },
 ];
 
-/** @deprecated use ROLE_PRESETS — kept as alias for older imports */
+/** @deprecated use ROLE_PRESETS */
 export const PRESETS = ROLE_PRESETS;
 
 const EU = new Set(["EU", "FR", "IT", "DE"]);
 const US = new Set(["US", "US-WA", "US-CA", "US-MD", "US-CO"]);
+
+/** Rule.provider is usually mailbox (Gmail) or a named ESP when the page is product-specific. */
+const ESP_PROVIDER_NAMES: Record<Exclude<EspId, "" | "other">, string[]> = {
+  klaviyo: ["Klaviyo"],
+  mailchimp: ["Mailchimp"],
+  braze: ["Braze"],
+  hubspot: ["HubSpot"],
+  sfmc: ["Salesforce", "Salesforce Marketing Cloud", "SFMC"],
+  omnisend: ["Omnisend"],
+  activecampaign: ["ActiveCampaign"],
+};
+
+export function espLabel(esp: EspId): string {
+  if (!esp) return "";
+  return ESP_OPTIONS.find((o) => o.id === esp)?.label ?? esp;
+}
 
 export function audienceActive(a: Audience): boolean {
   return !!(
@@ -130,17 +206,40 @@ export function audienceActive(a: Audience): boolean {
     a.uk ||
     a.au ||
     a.gmailBulk ||
-    a.klaviyo ||
+    a.esp ||
     a.onlyMine ||
     a.role
   );
+}
+
+function normalizeAudience(raw: Partial<Audience> & { klaviyo?: boolean }): Audience {
+  const next = { ...EMPTY_AUDIENCE, ...raw };
+  /* v3 → v4: old klaviyo boolean */
+  if ("klaviyo" in raw && raw.klaviyo && !next.esp) {
+    next.esp = "klaviyo";
+  }
+  if (next.esp && !ESP_OPTIONS.some((o) => o.id === next.esp)) {
+    next.esp = "other";
+  }
+  return {
+    eu: !!next.eu,
+    us: !!next.us,
+    ca: !!next.ca,
+    uk: !!next.uk,
+    au: !!next.au,
+    gmailBulk: !!next.gmailBulk,
+    esp: next.esp || "",
+    onlyMine: !!next.onlyMine,
+    role: next.role || "",
+  };
 }
 
 export function parseAudienceParam(search: string): Audience | null {
   const q = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   if (
     ![...q.keys()].some(
-      (k) => k.startsWith("f_") || k === "mine" || k === "preset" || k === "role",
+      (k) =>
+        k.startsWith("f_") || k === "mine" || k === "preset" || k === "role" || k === "esp",
     )
   ) {
     return null;
@@ -152,30 +251,38 @@ export function parseAudienceParam(search: string): Audience | null {
   if (q.get("f_uk") === "1") next.uk = true;
   if (q.get("f_au") === "1") next.au = true;
   if (q.get("f_gmail") === "1") next.gmailBulk = true;
-  if (q.get("f_klaviyo") === "1") next.klaviyo = true;
+  /* legacy */
+  if (q.get("f_klaviyo") === "1") next.esp = "klaviyo";
+  const esp = (q.get("esp") || "") as EspId;
+  if (esp && ESP_OPTIONS.some((o) => o.id === esp)) next.esp = esp;
   if (q.get("mine") === "1") next.onlyMine = true;
+
   const role = q.get("role") || q.get("preset") || "";
   if (role) {
     const p = ROLE_PRESETS.find((x) => x.id === role);
     if (p) {
-      return {
+      return normalizeAudience({
         ...p.audience,
         onlyMine: next.onlyMine || p.audience.onlyMine,
-        // allow URL to add geos on top of role
         eu: next.eu || p.audience.eu,
         us: next.us || p.audience.us,
         ca: next.ca || p.audience.ca,
         uk: next.uk || p.audience.uk,
         au: next.au || p.audience.au,
         gmailBulk: next.gmailBulk || p.audience.gmailBulk,
-        klaviyo: next.klaviyo || p.audience.klaviyo,
-      };
+        esp: next.esp || p.audience.esp,
+      });
     }
-    if (role === "newbie" || role === "lifecycle" || role === "deliverability" || role === "multi") {
+    if (
+      role === "newbie" ||
+      role === "lifecycle" ||
+      role === "deliverability" ||
+      role === "multi"
+    ) {
       next.role = role;
     }
   }
-  return next;
+  return normalizeAudience(next);
 }
 
 export function audienceToSearch(a: Audience): string {
@@ -187,22 +294,27 @@ export function audienceToSearch(a: Audience): string {
   if (a.uk) q.set("f_uk", "1");
   if (a.au) q.set("f_au", "1");
   if (a.gmailBulk) q.set("f_gmail", "1");
-  if (a.klaviyo) q.set("f_klaviyo", "1");
+  if (a.esp) q.set("esp", a.esp);
   if (a.onlyMine) q.set("mine", "1");
   const s = q.toString();
   return s ? `?${s}` : "";
 }
 
+/**
+ * Does this rule belong in the filtered list?
+ * ESP-specific pages (provider: Klaviyo) only when that tool is selected.
+ * Everyone else still sees shared/global/auth/consent — not a Klaviyo-only shelf.
+ */
 export function matchesAudience(
   rule: {
     ownership: string;
     jurisdictions: string[];
     provider?: string;
     topic?: string;
+    slug?: string;
   },
   a: Audience,
 ): boolean {
-  /* onlyMine: newbies keep "shared" (half ESP); others see pure "yours". */
   if (a.onlyMine) {
     if (a.role === "newbie") {
       if (rule.ownership === "esp" || rule.ownership === "context") return false;
@@ -211,16 +323,24 @@ export function matchesAudience(
     }
   }
 
-  const geoOrStack = a.eu || a.us || a.ca || a.uk || a.au || a.gmailBulk || a.klaviyo;
+  const geoOrStack =
+    a.eu || a.us || a.ca || a.uk || a.au || a.gmailBulk || !!a.esp;
   if (!geoOrStack) return true;
 
+  /* Named ESP product pages — only when that ESP is selected (or no ESP yet). */
+  if (rule.provider && isEspProductProvider(rule.provider)) {
+    if (!a.esp) return true; /* browsing without tool: still show so people learn gaps */
+    if (a.esp === "other") return false; /* no fake “your ESP” pages */
+    const names = ESP_PROVIDER_NAMES[a.esp as Exclude<EspId, "" | "other">];
+    if (!names) return true;
+    return names.some((n) => rule.provider === n || rule.provider?.includes(n));
+  }
+
   if (rule.jurisdictions.includes("Global")) {
-    if (rule.provider === "Klaviyo") {
-      return a.klaviyo || a.role === "lifecycle" || a.role === "newbie";
-    }
     if (rule.provider === "Gmail") {
-      return a.gmailBulk || a.us || a.eu || a.ca || a.uk || a.au;
+      return a.gmailBulk || a.us || a.eu || a.ca || a.uk || a.au || !!a.esp;
     }
+    /* Apple, Microsoft, Yahoo, generic global — always relevant when any filter is on */
     return true;
   }
   if (rule.jurisdictions.some((j) => EU.has(j))) return a.eu;
@@ -231,7 +351,19 @@ export function matchesAudience(
   return false;
 }
 
-/** Sort boost by role for Top 5 */
+function isEspProductProvider(provider: string): boolean {
+  const p = provider.toLowerCase();
+  return (
+    p.includes("klaviyo") ||
+    p.includes("mailchimp") ||
+    p.includes("braze") ||
+    p.includes("hubspot") ||
+    p.includes("salesforce") ||
+    p.includes("omnisend") ||
+    p.includes("activecampaign")
+  );
+}
+
 export function roleTopicBoost(topic: string, role: Audience["role"]): number {
   const maps: Record<string, string[]> = {
     newbie: ["measurement", "provider-rules", "consent-tracking", "content-claims"],
@@ -244,4 +376,27 @@ export function roleTopicBoost(topic: string, role: Audience["role"]): number {
   const list = maps[role] ?? [];
   const idx = list.indexOf(topic);
   return idx === -1 ? 50 : idx;
+}
+
+/** Read stored audience (v4 + migrate v3). */
+export function readStoredAudience(): Audience {
+  if (typeof window === "undefined") return EMPTY_AUDIENCE;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw) return normalizeAudience(JSON.parse(raw) as Partial<Audience>);
+    /* migrate v3 */
+    const legacy = window.localStorage.getItem("emailrules.audience.v3");
+    if (legacy) {
+      const n = normalizeAudience(JSON.parse(legacy) as Partial<Audience> & { klaviyo?: boolean });
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(n));
+      } catch {
+        /* */
+      }
+      return n;
+    }
+  } catch {
+    /* */
+  }
+  return EMPTY_AUDIENCE;
 }

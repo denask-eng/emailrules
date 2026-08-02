@@ -5,12 +5,13 @@ import Link from "next/link";
 import {
   type Audience,
   EMPTY_AUDIENCE,
-  STORAGE_KEY,
   ROLE_PRESETS,
   audienceActive,
   audienceToSearch,
+  espLabel,
   matchesAudience,
   parseAudienceParam,
+  readStoredAudience,
   roleTopicBoost,
 } from "@/lib/audience";
 import { briefCounts, impactOf, IMPACT_LABEL, sortForMarketer } from "@/lib/rule-signals";
@@ -43,8 +44,7 @@ function readAudience(): Audience {
   try {
     const fromUrl = parseAudienceParam(window.location.search);
     if (fromUrl && audienceActive(fromUrl)) return fromUrl;
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...EMPTY_AUDIENCE, ...(JSON.parse(raw) as Partial<Audience>) };
+    return readStoredAudience();
   } catch {
     /* */
   }
@@ -56,12 +56,12 @@ function roleLabel(a: Audience): string {
   if (p) return p.label;
   if (!audienceActive(a)) return "All marketers (no filter saved yet)";
   const bits: string[] = [];
+  if (a.esp) bits.push(espLabel(a.esp));
   if (a.eu) bits.push("EU");
   if (a.us) bits.push("US");
   if (a.uk) bits.push("UK");
   if (a.ca) bits.push("Canada");
   if (a.au) bits.push("Australia");
-  if (a.klaviyo) bits.push("Klaviyo");
   if (a.gmailBulk) bits.push("Gmail bulk");
   if (a.onlyMine) bits.push("desk-only");
   return bits.join(" · ") || "Custom setup";

@@ -50,7 +50,7 @@ export default async function RulesIndex() {
       <SectionHead
         label="Rules"
         title="What matters for you"
-        lede={`One setup. Five first. Filter by role and where you send — EU / Europe, UK, US, Canada, Australia, plus global inbox rules. ${stats.total} curated pages with sources.`}
+        lede={`One setup. Five first. Role, your email tool (any major ESP — not only Klaviyo), and where you send. ${stats.total} curated pages with sources.`}
       />
 
       <RuleFilter rules={rules} />

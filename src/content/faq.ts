@@ -12,7 +12,7 @@ export type FaqItem = {
 export const SITE_FAQ: FaqItem[] = [
   {
     q: "Who is this actually for?",
-    a: "People who ship email and are too busy to re-read every PDF: week-one marketers, lifecycle/CRM, deliverability, multi-country ops, DTC brands, agencies. That includes EU and UK programmes — turn on EU / Europe (and UK separately) in filters, or pick “I send to many countries.” You want what is true, whose job it is, and what to do Monday. Not for people who sell tools about email and need a fake score to demo.",
+    a: "People who ship email and are too busy to re-read every PDF: week-one marketers, lifecycle/CRM, deliverability, multi-country ops, DTC brands, agencies — on Klaviyo, Mailchimp, Braze, HubSpot, SFMC, or something else. Pick your tool and geos so product-specific pages only appear when they match. EU and UK are first-class filters. Not for people who sell tools about email and need a fake score to demo.",
   },
   {
     q: "Why only ~35 rules? Isn’t that… thin?",

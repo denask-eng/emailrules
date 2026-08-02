@@ -12,16 +12,20 @@ import { RuleRow } from "@/components/bits";
 import { cn } from "@/lib/utils";
 import {
   type Audience,
+  type EspId,
   EMPTY_AUDIENCE,
   STORAGE_KEY,
   ONBOARD_KEY,
   AUDIENCE_CHIPS,
+  ESP_OPTIONS,
   ROLE_PRESETS,
   audienceActive,
   audienceToSearch,
   matchesAudience,
   parseAudienceParam,
+  readStoredAudience,
   roleTopicBoost,
+  espLabel,
 } from "@/lib/audience";
 import { briefCounts, sortForMarketer, topForYou } from "@/lib/rule-signals";
 import Link from "next/link";
@@ -31,21 +35,10 @@ const listeners = new Set<() => void>();
 let memory: Audience = EMPTY_AUDIENCE;
 let hydrated = false;
 
-function readStored(): Audience {
-  if (typeof window === "undefined") return EMPTY_AUDIENCE;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY_AUDIENCE;
-    return { ...EMPTY_AUDIENCE, ...(JSON.parse(raw) as Partial<Audience>) };
-  } catch {
-    return EMPTY_AUDIENCE;
-  }
-}
-
 function isOnboarded(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem(ONBOARD_KEY) === "1" || audienceActive(readStored());
+    return window.localStorage.getItem(ONBOARD_KEY) === "1" || audienceActive(readStoredAudience());
   } catch {
     return false;
   }
@@ -62,7 +55,7 @@ function markOnboarded() {
 function readAudience(): Audience {
   if (typeof window === "undefined") return EMPTY_AUDIENCE;
   if (!hydrated) {
-    memory = parseAudienceParam(window.location.search) ?? readStored();
+    memory = parseAudienceParam(window.location.search) ?? readStoredAudience();
     hydrated = true;
   }
   return memory;
@@ -264,6 +257,40 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
         </div>
 
         <div className="mt-5">
+          <p className="label mb-2">Your email tool</p>
+          <div className="flex flex-wrap gap-2">
+            {ESP_OPTIONS.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                title={o.explain}
+                aria-pressed={a.esp === o.id}
+                onClick={() =>
+                  set({ esp: (a.esp === o.id ? "" : o.id) as EspId })
+                }
+                className={cn(
+                  "pressable rounded-full border px-3.5 py-1.5 text-[13.5px]",
+                  a.esp === o.id
+                    ? "border-accent bg-accent text-accent-fg"
+                    : "bg-bg text-muted-fg hover:bg-muted hover:text-fg",
+                )}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 max-w-[50ch] text-[12.5px] leading-relaxed text-dim">
+            {a.esp === "klaviyo"
+              ? "Klaviyo-specific pages (attribution, holdouts) stay in your list."
+              : a.esp && a.esp !== "other"
+                ? `${espLabel(a.esp)}: same inbox laws as everyone — Klaviyo-only product pages stay out of your way.`
+                : a.esp === "other"
+                  ? "Other / custom: no fake product pages. Global auth, consent, and hygiene still apply."
+                  : "Pick your ESP so product-specific pages only show when they match. Most rules are tool-agnostic."}
+          </p>
+        </div>
+
+        <div className="mt-5">
           <p className="label mb-2">Where you send</p>
           <div className="flex flex-wrap gap-2">
             {AUDIENCE_CHIPS.map((q) => (
@@ -287,10 +314,9 @@ export function RuleFilter({ rules }: { rules: Rule[] }) {
             ))}
           </div>
           <p className="mt-2 max-w-[48ch] text-[12.5px] leading-relaxed text-dim">
-            EU / Europe pulls ePrivacy plus FR, DE, IT pages tagged EU. UK is its own law — separate
-            chip. Not every Member State yet; see{" "}
+            EU / Europe pulls ePrivacy plus FR, DE, IT pages tagged EU. UK is separate.{" "}
             <Link href="/coverage" className="underline underline-offset-2 hover:text-fg">
-              coverage
+              Coverage map
             </Link>
             .
           </p>
