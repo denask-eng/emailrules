@@ -1,6 +1,7 @@
 /**
- * Sitewide FAQ — every answer must earn its slot.
- * Prefer one dense question over two thin ones. Order: who → shelf → not-that → trust → product.
+ * Sitewide FAQ — honest, slightly rude, actually human.
+ * Headlines stay plain single questions. Density lives in the answers.
+ * Order: who → shelf → not-that → trust → product.
  */
 
 export type FaqItem = {
@@ -11,30 +12,34 @@ export type FaqItem = {
 export const SITE_FAQ: FaqItem[] = [
   {
     q: "Who is this actually for?",
-    a: "People who ship email and are too busy to re-read every PDF: new marketers, lifecycle/CRM, deliverability, multi-country, DTC, agencies. You want what’s true, whose job it is, and Monday’s move. Not for people who sell tools about email and need a fake score to demo.",
+    a: "People who ship email and are too busy to re-read every PDF: week-one marketers, lifecycle/CRM, deliverability, multi-country ops, DTC brands, agencies. You want what is true, whose job it is, and what to do Monday. Not for people who sell tools about email and need a fake score to demo.",
   },
   {
-    q: "Why only ~35 rules? Isn’t that thin?",
-    a: "On purpose. Four hundred undated “best practices” is how you look busy and still get burned. Every page needs a primary source we actually read. Thin and checkable beats fat folklore. The coverage map lists what we still refuse to invent — SMS, seed scores, warm-up magic included.",
+    q: "Why only ~35 rules? Isn’t that… thin?",
+    a: "On purpose. A wall of 400 undated “best practices” is how you look busy and still get burned. Every page needs a primary source we actually read. Thin and checkable beats fat and folklore. Coverage map says what we still refuse to invent — including SMS, seed scores, and warm-up magic.",
   },
   {
-    q: "Is this legal advice? Will it make me “compliant”?",
-    a: "No and no. If it were advice you’d have a billable hour. No tool makes you compliant — lawyers and judges do. We say what the sources say, whose desk it usually lands on, and what to do first. Confirm high-stakes stuff with counsel who knows your facts. “Compliant” is a marketing word.",
+    q: "Is this legal advice?",
+    a: "No. If it were, you’d have a billable hour and a longer PDF. This is a dated operator reference written by an email geek. Confirm anything high-stakes with counsel who knows your facts. Same for “will this make me compliant?” — no tool does that. Lawyers and judges do. We say what the sources say and what to do first on Monday.",
   },
   {
-    q: "Why no score out of 100?",
-    a: "We refuse numbers you can’t audit. Fake scores sell seed tests and panic. Domain check gives plain findings with sources. If you wanted a red dial, you’re on the wrong site — and that’s fine.",
+    q: "Why no trust score out of 100?",
+    a: "Because we refuse to invent a number you can’t audit. Fake scores sell seed tests and panic. You get findings, dates, and links. If that feels less exciting than a red dial, good — you’re not the red-dial customer.",
   },
   {
-    q: "Why should I trust this over an ESP blog or AI page?",
-    a: "ESPs sell seats. AI invents citations when nobody watches. We sell nothing today (no pixels, seed tests, or affiliate), name a human, date every page, and publish corrections when we’re wrong — we already have been. Check the sources. Fail that test and leave.",
+    q: "Why should I trust you more than my ESP’s blog?",
+    a: "ESPs sell seats. AI invents citations when nobody watches. We sell nothing today — no pixels, no seed tests, no affiliate — so we can say “your open rate is broken” without selling the fix. Named human, last-verified dates, public corrections when we’re wrong (we already have been). Check the sources. Fail that test and leave.",
   },
   {
-    q: "Do I need an account? What about multi-client / agency mode?",
-    a: "No account. Filters live in the browser and the URL — share the link. We tried a client-name CRM on setup; it felt like work before value. Role filter + one-page brief + optional PDF title is enough for now. More complexity only after this shelf is habit.",
+    q: "Do I need an account?",
+    a: "No. Filters live in this browser and the URL. Share the link. That’s it. Accounts come later only if they earn it — not so we can nurture you about email.",
   },
   {
-    q: "Quiet changelog — is that a bug?",
-    a: "No. Quiet means nothing material moved. We don’t invent urgency so the homepage looks “alive.” When it’s still, sticky risks still show what usually needs a person.",
+    q: "I’m an agency. Where’s multi-client mode?",
+    a: "We tried a client-name CRM on the setup card. It made the product feel like work before it felt useful. Role filters + copy link + one-page brief (optional PDF title) is enough for now. Complexity comes back when the free shelf is habit, not before.",
+  },
+  {
+    q: "Is the quiet changelog a bug?",
+    a: "No. Quiet means nothing material moved. We don’t invent urgency so the homepage looks “alive.” Sticky risks still show what usually needs a person when the market is still.",
   },
 ];
