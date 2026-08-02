@@ -3,6 +3,7 @@
 import {
   useCallback,
   useDeferredValue,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -20,19 +21,27 @@ import {
 } from "@/content/how-email-works";
 
 /**
- * The stage sections, filterable.
+ * The stage sections — the body of the journey, not eight repeats of a list.
  *
- * Two controls, and the second one is the point. Typing narrows; the switch
- * collapses the whole corpus to the handful a week-one hire actually needs,
- * which is the single kindest thing this page does and something no other
- * glossary in this industry offers.
+ * The player at the top of the page draws the map; these chapters walk it.
+ * Each stop keeps a sticky monumental header — ghost numeral, a meter of the
+ * eight stops, the full "why this stop decides things" text in plain sight —
+ * beside the words that live there. And stops 04–06, the part of the trip
+ * that happens inside the receiver, drop into a dark zone: the page
+ * literally descends into the machine and comes back out into daylight with
+ * the numbers. Light, dark, light — your building, their building, what
+ * comes back — told with the page itself rather than with a caption.
+ *
+ * Two controls sit above it all, and the second one is the point. Typing
+ * narrows; the switch collapses the whole corpus to the handful a week-one
+ * hire actually needs, which is the single kindest thing this page does and
+ * something no other glossary in this industry offers.
  *
  * That switch has two positions, not one per level, and the reason is worth
  * keeping. The levels are a ladder — start, then working, then deep — so the
- * only honest views are a prefix of it. One chip per level made them exclusive
- * instead: "deep" handed you nine specialist words with SPF and DKIM removed,
- * which is a view of the taxonomy rather than a way to read. Two of the four
- * chips produced something nobody wanted.
+ * only honest views are a prefix of it. One chip per level made them
+ * exclusive instead: "deep" handed you nine specialist words with SPF and
+ * DKIM removed, which is a view of the taxonomy rather than a way to read.
  *
  * It is also phrased as a claim about the list rather than about the reader.
  * "Week one / Working / Deep" asked you to grade your own expertise before
@@ -77,19 +86,32 @@ const OWNER_TONE: Record<TermOwner, string> = {
   context: "border-border bg-bg-2 text-muted-fg",
 };
 
+/* The dark zone gets its own chips: the light tones are calibrated against
+   paper and die against ink. */
+const OWNER_TONE_DARK: Record<TermOwner, string> = {
+  yours: "border-[#9db4ff]/30 bg-[#9db4ff]/10 text-[#9db4ff]",
+  esp: "border-[#8fd9a8]/30 bg-[#8fd9a8]/10 text-[#8fd9a8]",
+  shared: "border-[#e8c07a]/30 bg-[#e8c07a]/10 text-[#e8c07a]",
+  context: "border-white/15 bg-white/5 text-white/50",
+};
+
 /** The rung the switch keeps. Everything else on the ladder sits above it. */
 const ESSENTIAL: TermLevel = "start";
 
 /**
  * On a phone the eight sections open at once are roughly fifteen thousand
  * pixels of stacked text, and you can never see one whole unit. Each stop
- * becomes a <details> there, so the page is eight tappable stops you can take
- * in at a glance. From sm the body is forced open and the summary chrome is
+ * becomes a fold there, so the page is eight tappable stops you can take in
+ * at a glance. From sm the body is forced open and the summary chrome is
  * dropped, because a desktop column has the room and folding it would be
  * hiding content for no reason.
  *
  * Pure CSS: the content is always in the DOM for crawlers and for ⌘F, it is
  * only collapsed to a zero-height grid row.
+ *
+ * Chapter entrances (.dc-reveal) run once, transform and opacity only, and
+ * are dead under prefers-reduced-motion. Content is never gated behind
+ * JavaScript: the noscript block puts everything back.
  */
 const STAGE_CSS = `
 .stage-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease-soft); }
@@ -99,12 +121,24 @@ const STAGE_CSS = `
   .stage-body { grid-template-rows: 1fr; }
   .stage-summary { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .stage-body { transition: none; } }`;
+.dc-reveal { opacity: 0; transform: translateY(24px);
+  transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+.dc-reveal.dc-in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .stage-body { transition: none; }
+  .dc-reveal { opacity: 1; transform: none; transition: none; }
+}`;
 
 /* Without JavaScript the toggle cannot run, so every stop opens. The content
    is in the DOM either way; this only decides whether a phone with scripting
    off can read it. */
-const STAGE_NOSCRIPT = `.stage-body { grid-template-rows: 1fr; } .stage-summary { display: none; }`;
+const STAGE_NOSCRIPT = `
+.stage-body { grid-template-rows: 1fr; }
+.stage-summary { display: none; }
+.dc-reveal { opacity: 1; transform: none; }`;
+
+/** Stops 04–06 happen inside the receiver. The page goes dark with them. */
+const THEIRS: StageId[] = ["judge", "filter", "verdict"];
 
 export function GlossaryBrowser({
   stages,
@@ -119,6 +153,7 @@ export function GlossaryBrowser({
   const [q, setQ] = useState("");
   const [essentialsOnly, setEssentialsOnly] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const deferred = useDeferredValue(q);
 
   const essentialCount = useMemo(
@@ -159,10 +194,37 @@ export function GlossaryBrowser({
 
   const filtering = essentialsOnly || searching;
 
+  /* Chapter entrances. While filtering, everything is simply there — a
+     search result that fades in is a search result that lies about being
+     ready. Sections mount and unmount as the filter changes, so this re-arms
+     on every filter state. */
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const els = Array.from(root.querySelectorAll(".dc-reveal:not(.dc-in)"));
+    if (filtering || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      els.forEach((el) => el.classList.add("dc-in"));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("dc-in");
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -4% 0px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [filtering, byStage]);
+
   /* Anything linking to #judge has to arrive at an open #judge. Every "the N
      words that live here" link in the player, and every breadcrumb on a term
-     page, targets a stop that is collapsed on a phone — so without this you
-     tap the link, the page scrolls, and you are looking at a closed heading.
+     page, targets a stop that is folded on a phone — so without this you tap
+     the link, the page scrolls, and you are looking at a closed heading.
      Read as an external store rather than set in an effect, so there is no
      synchronous setState on mount and no hydration mismatch. */
   const hash = useSyncExternalStore(
@@ -187,17 +249,248 @@ export function GlossaryBrowser({
       return next;
     });
 
+  function Chapter({ s, dark }: { s: BrowserStage; dark: boolean }) {
+    const list = byStage.get(s.id) ?? [];
+    if (filtering && list.length === 0) return null;
+    const tones = dark ? OWNER_TONE_DARK : OWNER_TONE;
+    return (
+      <section id={s.id} className="dc-reveal scroll-mt-[7.5rem]">
+        {/* Phone: the stop folds. A button and a panel, not <details>: a
+            closed <details> hides its own content at the UA level, so the
+            desktop media query that opens the panel could never win. */}
+        <button
+          type="button"
+          onClick={() => toggle(s.id)}
+          aria-expanded={isOpen(s.id)}
+          aria-controls={`${s.id}-body`}
+          className={cn(
+            "stage-summary flex w-full cursor-pointer items-center gap-x-3 border-b py-3.5 text-left",
+            dark ? "border-white/10" : "border-border-soft",
+          )}
+        >
+          <span
+            className={cn(
+              "num text-[13px] font-semibold",
+              dark ? "text-[#9db4ff]" : "text-accent",
+            )}
+          >
+            {String(s.n).padStart(2, "0")}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span
+              className={cn(
+                "block text-[1.2rem] leading-tight font-semibold tracking-tight",
+                dark && "text-white",
+              )}
+            >
+              {s.name}
+            </span>
+            <span
+              className={cn("num mt-1 block text-[11px]", dark ? "text-white/40" : "text-dim")}
+            >
+              {s.when} · {list.length} word{list.length === 1 ? "" : "s"}
+            </span>
+          </span>
+          <span
+            aria-hidden
+            className={cn(
+              "shrink-0 text-[18px] leading-none transition-transform",
+              dark ? "text-white/40" : "text-dim",
+              isOpen(s.id) && "rotate-45",
+            )}
+          >
+            +
+          </span>
+        </button>
+
+        <div className="stage-body" id={`${s.id}-body`} data-open={isOpen(s.id)}>
+          <div>
+            {/* Phone: what + why, inline. */}
+            <div className="sm:hidden">
+              <p
+                className={cn(
+                  "mt-3 max-w-[58ch] text-[1.02rem] leading-relaxed",
+                  dark ? "text-white/85" : "text-fg",
+                )}
+              >
+                {s.what}
+              </p>
+              <details className="faq-item mt-3 max-w-[58ch]">
+                <summary
+                  className={cn(
+                    "inline-flex h-11 cursor-pointer list-none items-center text-[13.5px] font-medium [&::-webkit-details-marker]:hidden",
+                    dark ? "text-white/60 hover:text-white" : "text-muted-fg hover:text-fg",
+                  )}
+                >
+                  Why this stop decides things
+                  <span aria-hidden className="ml-1.5 opacity-60">
+                    +
+                  </span>
+                </summary>
+                <div className="faq-body">
+                  <div>
+                    <p
+                      className={cn(
+                        "pt-1 text-[14.5px] leading-relaxed",
+                        dark ? "text-white/55" : "text-muted-fg",
+                      )}
+                    >
+                      {s.intro}
+                    </p>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            {/* Desktop: the sticky chapter header beside the words. */}
+            <div className="sm:grid sm:grid-cols-[15.5rem_1fr] sm:gap-x-10 lg:grid-cols-[17rem_1fr] lg:gap-x-14">
+              <div className="hidden sm:block">
+                <div className="sticky top-28">
+                  <p className={cn("label", dark && "text-white/40")}>
+                    Stop {String(s.n).padStart(2, "0")} / 08
+                  </p>
+                  <p
+                    aria-hidden
+                    className={cn(
+                      "num mt-4 leading-[0.85] font-semibold tracking-[-0.04em] select-none",
+                      dark ? "text-white/10" : "text-fg/10",
+                    )}
+                    style={{ fontSize: "clamp(4rem, 6.5vw, 5.75rem)" }}
+                  >
+                    {String(s.n).padStart(2, "0")}
+                  </p>
+                  <h2
+                    className={cn(
+                      "mt-4 text-[clamp(1.5rem,2.6vw,2rem)] leading-[1.08] font-semibold tracking-tight",
+                      dark && "text-white",
+                    )}
+                  >
+                    {s.name}
+                  </h2>
+                  <p className={cn("num mt-2 text-[11.5px]", dark ? "text-white/40" : "text-dim")}>
+                    {s.when}
+                  </p>
+
+                  {/* The journey meter: eight ticks, every stop so far lit. */}
+                  <div className="mt-5 flex items-center gap-1" aria-hidden>
+                    {stages.map((st) => (
+                      <span
+                        key={st.id}
+                        className={cn(
+                          "h-[3px] w-4 rounded-full",
+                          st.n <= s.n
+                            ? dark
+                              ? "bg-[#9db4ff]"
+                              : "bg-accent"
+                            : dark
+                              ? "bg-white/15"
+                              : "bg-border",
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  <p
+                    className={cn(
+                      "mt-5 text-[0.95rem] leading-relaxed",
+                      dark ? "text-white/80" : "text-fg",
+                    )}
+                  >
+                    {s.what}
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-3 text-[13px] leading-relaxed",
+                      dark ? "text-white/45" : "text-muted-fg",
+                    )}
+                  >
+                    {s.intro}
+                  </p>
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                {slots?.[s.id] ? <div className="mt-6 sm:mt-0">{slots[s.id]}</div> : null}
+
+                <ul
+                  className={cn(
+                    "mt-6 list-none border-t p-0",
+                    dark ? "border-white/10" : "border-border-soft",
+                    slots?.[s.id] && "sm:mt-7",
+                  )}
+                >
+                  {list.map((t) => (
+                    <li
+                      key={t.id}
+                      className={cn("border-b", dark ? "border-white/10" : "border-border-soft")}
+                    >
+                      <Link
+                        href={`/how-email-works/${t.id}`}
+                        className={cn(
+                          "group grid grid-cols-1 gap-x-6 gap-y-1.5 px-1 py-4 transition-colors sm:grid-cols-[13rem_1fr] sm:px-2",
+                          dark ? "hover:bg-white/5" : "hover:bg-muted/40",
+                        )}
+                      >
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:block">
+                          <span
+                            className={cn(
+                              "text-[15px] font-semibold tracking-tight decoration-1 underline-offset-[5px] group-hover:underline",
+                              dark && "text-white",
+                            )}
+                          >
+                            {t.term}
+                          </span>
+                          {/* Inline beside the term on a phone, on its own
+                              line from sm. */}
+                          <span
+                            className={cn(
+                              "inline-flex shrink-0 rounded-full border px-1.5 py-0.5 text-[10.5px] font-medium sm:mt-1.5 sm:flex sm:w-fit",
+                              tones[t.owner],
+                            )}
+                          >
+                            {OWNER_LABEL[t.owner].short}
+                          </span>
+                        </div>
+                        <p
+                          className={cn(
+                            "max-w-[58ch] text-[14.5px] leading-relaxed",
+                            dark ? "text-white/55" : "text-muted-fg",
+                          )}
+                        >
+                          {t.sayIt}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const lightBefore = stages.filter((s) => !THEIRS.includes(s.id) && s.n < 4);
+  const darkMid = stages.filter((s) => THEIRS.includes(s.id));
+  const lightAfter = stages.filter((s) => !THEIRS.includes(s.id) && s.n > 6);
+  /* Filtering can empty all three dark stops at once; an unlit tunnel with
+     nothing in it is worse than no tunnel. */
+  const darkVisible = darkMid.some((s) => (byStage.get(s.id) ?? []).length > 0) || !filtering;
+
   return (
-    <>
+    <div ref={rootRef}>
       <style>{STAGE_CSS}</style>
       <noscript>
         <style>{STAGE_NOSCRIPT}</style>
       </noscript>
+
       {/* Opaque, not translucent: the site header can be glassy because it is
           52px of chrome, but a second bar that lets a paragraph ghost through
-          it reads as a rendering fault rather than as depth. Sticky from sm. A phone cannot fit the field and four chips on
-          one line, and a two-row bar pinned under a 52px header would eat a
-          sixth of the viewport for the whole scroll. */}
+          it reads as a rendering fault rather than as depth. Sticky from sm.
+          A phone cannot fit the field and four chips on one line, and a
+          two-row bar pinned under a 52px header would eat a sixth of the
+          viewport for the whole scroll. */}
       <div className="static z-30 -mx-5 mt-14 border-y border-border-soft bg-bg px-5 py-2.5 sm:sticky sm:top-[3.25rem] md:-mx-7 md:px-7">
         <div className="flex flex-col gap-y-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
           <div className="relative min-w-0 sm:max-w-xs sm:flex-1">
@@ -219,9 +512,7 @@ export function GlossaryBrowser({
             role="group"
             aria-label="How many words to show"
             /* self-start or the column layout on a phone stretches the track
-               to full width and leaves dead rail after the second segment.
-               Back to centre from sm, where it sits beside the field — the two
-               are the same height today, so this only matters if one changes. */
+               to full width and leaves dead rail after the second segment. */
             className="flex shrink-0 self-start items-center gap-0.5 rounded-lg border border-border bg-bg-2 p-0.5 sm:self-center"
           >
             {[
@@ -237,9 +528,7 @@ export function GlossaryBrowser({
                   aria-pressed={active}
                   className={cn(
                     "pressable h-10 rounded-[0.4rem] px-3 text-[13px] whitespace-nowrap transition-colors sm:h-8 sm:px-3 sm:text-[12.5px]",
-                    active
-                      ? "bg-card font-medium text-fg shadow-sm"
-                      : "text-muted-fg hover:text-fg",
+                    active ? "bg-card font-medium text-fg shadow-sm" : "text-muted-fg hover:text-fg",
                   )}
                 >
                   {seg.label} <span className="num text-dim">{seg.count}</span>
@@ -253,9 +542,9 @@ export function GlossaryBrowser({
           </p>
         </div>
 
-        {/* A search hit the switch is sitting on has to be admitted to, or the
-            empty state tells the reader a word they can see on this site does
-            not exist. This line outranks the standing explanation. */}
+        {/* A search hit the switch is sitting on has to be admitted to, or
+            the empty state tells the reader a word they can see on this site
+            does not exist. This line outranks the standing explanation. */}
         {/* Suppressed at zero results: the empty-state panel below makes the
             same offer, and printing it twice reads as a stutter. */}
         {withheld > 0 && shown.length > 0 ? (
@@ -280,15 +569,13 @@ export function GlossaryBrowser({
 
       {/* Two different nothings. The word may genuinely not be in the corpus,
           or it may be sitting one switch-position away — and telling somebody
-          "nothing matches BIMI" on a page that defines BIMI is the worst thing
-          this component could say. */}
+          "nothing matches BIMI" on a page that defines BIMI is the worst
+          thing this component could say. */}
       {shown.length === 0 ? (
         <div className="mt-16 rounded-xl border border-border-soft bg-bg-2 px-5 py-10 text-center">
           {withheld > 0 ? (
             <>
-              <p className="text-[15px] text-fg">
-                “{q.trim()}” is here — just not in the essentials.
-              </p>
+              <p className="text-[15px] text-fg">“{q.trim()}” is here — just not in the essentials.</p>
               <p className="mx-auto mt-2 max-w-[42ch] text-[13.5px] leading-relaxed text-muted-fg">
                 {withheld === 1 ? "One word matches" : `${withheld} words match`} further up the
                 ladder — things you meet after the first week rather than during it.
@@ -324,134 +611,34 @@ export function GlossaryBrowser({
         </div>
       ) : null}
 
-      {stages.map((s) => {
-        const list = byStage.get(s.id) ?? [];
-        if (filtering && list.length === 0) return null;
-        /* Stops 4 and 5 happen inside Gmail, not inside your platform. Giving
-           them their own surface turns eight identically-separated sections
-           into a page with a spine: your building, their building, yours
-           again — which is also the argument the page is making. */
-        const theirs = s.id === "judge" || s.id === "filter";
-        return (
-          <section
-            key={s.id}
-            id={s.id}
-            className={cn(
-              "scroll-mt-[7.5rem]",
-              theirs
-                ? "mt-3 rounded-xl border border-border bg-bg-2 px-4 py-4 sm:mt-8 sm:rounded-2xl sm:px-8 sm:py-10 sm:first:mt-16"
-                : "sm:pt-16",
-            )}
-          >
-            {theirs ? (
-              <p className="label mb-2 flex items-center gap-2 text-muted-fg sm:mb-5">
-                <span aria-hidden className="h-px w-6 bg-fg/25" />
-                Their building — not in your platform
-              </p>
-            ) : null}
+      {/* ── Your building ────────────────────────────────────────────────── */}
+      <div className="mt-4 space-y-14 sm:mt-8 sm:space-y-20">
+        {lightBefore.map((s) => (
+          <Chapter key={s.id} s={s} dark={false} />
+        ))}
+      </div>
 
-            {/* A button and a panel, not <details>: a closed <details> hides
-                its own content at the UA level, so the desktop media query
-                that opens the panel could never win. */}
-            <div>
-              <button
-                type="button"
-                onClick={() => toggle(s.id)}
-                aria-expanded={isOpen(s.id)}
-                aria-controls={`${s.id}-body`}
-                className="stage-summary flex w-full cursor-pointer items-center gap-x-3 border-b border-border-soft py-3.5 text-left">
-                <span className="num text-[13px] font-semibold text-accent">
-                  {String(s.n).padStart(2, "0")}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[1.2rem] leading-tight font-semibold tracking-tight">
-                    {s.name}
-                  </span>
-                  <span className="num mt-1 block text-[11px] text-dim">
-                    {s.when} · {list.length} word{list.length === 1 ? "" : "s"}
-                  </span>
-                </span>
-                <span
-                  aria-hidden
-                  className={cn(
-                    "shrink-0 text-[18px] leading-none text-dim transition-transform",
-                    isOpen(s.id) && "rotate-45",
-                  )}
-                >
-                  +
-                </span>
-              </button>
+      {/* ── The descent: inside the receiver ─────────────────────────────── */}
+      {darkVisible ? (
+        <div className="mt-14 rounded-2xl bg-[#141417] px-4 py-8 sm:mt-20 sm:rounded-3xl sm:px-9 sm:py-12">
+          <p className="label flex items-center gap-2 text-white/40">
+            <span aria-hidden className="h-px w-6 bg-white/25" />
+            Their building — the page goes dark with it
+          </p>
+          <div className="mt-6 space-y-14 sm:mt-8 sm:space-y-16">
+            {darkMid.map((s) => (
+              <Chapter key={s.id} s={s} dark />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
-              <div className="stage-body" id={`${s.id}-body`} data-open={isOpen(s.id)}>
-                <div>
-                  {/* Repeated from the summary, for sm and up where the
-                      summary is hidden. */}
-                  <div className="hidden flex-wrap items-baseline gap-x-3 gap-y-1 sm:flex">
-                    <span className="num text-[13px] font-semibold text-accent">
-                      {String(s.n).padStart(2, "0")}
-                    </span>
-                    <h2 className="text-[clamp(1.45rem,3vw,1.85rem)] leading-tight font-semibold tracking-tight">
-                      {s.name}
-                    </h2>
-                    <span className="num text-[11.5px] text-dim">{s.when}</span>
-                  </div>
-
-                  <p className="mt-3 max-w-[58ch] text-[1.02rem] leading-relaxed text-fg sm:mt-2.5">
-                    {s.what}
-                  </p>
-
-                  <details className="faq-item mt-3 max-w-[58ch]">
-                    <summary className="inline-flex h-11 cursor-pointer list-none items-center text-[13.5px] font-medium text-muted-fg hover:text-fg sm:h-auto sm:py-1 [&::-webkit-details-marker]:hidden">
-                      Why this stop decides things
-                      <span aria-hidden className="ml-1.5 text-dim">
-                        +
-                      </span>
-                    </summary>
-                    <div className="faq-body">
-                      <div>
-                        <p className="pt-1 text-[14.5px] leading-relaxed text-muted-fg">{s.intro}</p>
-                      </div>
-                    </div>
-                  </details>
-
-                  {slots?.[s.id] ? <div className="mt-6 sm:mt-7">{slots[s.id]}</div> : null}
-
-                  <ul className="mt-6 list-none border-t border-border-soft p-0 sm:mt-7">
-              {list.map((t) => (
-                <li key={t.id} className="border-b border-border-soft">
-                  <Link
-                    href={`/how-email-works/${t.id}`}
-                    className="group grid grid-cols-1 gap-x-6 gap-y-1.5 px-1 py-4 transition-colors hover:bg-muted/40 sm:grid-cols-[13rem_1fr] sm:px-2"
-                  >
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:block">
-                      <span className="text-[15px] font-semibold tracking-tight decoration-1 underline-offset-[5px] group-hover:underline">
-                        {t.term}
-                      </span>
-                      {/* Inline beside the term on a phone, on its own line
-                          from sm. Left inline at sm it butts straight into the
-                          term with no separator, because JSX eats the space. */}
-                      <span
-                        className={cn(
-                          "inline-flex shrink-0 rounded-full border px-1.5 py-0.5 text-[10.5px] font-medium sm:mt-1.5 sm:flex sm:w-fit",
-                          OWNER_TONE[t.owner],
-                        )}
-                      >
-                        {OWNER_LABEL[t.owner].short}
-                      </span>
-                    </div>
-                    <p className="max-w-[58ch] text-[14.5px] leading-relaxed text-muted-fg">
-                      {t.sayIt}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </section>
-        );
-      })}
-    </>
+      {/* ── Back into daylight: what comes back ──────────────────────────── */}
+      <div className="mt-14 space-y-14 sm:mt-20 sm:space-y-20">
+        {lightAfter.map((s) => (
+          <Chapter key={s.id} s={s} dark={false} />
+        ))}
+      </div>
+    </div>
   );
 }
