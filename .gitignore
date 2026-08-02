@@ -42,3 +42,13 @@ next-env.d.ts
 
 # Research and strategy. Public repo: these stay local.
 docs/
+
+# Agent tooling. Local to whoever is working, not part of the product.
+.agents/
+.claude/
+.cnvs/
+.grok/
+skills-lock.json
+
+# Generated chart assets, 11 MB and referenced by nothing in src/.
+imagenai/
