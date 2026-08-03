@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Panel } from "@/components/bits";
 import { buttonVariants } from "@/components/ui/button";
 import { inboundDomain, newCheckId, RETENTION_DAYS } from "@/lib/message-check";
@@ -47,10 +46,14 @@ const CHECKS: { title: string; body: string }[] = [
 export default async function MessageCheckPage() {
   const domain = inboundDomain();
 
-  async function issue() {
-    "use server";
-    redirect(`/check/message/${newCheckId()}`);
-  }
+  /* Minted during this render rather than by a server action on click.
+     The action version posted nothing at all in testing: one hydration error
+     from an unrelated browser extension is enough to leave a form handler
+     attached and dead, and the only thing standing between a visitor and the
+     entire product was that one button. A link is a GET. It cannot fail to
+     fire, it works with JavaScript off, and the page is already
+     force-dynamic, so every arrival gets a fresh address. */
+  const id = newCheckId();
 
   return (
     <div className="shell shell-tight py-12 sm:py-16">
@@ -62,19 +65,26 @@ export default async function MessageCheckPage() {
         what you actually send.
       </p>
 
+      {/* The address itself, on arrival, not behind a click. Nobody needs to
+          press a button to be given a string. */}
       {domain ? (
         <Panel className="mt-8 p-5 sm:p-6">
-          <form action={issue}>
-            <button
-              type="submit"
-              className={cn(buttonVariants({ size: "lg" }), "h-10 rounded-[10px] px-5 font-semibold")}
-            >
-              Get a one-time address
-            </button>
-          </form>
+          <p className="label">Send one email to</p>
+          <p className="num mt-2.5 text-[clamp(0.95rem,3.1vw,1.35rem)] leading-tight break-all">
+            {id}@{domain}
+          </p>
+          <Link
+            href={`/check/message/${id}`}
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "mt-5 h-10 rounded-[10px] px-5 font-semibold",
+            )}
+          >
+            Open the page that waits for it
+          </Link>
           <p className="mt-3 max-w-[58ch] text-[0.88rem] leading-relaxed text-dim">
-            You get an address to send one email to, on a page you leave open. When the message
-            lands, that page becomes the result. Free, no account, no score.
+            Single use. Leave that page open and it becomes the result the moment the message
+            lands. Free, no account, no score.
           </p>
         </Panel>
       ) : (
