@@ -8,7 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "Check my domain",
   description:
-    "A live SPF, DKIM and DMARC check for your sending domain, read against every dated rule on this site. Free, no account, findings with sources rather than a score.",
+    "A live SPF, DKIM, DMARC and blocklist check for your sending domain, read against every dated rule on this site. We name which blocklists answered and which declined, and whose job each finding is. Free, no account, findings with sources rather than a score.",
   alternates: { canonical: "/check" },
 };
 
@@ -34,7 +34,8 @@ export default async function Check({
           they have not run yet; the case for the method belongs after the
           result is on its way, not in front of the only control on the page. */}
       <p className="mt-4 max-w-[54ch] text-[1.04rem] leading-relaxed text-muted-fg">
-        Live DNS for SPF, DKIM, DMARC, BIMI and MX. If nothing is wrong, we say so.
+        Live DNS for SPF, DKIM, DMARC, BIMI and MX, plus the blocklists. If nothing is wrong, we
+        say so.
       </p>
 
       <form action={run} className="mt-6 flex max-w-[520px] gap-2.5">
@@ -79,14 +80,25 @@ export default async function Check({
           </Link>{" "}
           and get the alignment verdict DNS cannot give.
         </div>
+
+        <div className="mt-4 max-w-[68ch] rounded-lg border p-4 text-[0.9rem] leading-relaxed text-muted-fg">
+          <b className="text-fg">On blocklists, two refusals.</b> We will not expand your sending
+          platform&rsquo;s ranges. A shared pool&rsquo;s reputation and its removal channel belong to
+          the platform, so handing you a stranger&rsquo;s listed address hands you a fire you cannot
+          put out — we name the platform instead. And we will not read a list&rsquo;s silence as good
+          news: every list here answers an entry it is required to publish before we believe anything
+          it says about you, so a list that declines is reported as declined rather than as clean.
+          Most checkers cannot tell those two apart.
+        </div>
       </section>
 
       <section className="mt-12 border-t pt-10">
         <h2 className="text-[1.3rem]">Two free checks. Nothing priced yet.</h2>
         <ul className="mt-4 max-w-[58ch] list-none space-y-3 p-0 text-[0.95rem] leading-relaxed text-muted-fg">
           <li>
-            <b className="text-fg">Domain (DNS)</b> — SPF, DMARC, common DKIM selectors, BIMI, MX.
-            Shareable result URL. The box above.
+            <b className="text-fg">Domain (DNS and blocklists)</b> — SPF, DMARC, common DKIM
+            selectors, BIMI, MX, and whether your domain or the addresses your own SPF names are
+            listed anywhere. Shareable result URL. The box above.
           </li>
           <li>
             <b className="text-fg">A whole message</b> —{" "}

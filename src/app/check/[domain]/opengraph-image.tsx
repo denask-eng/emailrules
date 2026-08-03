@@ -1,9 +1,10 @@
 import { ImageResponse } from "next/og";
+import { checkBlocklists } from "@/lib/blocklist-check";
 import { checkDomain, normaliseDomain } from "@/lib/dns-check";
-import type { Severity } from "@/lib/dns-check";
+import type { Finding, Severity } from "@/lib/dns-check";
 import { fmtDate } from "@/lib/format";
 
-export const alt = "A live SPF, DKIM and DMARC check — findings, not a score";
+export const alt = "A live authentication and blocklist check — findings, not a score";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -65,13 +66,19 @@ export default async function Image({ params }: { params: Promise<{ domain: stri
   if (!d) return Bare();
 
   let result;
+  let findings: Finding[];
   try {
-    result = await checkDomain(d);
+    /* Both halves, because the page shows both. A card that counted only the
+       authentication findings would contradict the result it links to, in
+       somebody else's Slack channel, where neither of us can correct it. */
+    const [dns, blocklist] = await Promise.all([checkDomain(d), checkBlocklists(d)]);
+    result = dns;
+    findings = [...dns.findings, ...blocklist.findings];
   } catch {
     return Bare();
   }
 
-  const count = (s: Severity) => result.findings.filter((f) => f.severity === s).length;
+  const count = (s: Severity) => findings.filter((f) => f.severity === s).length;
   const fails = count("fail");
   const warns = count("warn");
   const passes = count("pass");
@@ -79,7 +86,7 @@ export default async function Image({ params }: { params: Promise<{ domain: stri
 
   const verdict =
     fails === 0 && warns === 0
-      ? "Nothing to fix on authentication."
+      ? "Nothing to fix on authentication or reputation."
       : `${fails > 0 ? `${fails} thing${fails > 1 ? "s" : ""} to fix` : "Nothing broken"}${
           warns > 0 ? `, ${warns} worth a look` : ""
         }.`;
@@ -112,7 +119,7 @@ export default async function Image({ params }: { params: Promise<{ domain: stri
               <span style={{ color: ACCENT }}>.today</span>
             </div>
             <span>·</span>
-            <span>Authentication check</span>
+            <span>Authentication and blocklists</span>
             <span>·</span>
             <span>Checked {fmtDate(result.checkedAt)}</span>
           </div>

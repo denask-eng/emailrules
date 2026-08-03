@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { checkDomain, normaliseDomain } from "@/lib/dns-check";
+import { checkBlocklists } from "@/lib/blocklist-check";
+import { checkDomain, normaliseDomain, type Finding, type Severity } from "@/lib/dns-check";
 import { observeDomain, observedDayCount } from "@/lib/domain-history";
 import { getRule, fmtDate } from "@/lib/rules";
 import { SITE } from "@/lib/site";
@@ -32,8 +33,8 @@ export async function generateMetadata({
   const d = normaliseDomain(decodeURIComponent(domain));
   if (!d) return { title: "Check" };
 
-  const title = `${d} — authentication check`;
-  const description = `Live SPF, DKIM and DMARC for ${d}. Findings with the dated rule each one comes from — never a score.`;
+  const title = `${d} — authentication and blocklist check`;
+  const description = `Live SPF, DKIM, DMARC and blocklists for ${d}, with every finding named as your job or your sending platform's. The dated rule behind each one — never a score.`;
 
   return {
     title,
@@ -61,15 +62,29 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
      so this is unconditional — not a feature anyone opts into. */
   after(() => observeDomain(d));
 
-  const [result, daysObserved] = await Promise.all([checkDomain(d), observedDayCount(d)]);
-  const fails = result.findings.filter((f) => f.severity === "fail").length;
-  const warns = result.findings.filter((f) => f.severity === "warn").length;
+  /* Authentication and reputation are two different questions about the same
+     domain and neither answers the other, so they are asked together and read
+     as one list. The blocklist half proves each list is still talking before
+     it believes a silence — see lib/blocklist-check.ts. */
+  const [result, blocklist, daysObserved] = await Promise.all([
+    checkDomain(d),
+    checkBlocklists(d),
+    observedDayCount(d),
+  ]);
+
+  const SEVERITY_ORDER: Record<Severity, number> = { fail: 0, warn: 1, pass: 2, info: 3 };
+  const findings: Finding[] = [...result.findings, ...blocklist.findings].sort(
+    (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+  );
+
+  const fails = findings.filter((f) => f.severity === "fail").length;
+  const warns = findings.filter((f) => f.severity === "warn").length;
 
   /* Resolve rule titles so each finding can name its source rather than
      asserting on its own authority. */
   const ruleTitles: Record<string, string> = {};
   await Promise.all(
-    [...new Set(result.findings.map((f) => f.rule).filter(Boolean) as string[])].map(async (slug) => {
+    [...new Set(findings.map((f) => f.rule).filter(Boolean) as string[])].map(async (slug) => {
       const r = await getRule(slug);
       if (r) ruleTitles[slug] = r.title;
     }),
@@ -78,20 +93,20 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <p className="label">
-        Authentication check · <span className="num">{fmtDate(result.checkedAt)}</span>
+        Authentication and blocklists · <span className="num">{fmtDate(result.checkedAt)}</span>
       </p>
       <h1 className="num mt-3 text-[clamp(1.6rem,4.5vw,2.5rem)]">{result.domain}</h1>
 
       <p className="mt-5 max-w-[62ch] text-[1.04rem] leading-relaxed text-muted-fg">
         {fails === 0 && warns === 0
-          ? "Nothing to fix on authentication. That is a real outcome and you get it plainly."
+          ? "Nothing to fix on authentication or reputation. That is a real outcome and you get it plainly."
           : `${fails > 0 ? `${fails} thing${fails > 1 ? "s" : ""} to fix` : "Nothing broken"}${
               warns > 0 ? `, ${warns} worth a look` : ""
             }. Every finding names the rule it comes from.`}
       </p>
 
-      <FindingTally findings={result.findings} />
-      <FindingList findings={result.findings} ruleTitles={ruleTitles} />
+      <FindingTally findings={findings} />
+      <FindingList findings={findings} ruleTitles={ruleTitles} />
 
       <div className="mt-9 rounded-xl border bg-bg-2 p-5 text-[0.92rem] leading-relaxed text-muted-fg">
         <b className="text-fg">What this cannot see.</b> DNS tells us what you have published, not
