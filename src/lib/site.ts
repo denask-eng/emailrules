@@ -76,6 +76,7 @@ export const FOOTER_NAV = [
       { href: "/sources", label: "Sources" },
       { href: "/how-email-works", label: "How email works" },
       { href: "/esp", label: "Your platform" },
+      { href: "/blocklists", label: "Blocklist census" },
       { href: "/coverage", label: "Coverage map" },
       { href: "/embed", label: "Embed the check" },
     ],

@@ -481,4 +481,69 @@ export async function censusLists(): Promise<ListReport[]> {
   return (await usableLists()).reports;
 }
 
+export interface CensusRow {
+  label: string;
+  zone: string;
+  status: ListStatus;
+  /** We query this one when checking somebody. */
+  queried: boolean;
+  /** What it lists, or why we do not query it. */
+  note: string;
+  kind?: ListKind;
+  home?: string;
+}
+
+/**
+ * The whole ecosystem, asked the same question at the same moment.
+ *
+ * Both halves are probed live — the roster we query and the zones we refuse —
+ * because "we do not use that one, it is dead" is a claim, and a claim on this
+ * site has to be a measurement with a date on it. It is also the only way the
+ * page stays true: a zone that comes back gets reported as answering even
+ * while it sits in the refused column, and that discrepancy is the signal to
+ * go and re-decide rather than something a reader has to catch for us.
+ */
+export async function census(): Promise<CensusRow[]> {
+  const roster = activeLists();
+  const rosterRows = await Promise.all(
+    roster.map(async (list) => ({
+      label: list.label,
+      zone: list.zone,
+      status: await listStatus(list),
+      queried: true,
+      note: list.describes,
+      kind: list.kind,
+      home: list.home,
+    })),
+  );
+
+  /* The refused ones get the RFC 5782 controls too. Every one of them is an
+     address list, which is what makes 127.0.0.2 and 127.0.0.1 usable here. */
+  const excludedRows = await Promise.all(
+    EXCLUDED.map(async (entry) => {
+      const probe: ListDef = {
+        id: `excluded:${entry.zone}`,
+        zone: entry.zone,
+        label: entry.label,
+        target: "ip",
+        kind: "address",
+        describes: entry.reason,
+        home: "",
+        delisting: "self-service",
+        control: "2.0.0.127",
+        clean: "1.0.0.127",
+      };
+      return {
+        label: entry.label,
+        zone: entry.zone,
+        status: await listStatus(probe),
+        queried: false,
+        note: entry.reason,
+      };
+    }),
+  );
+
+  return [...rosterRows, ...excludedRows];
+}
+
 export { EXCLUDED as EXCLUDED_LISTS };

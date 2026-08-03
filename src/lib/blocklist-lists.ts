@@ -277,6 +277,21 @@ export const LISTS: ListDef[] = [
     clean: IP_CONTROL_CLEAN,
   },
   {
+    /* Found by auditing a competitor's own result page rather than by our own
+       sweep, which is worth recording: the roster is only as complete as the
+       last place we looked. It answers both controls on two resolvers. */
+    id: "schulte",
+    zone: "rbl.schulte.org",
+    label: "Schulte",
+    target: "ip",
+    kind: "address",
+    describes: "Addresses Schulte's operators list for spam and abuse.",
+    home: "https://rbl.schulte.org/",
+    delisting: "self-service",
+    control: IP_CONTROL_LISTED,
+    clean: IP_CONTROL_CLEAN,
+  },
+  {
     id: "jippg",
     zone: "mail-abuse.blacklist.jippg.org",
     label: "JIPPG",
@@ -463,6 +478,12 @@ export interface ExcludedList {
  * one of those silences is counted as a pass.
  */
 export const EXCLUDED: ExcludedList[] = [
+  { zone: "hil.habeas.com", label: "HIL", reason: "No nameserver answers for the zone." },
+  { zone: "spam.rbl.msrbl.net", label: "MSRBL Spam", reason: "No nameserver answers for the zone." },
+  { zone: "phishing.rbl.msrbl.net", label: "MSRBL Phishing", reason: "No nameserver answers for the zone." },
+  { zone: "blacklist.sci.kun.nl", label: "SERVICESNET", reason: "No nameserver answers for the zone." },
+  { zone: "unsure.nether.net", label: "NETHERUNSURE", reason: "No nameserver answers for the zone." },
+  { zone: "bl.drmx.org", label: "DRMX", reason: "The zone resolves but publishes no RFC 5782 test entry." },
   { zone: "dnsbl.sorbs.net", label: "SORBS", reason: "Shut down in June 2024. The zone has no nameserver." },
   { zone: "spam.dnsbl.sorbs.net", label: "SORBS Spam", reason: "Shut down in June 2024. The zone has no nameserver." },
   { zone: "ubl.unsubscore.com", label: "LASHBACK", reason: "No nameserver answers for the zone." },
