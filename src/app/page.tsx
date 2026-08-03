@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { runCheck } from "@/app/actions";
 import { SubscribeForm } from "@/components/subscribe-form";
 import { getAllRules, getChangelog, getStats, countsByTopic, fmtDate } from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
@@ -234,41 +233,59 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="shell border-t py-10 sm:py-12">
-        <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-12">
-          <div>
+      {/* One box, on the homepage, taking the same anything the check page
+          takes. Two different-shaped inputs for the same engine was the site
+          asking the reader to know which question they had. */}
+      <section className="border-t bg-bg-2 py-12 sm:py-16">
+        <div className="shell">
+          <div className="mx-auto max-w-2xl">
             <p className="label">The check</p>
-            <h2 className="mt-2.5 text-[1.35rem] tracking-tight sm:text-[1.5rem]">
-              A calm look at your sending domain
+            <h2 className="mt-3 text-[clamp(1.6rem,4vw,2.4rem)] tracking-tight">
+              Paste anything. We work out what it is.
             </h2>
-            <p className="mt-2.5 max-w-[62ch] text-[14.5px] leading-relaxed text-muted-fg">
-              Live SPF, DKIM and DMARC read straight from DNS — findings with sources, never a
-              scary score out of ten. If you are clean, we say so.
+            <p className="mt-3 max-w-[54ch] text-[15px] leading-relaxed text-muted-fg">
+              A domain, an address, an IP, or a whole campaign pasted in. Authentication, twenty-three
+              blocklists and the consent rules nobody else reads. Free, no account, and never a score.
             </p>
+
+            <form method="post" action="/api/detect" className="mt-6">
+              <label htmlFor="home-q" className="sr-only">
+                A domain, an address, an IP, or a whole message
+              </label>
+              <textarea
+                id="home-q"
+                name="q"
+                required
+                rows={2}
+                spellCheck={false}
+                placeholder={"yourbrand.com   ·   hello@yourbrand.com   ·   23.83.223.10\n…or paste a whole message"}
+                className="num field-sizing-content max-h-[32vh] min-h-[4.5rem] w-full resize-y rounded-xl border bg-card px-3.5 py-3 text-[14px] leading-relaxed outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25"
+                style={{ boxShadow: "var(--lift)" }}
+              />
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <button
+                  type="submit"
+                  className={cn(
+                    buttonVariants({ size: "lg" }),
+                    "h-11 rounded-[10px] px-5 font-medium",
+                  )}
+                >
+                  Read it
+                </button>
+                <span className="text-[13px] text-dim">
+                  Nothing stored but the findings.{" "}
+                  <Link
+                    href="/check/message"
+                    className="underline underline-offset-3 hover:text-fg"
+                  >
+                    Or send us one
+                  </Link>
+                  .
+                </span>
+              </div>
+            </form>
           </div>
-          <form className="flex min-w-0 max-w-md gap-2.5" action={runCheck}>
-            <input
-              name="domain"
-              required
-              placeholder="yourbrand.com"
-              aria-label="Sending domain"
-              className="num h-11 min-w-0 flex-1 rounded-[10px] border bg-card px-3.5 text-[14px] outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25 md:w-[14rem] md:flex-none"
-            />
-            <button
-              type="submit"
-              className={cn(buttonVariants({ size: "lg" }), "h-11 rounded-[10px] px-5 font-medium")}
-            >
-              Run check
-            </button>
-          </form>
         </div>
-        <p className="mt-4 max-w-[72ch] text-[13px] leading-relaxed text-muted-fg">
-          Free, no account, no score. Have a real message?{" "}
-          <Link href="/check/headers" className="text-fg underline decoration-1 underline-offset-3">
-            Paste its headers
-          </Link>{" "}
-          for DKIM alignment and one-click unsubscribe — DNS alone cannot prove those.
-        </p>
       </section>
 
       <section id="subscribe" className="shell border-t py-10">

@@ -78,12 +78,16 @@ export function BlocklistVerdict({
   contextual,
   lists,
   checkedWhat,
+  showHeadline = true,
 }: {
   actionable: Hit[];
   contextual: Hit[];
   lists: ListReport[];
   /** "klaviyo.com", or the address a real message came from. */
   checkedWhat: string;
+  /** Off where the page's own h1 is already the verdict, so it is not said
+      twice in two different sizes a few lines apart. */
+  showHeadline?: boolean;
 }) {
   const answered = lists.filter((l) => l.status === "answered");
   const unanswered = lists.filter((l) => l.status !== "answered");
@@ -101,9 +105,11 @@ export function BlocklistVerdict({
   return (
     <section className="mt-12 border-t pt-9">
       <p className="label">Blocklists</p>
-      <h2 className="mt-3 max-w-[26ch] text-[clamp(1.35rem,3vw,1.75rem)] leading-tight tracking-tight">
-        {headline}
-      </h2>
+      {showHeadline ? (
+        <h2 className="mt-3 max-w-[26ch] text-[clamp(1.35rem,3vw,1.75rem)] leading-tight tracking-tight">
+          {headline}
+        </h2>
+      ) : null}
 
       {/* The arithmetic, said once, in the order a person would ask it. */}
       <p className="num mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-muted-fg">

@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { normaliseDomain } from "@/lib/dns-check";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -19,47 +17,52 @@ export default async function Check({
 }) {
   const { e } = await searchParams;
 
-  async function run(formData: FormData) {
-    "use server";
-    const domain = normaliseDomain(String(formData.get("domain") ?? ""));
-    if (!domain) redirect("/check?e=1");
-    redirect(`/check/${domain}`);
-  }
-
   return (
     <div className="shell shell-tight py-12 sm:py-16">
-      <h1 className="text-[clamp(1.9rem,5.2vw,2.9rem)]">Check a sending domain</h1>
+      <h1 className="text-[clamp(1.9rem,5.2vw,2.9rem)]">Paste anything.</h1>
 
-      {/* One line, then the box. Nobody arrives here to read about a checker
-          they have not run yet; the case for the method belongs after the
-          result is on its way, not in front of the only control on the page. */}
-      <p className="mt-4 max-w-[54ch] text-[1.04rem] leading-relaxed text-muted-fg">
-        Live DNS for SPF, DKIM, DMARC, BIMI and MX, plus the blocklists. If nothing is wrong, we
-        say so.
+      {/* One box, because choosing between four doors requires already knowing
+          which question you have, and the person whose actual sentence is "our
+          emails go to spam" does not. Every door is opened by a string they
+          already have in their clipboard, so the box reads the string. */}
+      <p className="mt-4 max-w-[56ch] text-[1.04rem] leading-relaxed text-muted-fg">
+        A domain, an email address, an IP, or a whole message pasted in. We work out what it is and
+        answer the question that string can actually answer.
       </p>
 
-      <form action={run} className="mt-6 flex max-w-[520px] gap-2.5">
-        <input
-          name="domain"
+      {/* A plain form posting to a route handler. Not a server action: the one
+          on /check/message posted nothing at all from a real browser once an
+          extension broke hydration, and the way into the product does not get
+          to depend on React being alive. */}
+      <form method="post" action="/api/detect" className="mt-6 max-w-[620px]">
+        <label htmlFor="q" className="sr-only">
+          A domain, an address, an IP, or a whole message
+        </label>
+        <textarea
+          id="q"
+          name="q"
           required
-          placeholder="yourbrand.com"
-          aria-label="Sending domain"
-          className="num h-10 flex-1 rounded-lg border border-border bg-bg px-3 text-[0.9rem] outline-none focus-visible:ring-3 focus-visible:ring-accent/25"
+          rows={3}
+          spellCheck={false}
+          placeholder={"yourbrand.com\nhello@yourbrand.com\n23.83.223.10\n…or paste a whole message"}
+          className="num field-sizing-content max-h-[40vh] min-h-[5.5rem] w-full resize-y rounded-xl border border-border bg-card px-3.5 py-3 text-[0.92rem] leading-relaxed outline-none focus-visible:ring-3 focus-visible:ring-accent/25"
         />
-        <button type="submit" className={cn(buttonVariants({ size: "lg" }), "h-10 px-5 font-semibold")}>
-          Run check
-        </button>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button
+            type="submit"
+            className={cn(buttonVariants({ size: "lg" }), "h-10 rounded-[10px] px-5 font-semibold")}
+          >
+            Read it
+          </button>
+          <span className="text-[13px] text-dim">No signup. Nothing stored but the findings.</span>
+        </div>
       </form>
+
       {e ? (
-        <p role="alert" className="mt-2.5 text-[0.86rem] text-live">
-          That does not look like a domain. Try yourbrand.com.
+        <p role="alert" className="mt-3 max-w-[58ch] text-[0.9rem] leading-relaxed text-live">
+          {e}
         </p>
-      ) : (
-        <p className="mt-2.5 text-[0.86rem] text-dim">
-          One domain, no signup. Results get a shareable URL. Nothing is stored and no account is
-          created.
-        </p>
-      )}
+      ) : null}
 
       <section className="mt-14 border-t pt-10">
         <h2 className="text-[1.3rem]">What you get, and what we refuse to give you</h2>
@@ -93,23 +96,30 @@ export default async function Check({
       </section>
 
       <section className="mt-12 border-t pt-10">
-        <h2 className="text-[1.3rem]">Two free checks. Nothing priced yet.</h2>
-        <ul className="mt-4 max-w-[58ch] list-none space-y-3 p-0 text-[0.95rem] leading-relaxed text-muted-fg">
-          <li>
-            <b className="text-fg">Domain (DNS and blocklists)</b> — SPF, DMARC, common DKIM
-            selectors, BIMI, MX, and whether your domain or the addresses your own SPF names are
-            listed anywhere. Shareable result URL. The box above.
-          </li>
-          <li>
-            <b className="text-fg">A whole message</b> —{" "}
-            <Link href="/check/message" className="text-fg underline decoration-1 underline-offset-3">
-              give us a real campaign
-            </Link>{" "}
-            and you get DKIM alignment, the RFC 8058 unsubscribe pair, your postal address, whether
-            Apple has any text to summarise, and the consent rules a pixel puts you under. Everyone
-            checks a message against authentication; nobody checks one against consent.
-          </li>
-        </ul>
+        <h2 className="text-[1.3rem]">What the box does with each thing</h2>
+        <dl className="num mt-5 grid max-w-[62ch] grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-3 text-[0.9rem] sm:gap-x-8">
+          {[
+            ["a domain", "authentication, then twenty-three blocklists"],
+            ["an address", "the domain it sends from"],
+            ["an IP", "every list that answered today, sorted by whether the entry is even about it"],
+            ["a message", "all of the above, plus the consent and content rules no other checker reads"],
+            ["a record", "we say what it is, and which domain to give us instead"],
+          ].map(([k, v]) => (
+            <div key={k} className="col-span-2 grid grid-cols-subgrid items-baseline border-b border-border-soft pb-3">
+              <dt className="text-dim whitespace-nowrap">{k}</dt>
+              <dd className="m-0 text-muted-fg">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-5 max-w-[58ch] text-[0.95rem] leading-relaxed text-muted-fg">
+          A message is the only one of those that can answer the question people actually arrive
+          with, because it carries the address that really sent your campaign and everything your
+          DNS cannot show.{" "}
+          <Link href="/check/message" className="text-fg underline decoration-1 underline-offset-3">
+            Send us one
+          </Link>
+          .
+        </p>
         <p className="mt-5 max-w-[58ch] text-[0.95rem] leading-relaxed text-muted-fg">
           One domain can also be watched: subscribe with it and we re-read its authentication DNS
           daily, emailing you only when a record actually moves. Klaviyo send scans and a paid plan
