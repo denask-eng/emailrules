@@ -57,11 +57,11 @@ export default async function HowToUse() {
             d:
               "Say what kind of work you do and where you send. You get five rules to open first, not all " +
               stats.total +
-              ". Of those " +
-              stats.total +
-              ", your email tool already covers " +
-              stats.notYours +
-              " — the site says so on every page rather than letting you worry about them.",
+              ". Every one of them is labelled: " +
+              stats.yours +
+              " are yours outright, " +
+              stats.shared +
+              " are part platform and part you, and the label sits on the page rather than leaving you to guess which half is on your desk.",
           },
           {
             t: "Every rule answers the same four questions",

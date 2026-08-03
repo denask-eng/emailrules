@@ -34,6 +34,7 @@ export type HistoryWrite =
   | { status: "recorded"; changed: boolean }
   | { status: "already-observed-today" }
   | { status: "skipped-unreliable"; unresolved: string[] }
+  | { status: "skipped-nonexistent" }
   | { status: "no-database" }
   | { status: "error"; message: string };
 
@@ -61,6 +62,16 @@ export async function recordDomainObservation(
       observation.unresolved.join(", "),
     );
     return { status: "skipped-unreliable", unresolved: observation.unresolved };
+  }
+
+  /* A name nobody registered answers NXDOMAIN to everything, which is a
+     perfectly reliable observation of nothing and would be written down as a
+     real row. Anyone could then mint pages here by curling names, and once
+     /domain is indexed those pages are in our own sitemap. The check itself
+     still runs and still answers — this only governs what enters the series,
+     because the series is the part that has to stay worth something. */
+  if (!observation.exists) {
+    return { status: "skipped-nonexistent" };
   }
 
   const today = observedOnUtc();

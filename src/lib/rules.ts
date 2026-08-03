@@ -99,8 +99,19 @@ export async function getStats() {
     inForce: all.filter((r) => r.status === "in_force").length,
     upcoming: all.filter((r) => r.status === "upcoming").length,
     lastReview: all.reduce((max, r) => (r.lastVerified > max ? r.lastVerified : max), ""),
-    /** The numbers that make this a reference rather than a compliance scare sheet. */
+    /**
+     * The numbers that make this a reference rather than a compliance scare sheet.
+     *
+     * `shared` and `fullyHandled` are separate on purpose. Folding them together
+     * is how the homepage came to say "only 15 of 39 need a person": `notYours`
+     * counts all three of esp, shared and context, and `shared` is defined by
+     * this site as "part platform, part you — the judgement is still yours".
+     * Eighteen rules whose judgement is yours are not rules nobody has to read,
+     * and exactly one rule on the shelf is genuinely finished for you.
+     */
     yours: own.yours,
+    shared: own.shared,
+    fullyHandled: own.esp,
     notYours: own.esp + own.shared + own.context,
     espHandled: own.esp + own.shared,
     nothingToDo: own.context,

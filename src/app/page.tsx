@@ -68,7 +68,8 @@ export default async function Home() {
           You ship campaigns. You do not have a free afternoon for folklore PDFs. Pick your desk
           below and the five that matter appear{" "}
           <b className="font-medium text-fg">on this page</b> — whose job each one is, and what to
-          do first. Of {stats.total} rules, only {yours} actually need a person.
+          do first. Of {stats.total} rules, {yours} are yours outright and {stats.shared} more are
+          half yours: the platform does the mechanics, the judgement stays on your desk.
         </p>
 
         <TrustStrip className="mt-10" />
@@ -78,7 +79,7 @@ export default async function Home() {
             items={[
               { v: String(stats.total), k: "rules" },
               { v: String(stats.inForce), k: "in force" },
-              { v: String(yours), k: "need a person" },
+              { v: String(yours), k: "yours outright" },
               { v: fmtDate(stats.lastReview), k: "last verified" },
             ]}
           />
@@ -127,7 +128,7 @@ export default async function Home() {
             {[
               {
                 t: "Whose job is this, really?",
-                d: `Of ${stats.total} rules on the shelf, about ${stats.notYours} are already handled by a mainstream email tool, shared with ops, or pure context. Roughly ${yours} still need a human. We name that so you stop re-implementing platform work and still catch what lands on your desk.`,
+                d: `Of ${stats.total} rules on the shelf, ${yours} are yours outright, ${stats.shared} are part platform and part you, ${stats.nothingToDo} are context you can only be aware of, and exactly ${stats.fullyHandled} is finished for you by any mainstream tool. That last number is small, and pretending otherwise would be the same overstatement everyone else in this category makes. What it buys you is knowing which half of a shared rule is actually on your desk.`,
               },
               {
                 t: "What actually moved?",

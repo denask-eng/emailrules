@@ -30,6 +30,20 @@ export type DomainObservation = {
   reliable: boolean;
   /** The names the resolver could not answer for. Empty when reliable. */
   unresolved: string[];
+  /**
+   * The apex name exists in the DNS hierarchy at all.
+   *
+   * A domain nobody registered answers NXDOMAIN to everything and produces a
+   * perfectly "reliable" observation of nothing — which the history table
+   * would happily write down. That is harmless while /domain is private and
+   * is an open write path into our own sitemap the moment it is indexed:
+   * anyone could mint ten thousand pages by curling ten thousand names.
+   *
+   * NXDOMAIN and NODATA are the distinction that stops it, and both are
+   * already in hand — no extra lookup. A registered domain with no TXT and no
+   * MX answers NODATA to both; an unregistered one answers NXDOMAIN to both.
+   */
+  exists: boolean;
 };
 
 const SELECTORS: [string, string][] = [
@@ -56,14 +70,21 @@ const WILDCARD_LABEL = "(wildcard _domainkey — selectors not enumerable)";
 const PROBE = "zz-no-such-selector-probe._domainkey";
 
 /** A lookup that came back with something we can write down. */
-type Lookup<T> = { value: T; resolved: boolean };
+type Lookup<T> = {
+  value: T;
+  resolved: boolean;
+  /** The answer was specifically "no such name", not "no such record". */
+  nxdomain?: boolean;
+};
 
 /* NXDOMAIN and NODATA are answers, not failures: the name exists in the
    hierarchy or it does not, and either way the record is absent. Every other
    code — SERVFAIL, timeout, refused — means our resolver fell over, and the
-   only honest response is to admit we did not look. */
-const ANSWERED_ABSENT = new Set(["ENOTFOUND", "ENODATA"]);
+   only honest response is to admit we did not look.
 
+   They are both answers and they do not mean the same thing, which is why
+   they are no longer collapsed: NODATA says the name is real and carries no
+   record of this type, NXDOMAIN says nobody registered it. */
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function attempt<T>(run: () => Promise<T>, empty: T): Promise<Lookup<T> | null> {
@@ -71,7 +92,8 @@ async function attempt<T>(run: () => Promise<T>, empty: T): Promise<Lookup<T> | 
     return { value: await run(), resolved: true };
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code ?? "";
-    if (ANSWERED_ABSENT.has(code)) return { value: empty, resolved: true };
+    if (code === "ENOTFOUND") return { value: empty, resolved: true, nxdomain: true };
+    if (code === "ENODATA") return { value: empty, resolved: true };
     return null;
   }
 }
@@ -150,10 +172,16 @@ export async function captureDomainObservation(domain: string): Promise<DomainOb
     dkim.sort();
   }
 
+  /* Only the apex counts. `_dmarc.<domain>` answering NXDOMAIN is the normal
+     state of a domain with no DMARC and says nothing about the domain itself,
+     so asking it here would call half the internet imaginary. */
+  const exists = !(spfL.nxdomain === true && mxL.nxdomain === true);
+
   return {
     snapshot: { spf, dmarc, dkim, bimi, mx },
     reliable: unresolved.length === 0,
     unresolved,
+    exists,
   };
 }
 
