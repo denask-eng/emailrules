@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Panel } from "@/components/bits";
-import { FindingList, FindingTally, type FindingOwnership } from "@/components/findings";
+import { FindingTally, type FindingOwnership } from "@/components/findings";
+import { MessageJourney } from "@/components/message-journey";
+import { toJourney } from "@/lib/message-journey";
 import { SubscribeForm } from "@/components/subscribe-form";
 import { buttonVariants } from "@/components/ui/button";
 import { fmtDate } from "@/lib/format";
@@ -154,7 +156,15 @@ async function Result({ check }: { check: MessageCheck }) {
       </p>
 
       <FindingTally findings={check.findings} />
-      <FindingList findings={check.findings} ruleTitles={ruleTitles} ownership={ownership} />
+
+      {/* The findings as a journey rather than a list. Same findings, told in
+          the order they happened to the message, which is the order the
+          explainer already teaches. */}
+      <MessageJourney
+        journey={toJourney(check.findings)}
+        ruleTitles={ruleTitles}
+        ownership={ownership}
+      />
 
       <div className="mt-9 rounded-xl border bg-bg-2 p-5 text-[0.92rem] leading-relaxed text-muted-fg">
         <b className="text-fg">What this proves, and what it does not.</b> We read the signature; we

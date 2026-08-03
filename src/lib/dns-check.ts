@@ -1,6 +1,7 @@
 import "server-only";
 
 import { promises as dns } from "node:dns";
+import type { StageId } from "@/content/how-email-works";
 
 /**
  * A real check, not a score.
@@ -27,6 +28,16 @@ export interface Finding {
    * on the site where they have already been told something is wrong.
    */
   term?: string;
+  /**
+   * Which stop on the journey this happens at.
+   *
+   * /how-email-works already teaches email as eight stops, and a finding is
+   * always something that went right or wrong at exactly one of them. Naming
+   * it lets a real message be read along the same eight stops the explainer
+   * uses for a hypothetical one. Omitted where the finding's glossary term
+   * already implies the stop, which is most of them.
+   */
+  stage?: StageId;
   /** Raw record, shown verbatim so the reader can check our work. */
   evidence?: string;
 }

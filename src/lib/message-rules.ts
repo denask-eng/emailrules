@@ -540,6 +540,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "pass",
         title: "A postal address is present in the message text",
+        stage: "build",
         detail:
           "CAN-SPAM requires a valid physical postal address on every commercial message, and one is readable in the text of this one. Whether it is still the right address is the part no checker can answer.",
         rule: RULE.canSpam,
@@ -548,6 +549,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: declaresBulk ? "fail" : "warn",
         title: "No postal address is readable in the message text",
+        stage: "build",
         detail: declaresBulk
           ? "This message carries unsubscribe headers, so its sender is treating it as bulk marketing, and CAN-SPAM requires a valid physical postal address on it. None could be read from the text. An address that exists only inside an image does not count, because the text is all a filter or a screen reader ever sees."
           : "No physical postal address could be read from the text. CAN-SPAM requires one on commercial mail; a single message cannot prove this one is commercial, so this is flagged rather than failed. An address that exists only inside an image does not count.",
@@ -560,6 +562,7 @@ export function messageFindings(input: MessageInput): Finding[] {
         severity: declaresBulk ? "warn" : "info",
         term: "opt-out",
         title: "No opt-out wording is readable in the message",
+        stage: "build",
         detail:
           "CAN-SPAM wants a clear and conspicuous explanation of how to stop the mail inside the message itself, not only in a header a recipient never sees. No unsubscribe or preferences wording was found in the text.",
         rule: RULE.canSpam,
@@ -574,6 +577,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "fail",
         title: "This message carries no live text",
+        stage: "react",
         detail:
           "Nothing readable could be extracted from the body, which is the signature of an image-only campaign. Apple Mail summarises from live text and ignores alt text, so a recipient on Apple Mail sees a summary generated from the subject line alone.",
         rule: RULE.apple,
@@ -582,6 +586,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "warn",
         title: `Only ${lead.length} characters of live text sit above the fold`,
+        stage: "react",
         detail:
           "Apple Mail builds its summary from the first live text in the message. There is not enough here for it to describe what the message is about, so the summary falls back on the subject line.",
         rule: RULE.apple,
@@ -590,6 +595,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "warn",
         title: "The first live text is template boilerplate",
+        stage: "react",
         detail:
           "The message opens with a view-in-browser or images-off line, so that is what Apple Mail summarises. Moving one real sentence above it is a template change, not a campaign change.",
         rule: RULE.apple,
@@ -598,6 +604,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "pass",
         title: `${lead.length} characters of real text open this message`,
+        stage: "react",
         detail:
           "There is live text at the top for Apple Mail to summarise from, rather than an image and a view-in-browser line. Whether it says something worth summarising is an editorial question, not a technical one.",
         rule: RULE.apple,
@@ -622,6 +629,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "info",
         title: "Italy applies the same consent test from 29 October 2026",
+        stage: "build",
         detail:
           "Conditional on your audience. If any recipient is in Italy, the Garante's position on individual open tracking starts biting on that date, and switching a pixel off per segment is a build rather than a checkbox in most platforms.",
         rule: RULE.italy,
@@ -630,6 +638,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "info",
         title: "No open-tracking pixel was detected",
+        stage: "build",
         detail:
           "An observation rather than a verdict: detection is a heuristic over the image tags in the HTML, and a pixel served from a first-party domain at ordinary dimensions would not be caught. If you send to France, confirm this in your platform's tracking settings rather than here.",
         rule: RULE.france,
@@ -648,6 +657,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "warn",
         title: "The subject line is prefixed as a reply, and this is not one",
+        stage: "build",
         detail:
           "There is no In-Reply-To or References header, so this message is not part of a thread. Washington treats a subject line that misrepresents the contents of a message as an automatic violation, and a manufactured Re: is the least arguable version of that.",
         rule: RULE.washington,
@@ -682,6 +692,7 @@ export function messageFindings(input: MessageInput): Finding[] {
       findings.push({
         severity: "warn",
         title: "This message is being sent as though it were transactional",
+        stage: "build",
         detail:
           "It has no one-click unsubscribe headers, which is the shape of transactional mail, but it carries marketing content. Classification follows what the message does, not what the template is called, and a promotional message needs consent and a working opt-out whatever folder it was built in.",
         rule: RULE.transactional,
