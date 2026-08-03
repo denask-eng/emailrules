@@ -16,11 +16,15 @@ export function CopyField({
   value,
   note,
   className,
+  valueClassName,
 }: {
   label: string;
   value: string;
   note?: string;
   className?: string;
+  /** Override the value's type scale. The one-time address is the page's
+      subject rather than a snippet, so it is set larger there. */
+  valueClassName?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -51,7 +55,16 @@ export function CopyField({
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="num mt-2 rounded-lg border border-border-soft bg-bg-2 p-3 text-[12px] leading-relaxed break-words whitespace-pre-wrap">
+      {/* `break-word` rather than `break-all`: an address broken mid-domain
+          reads as two strings, and this is the one value on the page somebody
+          might retype by eye. The copy button is the real answer, and the wrap
+          only has to stay legible when it is refused. */}
+      <pre
+        className={cn(
+          "num mt-2 rounded-lg border border-border-soft bg-bg-2 p-3 leading-relaxed break-words whitespace-pre-wrap",
+          valueClassName ?? "text-[12px]",
+        )}
+      >
         {value}
       </pre>
       {note ? <p className="mt-1.5 max-w-[62ch] text-[12.5px] text-dim">{note}</p> : null}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Panel } from "@/components/bits";
+import { CopyField } from "@/components/copy-field";
 import { FindingTally, type FindingOwnership } from "@/components/findings";
 import { MessageJourney } from "@/components/message-journey";
 import { toJourney } from "@/lib/message-journey";
@@ -74,8 +75,11 @@ function Waiting({ id }: { id: string }) {
           </p>
 
           <Panel className="mt-7 p-5 sm:p-6">
-            <p className="label">Send one email to</p>
-            <p className="num mt-2.5 text-[clamp(0.95rem,3.4vw,1.3rem)] break-all">{address}</p>
+            <CopyField
+              label="Send one email to"
+              value={address}
+              valueClassName="text-[clamp(0.95rem,3.4vw,1.3rem)]"
+            />
             <p className="mt-4 max-w-[58ch] text-[0.88rem] leading-relaxed text-dim">
               Single use. The first message to arrive becomes the result and later ones are ignored,
               so this link cannot be overwritten by anyone you share it with.

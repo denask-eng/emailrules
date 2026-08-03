@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Panel } from "@/components/bits";
+import { CopyField } from "@/components/copy-field";
 import { buttonVariants } from "@/components/ui/button";
 import { inboundDomain, newCheckId, RETENTION_DAYS } from "@/lib/message-check";
 import { cn } from "@/lib/utils";
@@ -69,10 +70,11 @@ export default async function MessageCheckPage() {
           press a button to be given a string. */}
       {domain ? (
         <Panel className="mt-8 p-5 sm:p-6">
-          <p className="label">Send one email to</p>
-          <p className="num mt-2.5 text-[clamp(0.95rem,3.1vw,1.35rem)] leading-tight break-all">
-            {id}@{domain}
-          </p>
+          <CopyField
+            label="Send one email to"
+            value={`${id}@${domain}`}
+            valueClassName="text-[clamp(0.95rem,3.1vw,1.35rem)]"
+          />
           <Link
             href={`/check/message/${id}`}
             className={cn(

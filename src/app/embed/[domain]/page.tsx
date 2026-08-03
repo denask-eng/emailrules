@@ -5,7 +5,7 @@ import { normaliseDomain } from "@/lib/dns-check";
 import { SITE } from "@/lib/site";
 import { BADGE } from "@/app/badge/badge-svg";
 import { snippetsFor } from "@/app/embed/snippets";
-import { CopyField } from "@/app/embed/copy-field";
+import { CopyField } from "@/components/copy-field";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
