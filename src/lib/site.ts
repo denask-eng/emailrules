@@ -23,7 +23,7 @@ export const AUTHOR = {
   /** Public label only — no employer. Personal project, not a company promo. */
   role: "Email geek",
   blurb:
-    "I run email programmes across seven brands and fifteen locales. I built this because I kept finding out about rule changes months late, from a lawyer.",
+    "I geek out on email marketing, deliverability and the hidden gems in between — lifecycle, LTV, all of it. I built this because I kept finding out about rule changes months late, from a lawyer.",
   hook: "For people who ship email, not people who sell tools about email.",
   avatar: "/denas.jpg",
   x: "https://x.com/denaskulinicius",
