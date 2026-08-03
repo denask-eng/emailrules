@@ -9,6 +9,8 @@ import { getRule, fmtDate } from "@/lib/rules";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { BlocklistVerdict } from "@/components/blocklist-verdict";
+import { DomainRecord } from "@/components/domain-record";
 import { FindingList, FindingTally } from "@/components/findings";
 import { SubscribeForm } from "@/components/subscribe-form";
 
@@ -16,6 +18,11 @@ import { SubscribeForm } from "@/components/subscribe-form";
    hammer the resolver, but short enough that a fix shows up while you are
    still looking at the page. */
 export const revalidate = 300;
+
+/* Named rather than inlined so the header cannot drift from what dns-check.ts
+   actually does: the apex TXT, _dmarc, BIMI, MX, the impossible-selector probe
+   and fourteen real selectors. */
+const DNS_LOOKUPS = 19;
 
 /**
  * This is the artifact people paste into Slack, so the unfurl has to be its
@@ -72,13 +79,23 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
     observedDayCount(d),
   ]);
 
+  /* Authentication findings only. The blocklist half is rendered by
+     BlocklistVerdict rather than folded in here, because the thing worth
+     saying about a blocklist entry is which of three kinds it is, and a flat
+     severity-sorted list is exactly the shape that loses that. Its findings
+     still exist and still feed the share card's counts. */
   const SEVERITY_ORDER: Record<Severity, number> = { fail: 0, warn: 1, pass: 2, info: 3 };
-  const findings: Finding[] = [...result.findings, ...blocklist.findings].sort(
+  const findings: Finding[] = [...result.findings].sort(
     (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
   );
 
-  const fails = findings.filter((f) => f.severity === "fail").length;
+  const fails = findings.filter((f) => f.severity === "fail").length + blocklist.actionable.length;
   const warns = findings.filter((f) => f.severity === "warn").length;
+
+  const listsAsked = blocklist.lists.filter((l) => l.status === "answered").length;
+  const blocklistEntries = new Set(
+    [...blocklist.actionable, ...blocklist.contextual].map((h) => h.list.id),
+  ).size;
 
   /* Resolve rule titles so each finding can name its source rather than
      asserting on its own authority. */
@@ -92,21 +109,54 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
 
   return (
     <div className="shell shell-tight py-12 sm:py-16">
-      <p className="label">
-        Authentication and blocklists · <span className="num">{fmtDate(result.checkedAt)}</span>
+      {/* The answer, at the size of an answer.
+          This used to be a grey sentence under a mono heading, and a reader
+          had to assemble the verdict out of eight paragraphs. The domain is
+          the small line now and the verdict is the big one, because nobody
+          arrives here needing to be told which domain they typed. */}
+      <p className="num label">
+        {result.domain} · checked {fmtDate(result.checkedAt)}
       </p>
-      <h1 className="num mt-3 text-[clamp(1.6rem,4.5vw,2.5rem)]">{result.domain}</h1>
-
-      <p className="mt-5 max-w-[62ch] text-[1.04rem] leading-relaxed text-muted-fg">
+      <h1 className="mt-4 max-w-[18ch] text-[clamp(2.1rem,6.5vw,3.6rem)] leading-[0.98] tracking-[-0.045em]">
         {fails === 0 && warns === 0
-          ? "Nothing to fix on authentication or reputation. That is a real outcome and you get it plainly."
-          : `${fails > 0 ? `${fails} thing${fails > 1 ? "s" : ""} to fix` : "Nothing broken"}${
-              warns > 0 ? `, ${warns} worth a look` : ""
-            }. Every finding names the rule it comes from.`}
+          ? "Nothing here needs you."
+          : fails > 0
+            ? `${fails} ${fails > 1 ? "things" : "thing"} to fix.`
+            : `${warns} worth a look.`}
+      </h1>
+      <p className="num mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-dim">
+        <span>{DNS_LOOKUPS} DNS lookups</span>
+        <span aria-hidden>·</span>
+        <span>{listsAsked} blocklists asked</span>
+        <span aria-hidden>·</span>
+        <span>{blocklistEntries === 0 ? "no entries" : `${blocklistEntries} with an entry`}</span>
+        <span aria-hidden>·</span>
+        <span>no score, ever</span>
       </p>
 
+      {/* The record, before any opinion about it. */}
+      <div className="mt-9">
+        <DomainRecord
+          domain={result.domain}
+          checkedAt={fmtDate(result.checkedAt)}
+          facts={result.facts}
+          blocklist={{ asked: listsAsked, entries: blocklistEntries }}
+        />
+      </div>
+
+      {/* Two questions, two sections. "Is my authentication set up" and "does
+          anyone have an entry against me" are not the same question, and the
+          second one needs room to say which kind of entry it is. */}
+      <p className="label mt-14">What that means</p>
       <FindingTally findings={findings} />
       <FindingList findings={findings} ruleTitles={ruleTitles} />
+
+      <BlocklistVerdict
+        actionable={blocklist.actionable}
+        contextual={blocklist.contextual}
+        lists={blocklist.lists}
+        checkedWhat={result.domain}
+      />
 
       <div className="mt-9 rounded-xl border bg-bg-2 p-5 text-[0.92rem] leading-relaxed text-muted-fg">
         <b className="text-fg">What this cannot see.</b> DNS tells us what you have published, not

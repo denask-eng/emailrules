@@ -77,10 +77,36 @@ async function txt(name: string): Promise<string[]> {
   }
 }
 
+/**
+ * The record, as opposed to our reading of it.
+ *
+ * Findings are prose and they are sorted by how much they should worry you.
+ * That is the right shape for "what should I do" and the wrong shape for
+ * "what is actually published", which is the question somebody arrives with
+ * and currently has to reconstruct by reading eight paragraphs. These are the
+ * same lookups, kept rather than thrown away after the sentence was written.
+ */
+export interface DomainFacts {
+  spf: string | null;
+  /** The all-mechanism as published: -all, ~all, +all, ?all. */
+  spfAll: string | null;
+  spfLookups: number;
+  dmarc: string | null;
+  dmarcPolicy: string | null;
+  dmarcHasRua: boolean;
+  /** "selector (vendor)" for every selector carrying a real key. */
+  dkim: string[];
+  dkimWildcard: boolean;
+  bimi: string | null;
+  mx: string[];
+  mxProvider: string | null;
+}
+
 export interface CheckResult {
   domain: string;
   checkedAt: string;
   findings: Finding[];
+  facts: DomainFacts;
 }
 
 export async function checkDomain(domain: string): Promise<CheckResult> {
@@ -92,9 +118,27 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
   ]);
 
   const findings: Finding[] = [];
+  const facts: DomainFacts = {
+    spf: null,
+    spfAll: null,
+    spfLookups: 0,
+    dmarc: null,
+    dmarcPolicy: null,
+    dmarcHasRua: false,
+    dkim: [],
+    dkimWildcard: false,
+    bimi: null,
+    mx: [],
+    mxProvider: null,
+  };
 
   /* ── SPF ───────────────────────────────────────────────────────────── */
   const spf = spfRecords.find((r) => r.toLowerCase().startsWith("v=spf1"));
+  facts.spf = spf ?? null;
+  if (spf) {
+    facts.spfAll = /[~\-+?]all/.exec(spf)?.[0] ?? null;
+    facts.spfLookups = (spf.match(/\b(include|a|mx|ptr|exists|redirect)[:=]/g) ?? []).length;
+  }
   if (!spf) {
     findings.push({
       severity: "fail",
@@ -142,6 +186,11 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
 
   /* ── DMARC ─────────────────────────────────────────────────────────── */
   const dmarc = dmarcRecords.find((r) => r.toLowerCase().startsWith("v=dmarc1"));
+  facts.dmarc = dmarc ?? null;
+  if (dmarc) {
+    facts.dmarcPolicy = /p=(none|quarantine|reject)/i.exec(dmarc)?.[1]?.toLowerCase() ?? null;
+    facts.dmarcHasRua = /rua=/i.test(dmarc);
+  }
   if (!dmarc) {
     findings.push({
       severity: "fail",
@@ -200,6 +249,9 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
     );
   }
 
+  facts.dkim = [...found].sort();
+  facts.dkimWildcard = hasWildcard;
+
   if (hasWildcard) {
     findings.push({
       severity: "warn",
@@ -234,6 +286,7 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
   }
 
   /* ── Context, not obligations ──────────────────────────────────────── */
+  facts.bimi = bimiRecords.find((r) => r.toLowerCase().startsWith("v=bimi1")) ?? null;
   if (bimiRecords.some((r) => r.toLowerCase().startsWith("v=bimi1"))) {
     findings.push({
       severity: "info",
@@ -249,6 +302,8 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
       : hosts.some((h) => h.includes("outlook") || h.includes("microsoft"))
         ? "Microsoft 365"
         : null;
+    facts.mx = hosts;
+    facts.mxProvider = provider;
     findings.push({
       severity: "info",
       title: provider ? `Receiving mail via ${provider}` : "MX records present",
@@ -262,5 +317,5 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
   const order: Record<Severity, number> = { fail: 0, warn: 1, pass: 2, info: 3 };
   findings.sort((a, b) => order[a.severity] - order[b.severity]);
 
-  return { domain, checkedAt: new Date().toISOString().slice(0, 10), findings };
+  return { domain, checkedAt: new Date().toISOString().slice(0, 10), findings, facts };
 }

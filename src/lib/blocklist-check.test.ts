@@ -26,8 +26,33 @@ test("a real listing code is a listing", () => {
 test("URIBL's own refusal code is a refusal only for URIBL", () => {
   /* 127.0.0.1 means "we are declining you" at URIBL and nothing at all
      elsewhere, so it is configured per list rather than assumed globally. */
-  assert.equal(classifyCodes(["127.0.0.1"], ["127.0.0.1"]).kind, "refused");
+  assert.equal(classifyCodes(["127.0.0.1"], { refusalCodes: ["127.0.0.1"] }).kind, "refused");
   assert.equal(classifyCodes(["127.0.0.1"]).kind, "listed");
+});
+
+/* ── The third answer: resolves, and is not a listing ─────────────────────
+   Spamhaus PBL is the case that matters. 127.0.0.10 is the network that owns
+   an address stating it should not send mail directly — true of most consumer
+   broadband, and expected on plenty of infrastructure. It is not an
+   accusation about the sender, and counting it as a blocklisting is how a
+   clean domain gets told it is blacklisted. */
+
+test("a notListed code resolves without being a listing", () => {
+  const pbl = { notListed: ["127.0.0.10", "127.0.0.11"] };
+  assert.equal(classifyCodes(["127.0.0.10"], pbl).kind, "absent");
+  assert.equal(classifyCodes(["127.0.0.11"], pbl).kind, "absent");
+});
+
+test("a real listing alongside a notListed code is still a listing, minus the noise", () => {
+  const answer = classifyCodes(["127.0.0.2", "127.0.0.10"], { notListed: ["127.0.0.10"] });
+  assert.equal(answer.kind, "listed");
+  /* The SBL entry survives; the policy statement does not get reported as one. */
+  assert.deepEqual(answer.kind === "listed" ? answer.codes : [], ["127.0.0.2"]);
+});
+
+test("a refusal outranks notListed, because a refusal means we never asked", () => {
+  const answer = classifyCodes(["127.255.255.254"], { notListed: ["127.255.255.254"] });
+  assert.equal(answer.kind, "refused");
 });
 
 test("one refusal among several codes still refuses the whole answer", () => {
@@ -113,8 +138,10 @@ test("a bare IPv6 host is a target and a range is not", () => {
 });
 
 test("the number of hosts queried is capped", () => {
+  /* Every host costs one query per address list, and the roster is now ~24 of
+     them. Free lists publish fair-use limits and we intend to stay inside. */
   const many = `v=spf1 ${Array.from({ length: 30 }, (_, i) => `ip4:203.0.113.${i + 1}`).join(" ")} -all`;
-  assert.equal(spfTargets(many).ips.length, 8);
+  assert.equal(spfTargets(many).ips.length, 3);
 });
 
 test("no SPF means no targets rather than an assumption", () => {
