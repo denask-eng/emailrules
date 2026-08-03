@@ -2,6 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 import { cn } from "@/lib/utils";
 import type { Ownership } from "@/lib/types";
 import {
@@ -166,7 +167,20 @@ export function AnswerHere({ sets }: { sets: Record<RoleKey, FiveSet> }) {
   const preset = ROLE_PRESETS.find((p) => p.id === role);
   const rest = set.matched - set.cards.length;
 
-  const onPick = useCallback((next: RoleKey) => store(next), []);
+  /**
+   * The one thing here a page view cannot count.
+   *
+   * Running a check and subscribing both end in a navigation — /check/<domain>
+   * and /subscribed — so they are already in the page counts and adding events
+   * for them would only double-count. This tap navigates nowhere by design,
+   * which is the entire premise of the homepage rebuild and currently the only
+   * part of it we have no evidence about. One event, no identifier, no cookie:
+   * which desk was picked, and nothing about who picked it.
+   */
+  const onPick = useCallback((next: RoleKey) => {
+    track("desk-picked", { desk: next || "cleared" });
+    store(next);
+  }, []);
 
   return (
     <section id="your-five" className="shell border-t border-fg/12 py-10 text-center sm:py-12">

@@ -99,9 +99,9 @@ export default async function Check({
           </li>
         </ul>
         <p className="mt-5 max-w-[58ch] text-[0.95rem] leading-relaxed text-muted-fg">
-          Continuous monitoring against these rules, Klaviyo send scans, and a paid plan are not
-          built. Today this site sells nothing. The free check is the product; the alert list is how
-          you hear when a rule moves.
+          One domain can also be watched: subscribe with it and we re-read its authentication DNS
+          daily, emailing you only when a record actually moves. Klaviyo send scans and a paid plan
+          are not built. Today this site sells nothing.
         </p>
         <Link
           href="/#subscribe"

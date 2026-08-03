@@ -96,6 +96,15 @@ export async function recordDomainObservation(
   }
 }
 
+/** Cheap enough to ask before every capture, and the whole point of doing so. */
+async function observedToday(domain: string): Promise<boolean> {
+  const rows = (await sql().query(
+    `select 1 from domain_history where domain = $1 and observed_on = $2::date`,
+    [domain, observedOnUtc()],
+  )) as unknown[];
+  return rows.length > 0;
+}
+
 /**
  * Capture and record in one call, for the request paths.
  *
@@ -106,6 +115,14 @@ export async function recordDomainObservation(
 export async function observeDomain(domain: string): Promise<HistoryWrite> {
   if (!hasDatabase()) return { status: "no-database" };
   try {
+    /* Ask the table before asking DNS.
+       `recordDomainObservation` already refuses a second row for the same day,
+       so this changes no data — it changes what the day's second visitor
+       costs. A capture is nineteen lookups, and without this every view of
+       /check/<d> and /domain/<d> repeats them to write nothing. Those pages are
+       about to be indexed, at which point a crawler working through a thousand
+       domains would be an amplifier aimed at our own resolver. */
+    if (await observedToday(domain)) return { status: "already-observed-today" };
     return await recordDomainObservation(domain, await captureDomainObservation(domain));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

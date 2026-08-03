@@ -25,9 +25,12 @@ import { FindingList, FindingTally } from "@/components/findings";
  */
 const INDEXABLE = false;
 
-/* Live DNS for the "today" half, same cache window as /check so a fix shows
-   up while you are still looking at the page. */
-export const revalidate = 300;
+/* Live DNS for the "today" half. Deliberately looser than /check's five
+   minutes: that page is where somebody watches a fix land, this one is a
+   history whose finest grain is a day and whose "today" reading is stamped
+   with a date, not a time. An hour of staleness is invisible here and it is
+   the difference between one lookup an hour and one per crawler hit. */
+export const revalidate = 3600;
 
 export async function generateMetadata({
   params,

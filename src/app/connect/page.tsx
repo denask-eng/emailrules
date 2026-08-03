@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Connect your ESP — roadmap",
   description:
-    "Honest roadmap for read-only ESP checks (Klaviyo first). Not live yet — we only ship when it earns trust, not when it demos well.",
+    "What is live and what is not: role filtering, the team brief, the domain and message checks and daily domain watch all ship today. Read-only Klaviyo does not, and this page says which is which.",
   alternates: { canonical: "/connect" },
   robots: { index: true, follow: true },
 };
@@ -36,15 +36,19 @@ const GATES = [
   },
   {
     n: "04",
-    t: "Read-only Klaviyo (planned)",
-    d: "Compare your account settings to rules that still need a person. No write access. No “AI score.” Ships only after free habit exists.",
-    status: "Not shipped",
-    live: false,
+    t: "Domain watch",
+    d: "Give us a sending domain when you subscribe and we re-read its authentication DNS every day. One email when SPF, DKIM, DMARC, BIMI or MX actually moves — never when we merely looked. A day the resolver did not answer is skipped rather than reported as a record disappearing.",
+    status: "Live now",
+    live: true,
   },
+  /* The only gate still shut, and it is last on purpose: the lede promises
+     live steps first and OAuth only once the free shelf is a habit. A roadmap
+     that leaves a shipped item marked "planned" is the one kind of stale this
+     site cannot afford, so this list is checked whenever a gate opens. */
   {
     n: "05",
-    t: "Domain watch (planned)",
-    d: "Optional alert when SPF, DKIM, or DMARC on a domain you care about changes. Low noise.",
+    t: "Read-only Klaviyo (planned)",
+    d: "Compare your account settings to rules that still need a person. No write access. No “AI score.” Ships only after free habit exists.",
     status: "Not shipped",
     live: false,
   },
