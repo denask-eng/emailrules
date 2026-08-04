@@ -9,6 +9,7 @@ import {
   primarySender,
   signingButUnauthorised,
   spfSendersAreReadable,
+  SENDING_SUBDOMAINS,
   spfAuthorised,
   type DetectedPlatform,
   type SpfManager,
@@ -156,6 +157,21 @@ export interface CheckResult {
   platforms: DetectedPlatform[];
   /** Set when a hosted SPF service holds the sender list instead of this record. */
   spfManager: SpfManager | null;
+  /**
+   * Platforms demonstrably signing this domain's mail that nothing we can read
+   * names — neither the root SPF nor any of the subdomains bulk mail is
+   * normally sent from.
+   *
+   * Computed once, here, and read by everything downstream. It exists as a
+   * field rather than a helper because the same guard has now been bypassed
+   * twice by a second caller re-deriving it from `platforms`: once on the
+   * homepage panel and once in the Index. A value that must never be
+   * recomputed should not be recomputable.
+   *
+   * Empty when the SPF cannot be read at all — there the question has no
+   * answer, and an empty list is the honest representation of that.
+   */
+  unnamedSigners: string[];
 }
 
 export async function checkDomain(domain: string): Promise<CheckResult> {
@@ -457,7 +473,68 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
      morning and costs us the only thing this site sells. */
   const spfReadable = spfSendersAreReadable(facts.spf) && !spfManager;
 
-  for (const orphan of signingButUnauthorised(platforms)) {
+  /* ── Before accusing anybody, look where the mail actually leaves from ──
+
+     SPF is evaluated against the envelope domain. A brand that sends its bulk
+     mail from `send.brand.com` has no reason to name its ESP in the root
+     record, and a root-only reading calls that a misconfiguration. It is not
+     one — it is the normal, correct setup, and it is what klaviyo.com,
+     stripe.com and roughly half the well-known senders we measured actually
+     do.
+
+     So when the root record does not name a signer, we ask the subdomains
+     bulk mail is usually sent from whether *they* name it. Only if none of
+     them does is there anything to report.
+
+     These lookups happen exclusively when an orphan was already detected, so
+     the ordinary clean domain pays nothing for them. */
+  const orphansRaw = signingButUnauthorised(platforms);
+  const excusedBySubdomain = new Map<string, string>();
+
+  if (orphansRaw.length && spfReadable) {
+    const subRecords = await Promise.all(
+      SENDING_SUBDOMAINS.map(async (sub) => {
+        const records = await txt(`${sub}.${domain}`);
+        const record = records.find((r) => r.toLowerCase().startsWith("v=spf1"));
+        return record ? { sub: sub as string, record: record.toLowerCase() } : null;
+      }),
+    );
+    const found = subRecords.filter(
+      (r): r is { sub: string; record: string } => r !== null,
+    );
+
+    for (const orphan of orphansRaw) {
+      /* Match on the vendor's own SPF tokens, not on its display name: a
+         record says `include:sendgrid.net`, never "SendGrid". */
+      const tokens = orphan.evidence
+        .map((e) => e.value.toLowerCase())
+        .concat(orphan.name.toLowerCase().replace(/\s+/g, ""));
+      const hit = found.find((f) => tokens.some((t) => t.length > 3 && f.record.includes(t)));
+      if (hit) excusedBySubdomain.set(orphan.name, `${hit.sub}.${domain}`);
+    }
+  }
+
+  const unnamedSigners: string[] = spfReadable
+    ? orphansRaw.filter((o) => !excusedBySubdomain.has(o.name)).map((o) => o.name)
+    : [];
+
+  for (const orphan of orphansRaw) {
+    /* The subdomain names it. There is nothing wrong here, and saying there is
+       would be the false accusation this whole guard exists to prevent. */
+    const excused = excusedBySubdomain.get(orphan.name);
+    if (excused) {
+      findings.push({
+        severity: "pass",
+        title: `${orphan.name} is authorised on ${excused}`,
+        detail: `${orphan.name} signs mail as this domain, and the root SPF record does not name it — which on its own looks like a mismatch. It is not: ${excused} publishes its own SPF naming ${orphan.name}, and SPF is evaluated against the envelope domain rather than the root. This is the normal setup for bulk mail on a subdomain.`,
+        ownership: "context",
+        rule: "gmail-bulk-sender-requirements",
+        term: "spf",
+        evidence: facts.spf ?? "no SPF record",
+      });
+      continue;
+    }
+
     if (!spfReadable) {
       findings.push({
         severity: "info",
@@ -476,16 +553,32 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
       continue;
     }
 
+    /* This was a `fail` reading "every campaign is failing SPF right now",
+       and that is not something DNS can establish.
+
+       SPF is evaluated against the *envelope* domain. Every major platform
+       sends with its own bounce domain by default — SendGrid's `em####`
+       subdomain, Klaviyo's own return path — and on those messages the
+       sender's SPF is simply not consulted. DMARC then passes on DKIM
+       alignment alone, which is valid, intended and how most serious senders
+       are configured. Stripe, Shopify, Figma, 1Password and Mailchimp all look
+       exactly like this, and none of them is misconfigured.
+
+       What remains true and worth saying is narrower: nothing this domain
+       publishes names the platform, so if it *is* sending with its own domain
+       as the envelope, those messages have no SPF to pass — and either way the
+       channel is resting on DKIM alone. That is a resilience observation, not
+       a fault, and it is now written as one. */
     findings.push({
-      severity: "fail",
-      title: `${orphan.name} signs your mail, and your SPF does not authorise it`,
-      detail: `${orphan.dkimSelectors} of ${orphan.name}'s selectors carry live keys on this domain, so ${orphan.name} is demonstrably signing mail as you. Your SPF record does not list ${orphan.name} anywhere${
+      severity: "warn",
+      title: `${orphan.name} signs your mail, and nothing you publish names it`,
+      detail: `${orphan.dkimSelectors} of ${orphan.name}'s selectors carry live keys here, so ${orphan.name} is signing mail as you. Neither your SPF record nor any of the subdomains bulk mail is normally sent from mentions ${orphan.name}${
         authorised.length
-          ? ` — it authorises ${authorised.map((a) => a.name).join(" and ")} instead`
+          ? `; your SPF names ${authorised.map((a) => a.name).join(" and ")}`
           : ""
-      }. Every campaign ${orphan.name} sends is failing SPF right now and surviving on DKIM alignment alone, which holds until one key is rotated, revoked or misconfigured.`,
-      ownership: "yours",
-      mondayMorning: `Add ${orphan.name}'s include: to your SPF today — ${orphan.name} publishes the exact line and cannot put it in your DNS for you. Then send one campaign to yourself and confirm the Authentication-Results header reads spf=pass, not spf=softfail.`,
+      }. That is not automatically wrong: if ${orphan.name} sends with its own return-path domain, which is the default on every major platform, your SPF is never consulted on those messages and they pass DMARC on DKIM alignment alone. What it does mean is that this channel has no SPF to fall back on — one key rotated, revoked or mis-copied and there is nothing underneath it.`,
+      ownership: "shared",
+      mondayMorning: `Send one campaign through ${orphan.name} to yourself and read the Authentication-Results header. If it says spf=pass, the envelope is on ${orphan.name}'s domain and there is nothing to do. If it says spf=fail or softfail, you are sending with your own domain as the envelope and ${orphan.name}'s include: belongs in your SPF.`,
       rule: "gmail-bulk-sender-requirements",
       term: "spf",
       evidence: `${facts.spf ?? "no SPF record"}\n${orphan.evidence
@@ -528,5 +621,6 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
     facts,
     platforms,
     spfManager,
+    unnamedSigners,
   };
 }

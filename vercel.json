@@ -11,6 +11,26 @@
     {
       "path": "/api/cron/source-watch",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/census",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/index-sweep",
+      "schedule": "10 6 * * *"
+    },
+    {
+      "path": "/api/cron/index-sweep",
+      "schedule": "20 6 * * *"
+    },
+    {
+      "path": "/api/cron/index-sweep",
+      "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/cron/index-sweep",
+      "schedule": "40 6 * * *"
     }
   ]
 }

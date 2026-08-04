@@ -247,4 +247,121 @@ export const SCHEMA = `
   );
   create index if not exists rule_source_changes_status_idx
     on rule_source_changes (status, first_seen_at desc);
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     The instrument tables.
+
+     Everything above records what this site knows. Everything below records
+     what it has *measured*, on a date, and keeps measuring. That distinction
+     is the whole point: a reference can be copied in an afternoon, and four
+     hundred days of dated measurements cannot be backfilled by anybody.
+
+     All three are append-only by day. Nothing is ever updated in place,
+     because the value is the series and a series you can edit is not
+     evidence.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* ── The census: is each blocklist actually alive, today? ──────────────
+     census() already probes every zone against its RFC 5782 controls. This
+     is that reading, kept. One row per zone per day.
+
+     status is the measured answer: answered | refused | wildcard | silent.
+     queried says whether we would use it on a real check, which is a
+     judgement — keeping both means the day a refused zone starts answering
+     again is visible rather than something a reader has to catch for us. */
+  create table if not exists census_snapshots (
+    day        date not null,
+    zone       text not null,
+    label      text not null,
+    status     text not null,
+    queried    boolean not null,
+    kind       text,
+    note       text,
+    checked_at timestamptz not null default now(),
+    primary key (day, zone)
+  );
+  create index if not exists census_snapshots_day_idx
+    on census_snapshots (day desc);
+  create index if not exists census_snapshots_zone_idx
+    on census_snapshots (zone, day desc);
+
+  /* ── The index roster: public senders we measure every day ─────────────
+     Deliberately a table and not a constant. The roster is itself a published
+     claim — who we watch, and since when — and it has to be auditable and
+     append-only rather than something that quietly changes shape between
+     deploys. retired_at rather than deletion, so a domain leaving the index
+     cannot silently rewrite the history it contributed to. */
+  create table if not exists index_domains (
+    domain     text primary key,
+    sector     text not null,
+    added_at   timestamptz not null default now(),
+    retired_at timestamptz,
+    note       text
+  );
+  create index if not exists index_domains_sector_idx
+    on index_domains (sector) where retired_at is null;
+
+  /* ── The index: one dated auth posture per domain per day ──────────────
+     The aggregate everybody quotes once a year from a PDF, measured daily and
+     kept. Booleans and short enums only: this table gets scanned across
+     thousands of rows to produce a percentage, and it should never need a
+     JSONB parse to answer "how many are at reject".
+
+     spf_readable is here because of a real false accusation this site
+     shipped: a macro or hosted-manager record cannot be expanded from DNS, so
+     any statistic about "domains authorising their signer" has to exclude
+     them rather than count them as failures. */
+  create table if not exists index_snapshots (
+    day           date not null,
+    domain        text not null,
+    has_spf       boolean not null,
+    spf_all       text,
+    spf_lookups   int,
+    spf_readable  boolean not null,
+    has_dmarc     boolean not null,
+    dmarc_policy  text,
+    dmarc_has_rua boolean not null,
+    dkim_keys     int not null default 0,
+    has_bimi      boolean not null,
+    mx_provider   text,
+    /* Platforms signing that the readable part of SPF does not name. Null when
+       SPF is unreadable, because there the question has no answer. */
+    unauthorised  int,
+    checked_at    timestamptz not null default now(),
+    primary key (day, domain)
+  );
+  create index if not exists index_snapshots_day_idx
+    on index_snapshots (day desc);
+  create index if not exists index_snapshots_domain_idx
+    on index_snapshots (domain, day desc);
+
+  /* ── The ESP truth table: what a platform actually does, measured ──────
+     Not what its documentation says. One row per platform per measurement,
+     produced by sending a real campaign through it and reading the headers
+     that arrived.
+
+     This table stays empty until a real send has been made. It is not seeded
+     from vendor documentation, because the entire reason for its existence is
+     that vendor documentation lags and sometimes lies — a seeded row would be
+     the exact thing it is built to replace, wearing its clothes. */
+  create table if not exists esp_measurements (
+    id             text primary key,
+    esp            text not null,
+    measured_on    date not null,
+    /* The observed header facts, verbatim from the message that arrived. */
+    list_unsub     boolean,
+    list_unsub_post boolean,
+    unsub_https    boolean,
+    dkim_d         text,
+    dkim_aligned   boolean,
+    return_path    text,
+    tracking_pixel boolean,
+    postal_address boolean,
+    /* How this was obtained, so a reader can repeat it. */
+    method         text not null,
+    note           text,
+    recorded_at    timestamptz not null default now()
+  );
+  create index if not exists esp_measurements_esp_idx
+    on esp_measurements (esp, measured_on desc);
 `;

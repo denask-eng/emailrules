@@ -455,6 +455,26 @@ export function spfAuthorised(detected: DetectedPlatform[]): DetectedPlatform[] 
  * Klaviyo campaign from that domain fails SPF. It survives on DKIM alignment
  * alone, which means one broken key is the difference between fine and gone.
  */
+/**
+ * Subdomains that real senders put bulk mail on.
+ *
+ * This list exists because of a false positive that nearly shipped as a
+ * headline. `klaviyo.com` publishes SendGrid DKIM selectors at its root while
+ * its root SPF names Greenhouse, Google and Zendesk — which reads as a
+ * mismatch and is not one, because the SendGrid mail leaves from
+ * `send.klaviyo.com`, whose own SPF names SendGrid correctly. Stripe does the
+ * same with `marketing.stripe.com` and `e.stripe.com`.
+ *
+ * SPF is evaluated against the **envelope** domain, not the From domain and
+ * certainly not the organisational root. A root record that does not name a
+ * platform says nothing at all about mail that never claimed to come from the
+ * root.
+ */
+export const SENDING_SUBDOMAINS = [
+  "email", "mail", "e", "em", "news", "send", "go", "m", "mktg", "marketing",
+  "updates", "info", "notifications", "mailer", "reply", "t", "link", "nl",
+] as const;
+
 export function signingButUnauthorised(detected: DetectedPlatform[]): DetectedPlatform[] {
   return detected.filter((p) => p.basis === "dkim-confirmed" && p.kind !== "corporate");
 }

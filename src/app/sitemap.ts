@@ -56,6 +56,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
        Indexable because it is a genuine primary source: nobody else publishes
        which of these zones can still answer. */
     { url: `${SITE.url}/blocklists`, lastModified: newest, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE.url}/email-index`, lastModified: newest, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE.url}/freshness`, lastModified: newest, changeFrequency: "daily", priority: 0.7 },
     /* The setup page only. A results URL is a credential and is noindex. */
     { url: `${SITE.url}/dmarc`, lastModified: newest, changeFrequency: "monthly", priority: 0.8 },
