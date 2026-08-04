@@ -5,6 +5,8 @@ import {
   detectSpfManager,
   platformClaim,
   primarySender,
+  signingButUnauthorised,
+  spfAuthorised,
   spfIncludes,
 } from "./sending-platform";
 
@@ -28,6 +30,67 @@ test("a short selector alone never claims the domain sends through a platform", 
 test("a selector-only match is never the primary sender", () => {
   const detected = detectPlatforms(null, ["k1._domainkey (Mailchimp)", "s1._domainkey (SendGrid)"]);
   assert.equal(primarySender(detected), null);
+});
+
+/* ── The mismatch, which is the whole reason to read both records ─────────
+   `kureapp.health`, live on 4 Aug 2026: SPF authorises Zendesk and nothing
+   else, while `kl` and `kl2` both carry live Klaviyo keys. The first version
+   of this page called that a possible selector collision and printed "Nothing
+   here is yours" — a false negative on a live sender, produced by
+   over-correcting the klaviyo.com false positive above. Both directions are
+   tested here so neither fix can eat the other. */
+
+test("two of one vendor's selectors is a completed setup, not a collision", () => {
+  const detected = detectPlatforms("v=spf1 include:mail.zendesk.com ~all", [
+    "kl._domainkey (Klaviyo)",
+    "kl2._domainkey (Klaviyo)",
+  ]);
+  const klaviyo = detected.find((p) => p.name === "Klaviyo");
+  assert.equal(klaviyo?.basis, "dkim-confirmed");
+  assert.equal(klaviyo?.dkimSelectors, 2);
+});
+
+test("a platform signing without SPF authorisation is surfaced", () => {
+  const detected = detectPlatforms("v=spf1 include:mail.zendesk.com ~all", [
+    "kl._domainkey (Klaviyo)",
+    "kl2._domainkey (Klaviyo)",
+  ]);
+  const orphans = signingButUnauthorised(detected);
+  assert.equal(orphans.length, 1);
+  assert.equal(orphans[0].name, "Klaviyo");
+  assert.match(platformClaim(orphans[0]), /does not list it/);
+});
+
+test("one selector alone is still not enough to call it a mismatch", () => {
+  /* The guard against re-introducing the klaviyo.com false positive. */
+  const detected = detectPlatforms("v=spf1 include:mail.zendesk.com ~all", [
+    "k1._domainkey (Mailchimp)",
+  ]);
+  assert.deepEqual(signingButUnauthorised(detected), []);
+});
+
+test("the mismatch names who SPF authorises instead, even when it is not an ESP", () => {
+  /* Answering this from the ESP list alone left the sentence empty on exactly
+     the domains that need it — Zendesk is infrastructure, not an ESP. */
+  const detected = detectPlatforms("v=spf1 include:mail.zendesk.com ~all", [
+    "kl._domainkey (Klaviyo)",
+    "kl2._domainkey (Klaviyo)",
+  ]);
+  assert.deepEqual(
+    spfAuthorised(detected).map((p) => p.name),
+    ["Zendesk"],
+  );
+  /* And the orphan must never be mistaken for the authorised sender. */
+  assert.equal(primarySender(detected), null);
+});
+
+test("a properly configured domain reports no mismatch", () => {
+  const detected = detectPlatforms("v=spf1 include:_spf.klaviyo.com ~all", [
+    "kl._domainkey (Klaviyo)",
+    "kl2._domainkey (Klaviyo)",
+  ]);
+  assert.deepEqual(signingButUnauthorised(detected), []);
+  assert.equal(primarySender(detected)?.name, "Klaviyo");
 });
 
 test("an SPF include alone is reported as permission, not as use", () => {

@@ -9,6 +9,8 @@ import { SiteFaqJsonLd } from "@/components/site-faq";
 import { isMarketChange, stickyRisks } from "@/lib/rule-signals";
 import { AnswerHere } from "@/components/home/answer-here";
 import { AskBox, Surfaces } from "@/components/ask-box";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Ledger } from "@/components/home/ledger";
 import { buildFiveSets } from "@/components/home/five";
 
@@ -67,17 +69,89 @@ export default async function Home() {
             is vocabulary we invented — a first-time reader could not tell from
             it whether this was a blog, a newsletter or a tool. Input, output,
             and the one thing nobody else does, in that order. */}
-        <p className="mx-auto mt-5 max-w-[34rem] text-[1.06rem] leading-relaxed text-balance text-muted-fg sm:text-[1.15rem]">
-          Paste a domain, an address, or a whole campaign. You get what is broken,{" "}
+        <p className="mx-auto mt-5 max-w-[36rem] text-[1.06rem] leading-relaxed text-balance text-muted-fg sm:text-[1.15rem]">
+          Send one real campaign. You get what is broken,{" "}
           <b className="font-medium text-fg">whose job it is to fix it</b>, and the dated rule that
           says so.
         </p>
 
-        {/* The box, at the top, because the sentence people arrive with is
-            "our emails are going to spam" and it used to sit below five
-            screens of shelf. Nothing about the site changes — this is the
-            same box with the same copy, moved to where the question is. */}
-        <AskBox className="mt-9" />
+        {/* The message, promoted over the domain.
+            The box was the front door and it invited "yourbrand.com", which is
+            the weakest thing this site can answer: a DNS report is what every
+            checker in the category already gives you, and the /check page has
+            always admitted as much in its own copy. A real campaign carries
+            the address that actually sent it, the consent evidence and the
+            content — none of which is in DNS. The strong door goes first. */}
+        <div className="mx-auto mt-9 flex max-w-[640px] flex-col items-center">
+          <Link
+            href="/check/message"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "h-12 w-full rounded-xl px-7 text-[1rem] font-semibold sm:w-auto",
+            )}
+            style={{ boxShadow: "var(--lift)" }}
+          >
+            Send us your campaign →
+          </Link>
+          <p className="mt-3.5 max-w-[42ch] text-[0.9rem] leading-relaxed text-balance text-muted-fg">
+            DNS shows what you published. A message shows what you actually send, and it is the
+            only one of the two that can be wrong in a way that costs you money.
+          </p>
+        </div>
+
+        {/* Still here, still works, no longer pretending to be the answer. */}
+        <details className="group mx-auto mt-8 max-w-[640px]">
+          <summary className="min-h-11 cursor-pointer list-none text-[0.9rem] text-muted-fg underline decoration-input underline-offset-4 marker:content-none hover:text-fg [&::-webkit-details-marker]:hidden">
+            Or check a domain, an address or an IP
+          </summary>
+          <AskBox className="mt-4" />
+        </details>
+
+        {/* What the tool actually returns, shown rather than described.
+            A landing page for an instrument should print a reading off it —
+            this is a real finding from a real domain, in the same surface the
+            result page uses, so nothing here is a mockup of a thing that does
+            not exist. */}
+        <figure className="mx-auto mt-14 max-w-[720px] overflow-hidden rounded-2xl bg-[#141417] text-left shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]">
+          <div className="num flex items-center justify-between border-b border-white/8 px-5 py-3 text-[10.5px] tracking-[0.11em] text-white/38 uppercase sm:px-6">
+            <span className="flex items-center gap-2.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="listening absolute inset-0 rounded-full" aria-hidden />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#7ee0a8]" />
+              </span>
+              What comes back
+            </span>
+            <span>a real reading</span>
+          </div>
+          <div className="px-5 py-6 sm:px-6">
+            <p className="num text-[11px] tracking-[0.09em] text-white/30 uppercase">
+              Signs your mail
+            </p>
+            <p className="text-[1.15rem] leading-tight font-semibold text-[#ff9d94]">Klaviyo</p>
+            <p className="num mt-1 text-[0.72rem] text-white/30">
+              kl._domainkey kl2._domainkey
+            </p>
+
+            <div className="my-3 flex items-center gap-3">
+              <span className="h-6 w-px bg-[#ff9d94]/50" aria-hidden />
+              <span className="num text-[10.5px] tracking-[0.08em] text-[#ff9d94] uppercase">
+                ✗ these disagree
+              </span>
+            </div>
+
+            <p className="num text-[11px] tracking-[0.09em] text-white/30 uppercase">
+              SPF authorises
+            </p>
+            <p className="text-[1.15rem] leading-tight font-semibold text-[#f0c26a]">Zendesk</p>
+            <p className="num mt-1 text-[0.72rem] text-white/30">include:mail.zendesk.com</p>
+
+            <p className="mt-5 max-w-[52ch] text-[0.9rem] leading-relaxed text-white/60">
+              Klaviyo signs mail as this domain and its SPF has never listed Klaviyo. Those
+              campaigns fail SPF and pass DMARC on DKIM alignment alone. No other checker reads
+              the two records against each other.
+            </p>
+          </div>
+        </figure>
 
         <TrustStrip className="mt-10" />
 

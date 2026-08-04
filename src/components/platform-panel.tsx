@@ -1,4 +1,5 @@
 import { OWNERSHIP } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { platformClaim, type DetectedPlatform, type SpfManager } from "@/lib/sending-platform";
 
 /**
@@ -28,6 +29,7 @@ export function PlatformPanel({
      klaviyo.com becomes "you send through Mailchimp". */
   const named = platforms.filter((p) => p.kind !== "corporate" && p.basis !== "dkim");
   const keysOnly = platforms.filter((p) => p.kind !== "corporate" && p.basis === "dkim");
+  const orphans = named.filter((p) => p.basis === "dkim-confirmed");
   const corporate = platforms.filter((p) => p.kind === "corporate");
 
   return (
@@ -57,7 +59,17 @@ export function PlatformPanel({
         <ul className="mt-4 list-none space-y-4 p-0">
           {named.map((p) => (
             <li key={p.name}>
-              <p className="text-[1.02rem] leading-snug font-semibold">{platformClaim(p)}</p>
+              <p
+                className={cn(
+                  "text-[1.02rem] leading-snug font-semibold",
+                  /* A platform signing mail it was never authorised to send is
+                     not neutral information, and setting it in the same grey as
+                     "you send through Klaviyo" is how it got missed. */
+                  p.basis === "dkim-confirmed" && "text-live",
+                )}
+              >
+                {platformClaim(p)}
+              </p>
               <ul className="num mt-2 list-none space-y-1 p-0 text-[0.76rem] text-muted-fg">
                 {p.evidence.map((e) => (
                   <li key={e.value} className="flex flex-wrap items-baseline gap-x-2.5">
@@ -68,6 +80,13 @@ export function PlatformPanel({
                   </li>
                 ))}
               </ul>
+              {p.basis === "dkim-confirmed" ? (
+                <p className="mt-2 max-w-[62ch] text-[0.86rem] leading-relaxed text-muted-fg">
+                  {p.dkimSelectors} of {p.name}&rsquo;s own selectors carry live keys, which is a
+                  setup somebody completed — not a selector collision. Your SPF names somebody
+                  else, so this mail passes DMARC on DKIM alignment alone.
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -102,6 +121,9 @@ export function PlatformPanel({
         platform it stopped paying for two years ago
         {named.some((p) => p.basis === "spf")
           ? ", which is why an include on its own is reported as permission rather than as use"
+          : ""}
+        {orphans.length
+          ? ", and it can carry live keys for a platform it never authorised, which is the reverse and the more expensive of the two"
           : ""}
         . Only a real message names the address that actually sent your campaign.
       </p>

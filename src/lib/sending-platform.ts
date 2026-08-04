@@ -276,7 +276,19 @@ export type PlatformBasis =
   | "both"
   /** SPF authorises it. A standing permission, which may long outlive its use. */
   | "spf"
-  /** Only a selector matched. Suggestive, and on short selectors, collidable. */
+  /**
+   * Two or more of this vendor's selectors carry real keys, and SPF does not
+   * mention them.
+   *
+   * One short selector is a coincidence away from wrong, which is why a lone
+   * match stays cautious. Two are not: `kl` and `kl2` both resolving to real
+   * RSA keys is Klaviyo's own setup wizard, not an accident. Collapsing this
+   * into the cautious case is a false negative on a live sender — and it hides
+   * the most useful finding a DNS check can produce, which is that the
+   * platform signing your mail is missing from your SPF.
+   */
+  | "dkim-confirmed"
+  /** One selector matched. Suggestive, and on short selectors, collidable. */
   | "dkim";
 
 export interface DetectedPlatform {
@@ -290,6 +302,8 @@ export interface DetectedPlatform {
    * has not been revoked since.
    */
   confirmedByDkim: boolean;
+  /** How many of this vendor's selectors carry a real key. Two is not luck. */
+  dkimSelectors: number;
   dkimPath?: string;
 }
 
@@ -337,20 +351,32 @@ export function detectPlatforms(spf: string | null, dkim: string[]): DetectedPla
 
     if (evidence.length) {
       const hasSpf = evidence.some((e) => e.from === "spf");
-      const hasDkim = evidence.some((e) => e.from === "dkim");
+      const dkimCount = evidence.filter((e) => e.from === "dkim").length;
       detected.push({
         name: def.name,
         kind: def.kind,
         evidence,
-        basis: hasSpf && hasDkim ? "both" : hasSpf ? "spf" : "dkim",
-        confirmedByDkim: hasDkim,
+        basis: hasSpf
+          ? dkimCount
+            ? "both"
+            : "spf"
+          : dkimCount >= 2
+            ? "dkim-confirmed"
+            : "dkim",
+        confirmedByDkim: dkimCount > 0,
+        dkimSelectors: dkimCount,
         dkimPath: def.dkimPath,
       });
     }
   }
 
   const kindOrder: Record<PlatformKind, number> = { esp: 0, infrastructure: 1, corporate: 2 };
-  const basisOrder: Record<PlatformBasis, number> = { both: 0, spf: 1, dkim: 2 };
+  const basisOrder: Record<PlatformBasis, number> = {
+    both: 0,
+    spf: 1,
+    "dkim-confirmed": 2,
+    dkim: 3,
+  };
   return detected.sort((a, b) => {
     if (basisOrder[a.basis] !== basisOrder[b.basis]) {
       return basisOrder[a.basis] - basisOrder[b.basis];
@@ -369,7 +395,42 @@ export function detectPlatforms(spf: string | null, dkim: string[]): DetectedPla
  * this, so it holds out for the record that actually says something.
  */
 export function primarySender(detected: DetectedPlatform[]): DetectedPlatform | null {
-  return detected.find((p) => p.kind === "esp" && p.basis !== "dkim") ?? null;
+  /* Strictly "who the record says may send". A DKIM-confirmed orphan is
+     signing without permission, which is the opposite claim — letting it
+     answer this made the mismatch finding read "your SPF does not list
+     Klaviyo, it authorises Klaviyo instead". */
+  return detected.find((p) => p.kind === "esp" && (p.basis === "both" || p.basis === "spf")) ?? null;
+}
+
+/**
+ * Everyone the SPF record actually names, whatever kind they are.
+ *
+ * The mismatch finding has to say who SPF authorises *instead*, and on a real
+ * domain that is often not an ESP at all — `kureapp.health` authorises Zendesk
+ * and signs with Klaviyo. Answering that question with the ESP list only
+ * produces an empty sentence on exactly the domains that need it.
+ */
+export function spfAuthorised(detected: DetectedPlatform[]): DetectedPlatform[] {
+  return detected.filter((p) => p.basis === "both" || p.basis === "spf");
+}
+
+/**
+ * Platforms that are demonstrably signing this domain's mail while its SPF
+ * record does not mention them at all.
+ *
+ * This is the finding no other checker produces, because producing it means
+ * reading two records against each other rather than grading each one on its
+ * own. Every checker in this category will tell you SPF is present and DKIM is
+ * present and call the domain healthy — and miss that the platform doing the
+ * signing was never authorised to send.
+ *
+ * Real example, `kureapp.health` on 4 Aug 2026: SPF authorises Zendesk and
+ * nothing else, while `kl` and `kl2` both carry live Klaviyo keys. Every
+ * Klaviyo campaign from that domain fails SPF. It survives on DKIM alignment
+ * alone, which means one broken key is the difference between fine and gone.
+ */
+export function signingButUnauthorised(detected: DetectedPlatform[]): DetectedPlatform[] {
+  return detected.filter((p) => p.basis === "dkim-confirmed" && p.kind !== "corporate");
 }
 
 /**
@@ -384,5 +445,6 @@ export function primarySender(detected: DetectedPlatform[]): DetectedPlatform | 
 export function platformClaim(p: DetectedPlatform): string {
   if (p.basis === "both") return `You send through ${p.name}`;
   if (p.basis === "spf") return `Your SPF authorises ${p.name}`;
+  if (p.basis === "dkim-confirmed") return `${p.name} signs your mail — and your SPF does not list it`;
   return `A DKIM key is published on ${p.name}'s selector`;
 }

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Panel } from "@/components/bits";
-import { CopyField } from "@/components/copy-field";
 import { buttonVariants } from "@/components/ui/button";
+import { Inbox } from "./inbox";
 import { inboundDomain, newCheckId, RETENTION_DAYS } from "@/lib/message-check";
 import { cn } from "@/lib/utils";
 
@@ -69,26 +69,16 @@ export default async function MessageCheckPage() {
       {/* The address itself, on arrival, not behind a click. Nobody needs to
           press a button to be given a string. */}
       {domain ? (
-        <Panel className="mt-8 p-5 sm:p-6">
-          <CopyField
-            label="Send one email to"
-            value={`${id}@${domain}`}
-            valueClassName="text-[clamp(0.95rem,3.1vw,1.35rem)]"
+        <>
+          <Inbox
+            id={id}
+            address={`${id}@${domain}`}
+            checks={CHECKS.map((c) => c.title)}
           />
-          <Link
-            href={`/check/message/${id}`}
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "mt-5 h-10 rounded-[10px] px-5 font-semibold",
-            )}
-          >
-            Open the page that waits for it
-          </Link>
           <p className="mt-3 max-w-[58ch] text-[0.88rem] leading-relaxed text-dim">
-            Single use. Leave that page open and it becomes the result the moment the message
-            lands. Free, no account, no score.
+            Single use, free, no account and no score. Nothing to click after you have copied it.
           </p>
-        </Panel>
+        </>
       ) : (
         <Panel className="mt-8 p-5 sm:p-6">
           <p className="text-[0.95rem] leading-relaxed">

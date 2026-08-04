@@ -19,16 +19,16 @@ import { cn } from "@/lib/utils";
  * No score, no grade, no ring chart. The record is the design.
  */
 
-const TONE = {
+export const TONE = {
   ok: "text-[#7ee0a8]",
   warn: "text-[#f0c26a]",
   bad: "text-[#ff9d94]",
   dim: "text-white/38",
 } as const;
 
-type Tone = keyof typeof TONE;
+export type Tone = keyof typeof TONE;
 
-interface Row {
+export interface Row {
   key: string;
   value: string;
   tone: Tone;
@@ -36,7 +36,7 @@ interface Row {
   note?: string;
 }
 
-function rows(facts: DomainFacts, blocklist: { asked: number; entries: number }): Row[] {
+export function rows(facts: DomainFacts, blocklist: { asked: number; entries: number }): Row[] {
   const out: Row[] = [];
 
   out.push(

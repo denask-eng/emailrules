@@ -131,18 +131,23 @@ async function Nav() {
           ))}
           <Search items={index} terms={terms} />
           <Link
-            href="/check"
+            href="/check/message"
             className={cn(
               buttonVariants({ size: "sm" }),
               "h-10 rounded-full px-3 text-[12.5px] font-medium sm:h-8 sm:px-3.5",
             )}
           >
-            {/* The noun is the value, so it survives every width a current
+            {/* Points at the message rather than the domain. The button on
+                every page was sending everyone to the DNS report — the one
+                answer here that every other checker also gives — while the
+                thing nobody else does sat two clicks away.
+
+                The noun is the value, so it survives every width a current
                 phone actually has. Only below 360px — an original SE, now a
                 rounding error — does it drop, because there the row genuinely
                 cannot hold it and a header that scrolls sideways is worse than
                 a shorter label. */}
-            Check<span className="hidden min-[360px]:inline"> domain</span>
+            Check<span className="hidden min-[360px]:inline"> a campaign</span>
           </Link>
         </nav>
       </div>

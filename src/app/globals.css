@@ -196,6 +196,18 @@
     70%, 100% { transform: scale(1.9); opacity: 0; }
   }
 
+  /* Waiting for a message that will arrive in seconds.
+     The same ring in the accent rather than the alarm colour, and slower: this
+     is a page listening, not an obligation biting. */
+  .listening::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 9999px;
+    border: 1px solid var(--accent);
+    animation: ring 3.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
   /* A proportion, drawn.
      The segments settle from nothing to their real share, which is the one
      moment the page gets to say "this is measured" without a sentence. Width
@@ -286,6 +298,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pulse::before { animation: none; }
+  .listening::before { animation: none; opacity: 0.35; }
   /* main no longer animates at all — see the note above the keyframes. */
   .reveal {
     opacity: 1;

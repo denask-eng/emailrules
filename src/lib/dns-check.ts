@@ -7,6 +7,8 @@ import {
   detectPlatforms,
   detectSpfManager,
   primarySender,
+  signingButUnauthorised,
+  spfAuthorised,
   type DetectedPlatform,
   type SpfManager,
 } from "@/lib/sending-platform";
@@ -234,6 +236,7 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
   /* ── Who this domain authorises ────────────────────────────────────── */
   const platforms = detectPlatforms(facts.spf, facts.dkim);
   const sender = primarySender(platforms);
+  const authorised = spfAuthorised(platforms);
   const spfManager = detectSpfManager(facts.spf);
 
   const findings: Finding[] = [];
@@ -422,6 +425,31 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
       ownership: "context",
       rule: "dkim-alignment-vs-dkim-passing",
       term: "dkim",
+    });
+  }
+
+  /* ── The two records, read against each other ──────────────────────────
+     Everything above grades one record at a time, which is what every checker
+     in this category does and why they all miss this. A domain whose SPF is
+     "present" and whose DKIM is "present" reads as healthy right up until you
+     notice they name different companies. */
+  for (const orphan of signingButUnauthorised(platforms)) {
+    findings.push({
+      severity: "fail",
+      title: `${orphan.name} signs your mail, and your SPF does not authorise it`,
+      detail: `${orphan.dkimSelectors} of ${orphan.name}'s selectors carry live keys on this domain, so ${orphan.name} is demonstrably signing mail as you. Your SPF record does not list ${orphan.name} anywhere${
+        authorised.length
+          ? ` — it authorises ${authorised.map((a) => a.name).join(" and ")} instead`
+          : ""
+      }. Every campaign ${orphan.name} sends is failing SPF right now and surviving on DKIM alignment alone, which holds until one key is rotated, revoked or misconfigured.`,
+      ownership: "yours",
+      mondayMorning: `Add ${orphan.name}'s include: to your SPF today — ${orphan.name} publishes the exact line and cannot put it in your DNS for you. Then send one campaign to yourself and confirm the Authentication-Results header reads spf=pass, not spf=softfail.`,
+      rule: "gmail-bulk-sender-requirements",
+      term: "spf",
+      evidence: `${facts.spf ?? "no SPF record"}\n${orphan.evidence
+        .filter((e) => e.from === "dkim")
+        .map((e) => e.value)
+        .join(", ")}`,
     });
   }
 

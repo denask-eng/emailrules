@@ -10,8 +10,9 @@ import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { BlocklistVerdict } from "@/components/blocklist-verdict";
-import { DomainRecord } from "@/components/domain-record";
 import { FindingList, FindingTally, countYours } from "@/components/findings";
+import { rows } from "@/components/domain-record";
+import { Instrument } from "@/components/instrument";
 import { PlatformPanel } from "@/components/platform-panel";
 import { primarySender } from "@/lib/sending-platform";
 import { SubscribeForm } from "@/components/subscribe-form";
@@ -137,38 +138,37 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
           had to assemble the verdict out of eight paragraphs. The domain is
           the small line now and the verdict is the big one, because nobody
           arrives here needing to be told which domain they typed. */}
-      <p className="num label">
-        {result.domain} · checked {fmtDate(result.checkedAt)}
-      </p>
-      <h1 className="mt-4 max-w-[18ch] text-[clamp(2.1rem,6.5vw,3.6rem)] leading-[0.98] tracking-[-0.045em]">
-        {yours > 0
-          ? `${yours === 1 ? "One thing is" : `${COUNT_WORD[yours] ?? yours} of these are`} yours.`
-          : own.shared > 0
-            ? "Nothing here is yours."
-            : "Nothing here needs you."}
-      </h1>
-      {/* The second line carries what the headline gave up. A reader who is
-          told nothing is theirs still needs to know somebody is on the hook,
-          or the relief reads as the page not having looked. */}
-      {yours === 0 && own.shared > 0 ? (
-        <p className="mt-4 max-w-[46ch] text-[1.02rem] leading-relaxed text-muted-fg">
-          {own.shared === 1 ? "One finding is" : `${own.shared} findings are`} shared with{" "}
-          {sender ? sender.name : "your sending platform"} — the mechanical half is done and the
-          judgement is still yours.
-        </p>
-      ) : null}
-      <p className="num mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-dim">
-        <span>{DNS_LOOKUPS} DNS lookups</span>
-        <span aria-hidden>·</span>
-        <span>{listsAsked} blocklists asked</span>
-        <span aria-hidden>·</span>
-        <span>{blocklistEntries === 0 ? "no entries" : `${blocklistEntries} with an entry`}</span>
-        <span aria-hidden>·</span>
-        <span>no score, ever</span>
-      </p>
+      {/* One measurement, one surface. The verdict, the record and the trace
+          were three stacked cards on cream and read as a document about a
+          domain; they are a single reading taken at a single moment. */}
+      <Instrument
+        domain={result.domain}
+        checkedAt={fmtDate(result.checkedAt)}
+        headline={
+          yours > 0
+            ? `${yours === 1 ? "One thing is" : `${COUNT_WORD[yours] ?? yours} of these are`} yours.`
+            : own.shared > 0
+              ? "Nothing here is yours."
+              : "Nothing here needs you."
+        }
+        sub={
+          yours === 0 && own.shared > 0
+            ? `${own.shared === 1 ? "One finding is" : `${own.shared} findings are`} shared with ${
+                sender ? sender.name : "your sending platform"
+              }. The mechanical half is done and the judgement is still yours.`
+            : undefined
+        }
+        meta={[
+          `${DNS_LOOKUPS} DNS lookups`,
+          `${listsAsked} blocklists asked`,
+          blocklistEntries === 0 ? "no entries" : `${blocklistEntries} with an entry`,
+          "no score, ever",
+        ]}
+        readout={rows(result.facts, { asked: listsAsked, entries: blocklistEntries })}
+        platforms={result.platforms}
+      />
 
-      {/* Who this domain authorises, before any finding is owned — because no
-          finding underneath can be owned without it. */}
+      {/* The caveats the panel cannot carry without becoming an essay. */}
       <PlatformPanel platforms={result.platforms} spfManager={result.spfManager} />
 
       {/* The limit, said early rather than buried under the answer. A reader
@@ -185,15 +185,8 @@ export default async function CheckResult({ params }: { params: Promise<{ domain
         and we read them off the message itself.
       </div>
 
-      {/* The record, before any opinion about it. */}
-      <div className="mt-9">
-        <DomainRecord
-          domain={result.domain}
-          checkedAt={fmtDate(result.checkedAt)}
-          facts={result.facts}
-          blocklist={{ asked: listsAsked, entries: blocklistEntries }}
-        />
-      </div>
+      {/* The record moved up into the instrument. Printing it twice was the
+          old layout's habit of restating itself. */}
 
       {/* Two questions, two sections. "Is my authentication set up" and "does
           anyone have an entry against me" are not the same question, and the
