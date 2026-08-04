@@ -211,9 +211,26 @@
     to { width: var(--w); }
   }
 
+  /* A stop, arriving.
+     The nodes land left to right so the eye is walked along the journey once
+     before it starts reading. This is an arrival, not a simulation: the result
+     was computed before the page rendered, and a spinner pretending to check
+     work already done would be theatre. Fast enough to feel alive, short
+     enough that nobody waits for it. */
+  .settle {
+    opacity: 0;
+    animation: settle 0.5s var(--ease-out) forwards;
+    animation-delay: var(--settle-delay, 0ms);
+  }
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(5px) scale(0.9); }
+    to   { opacity: 1; transform: none; }
+  }
+
   /* Nothing above animates for a reader who has asked for stillness. */
   @media (prefers-reduced-motion: reduce) {
     .grow-x { width: var(--w); animation: none; }
+    .settle { opacity: 1; transform: none; animation: none; }
   }
 
   /* Scroll / list reveal — human, quiet */
