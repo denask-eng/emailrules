@@ -4,6 +4,8 @@ import {
   runMessageCheck,
   saveMessageCheck,
 } from "@/lib/message-check";
+import { ingestReports } from "@/lib/dmarc-ingest";
+import { tokenFromAddress } from "@/lib/dmarc-store";
 import { verifyWebhookSignature } from "./signature";
 
 /**
@@ -89,15 +91,38 @@ export async function POST(request: Request) {
 
   if (event.type !== "email.received") return acknowledge(`ignored event ${String(event.type)}`);
 
-  const id = recipients(event.data?.to)
-    .map((address) => checkIdFromAddress(address))
-    .find((candidate): candidate is string => Boolean(candidate));
-  if (!id) return acknowledge("no recipient matched a one-time check address");
+  const to = recipients(event.data?.to);
 
   const emailId = event.data?.email_id;
   if (typeof emailId !== "string" || !/^[a-z0-9-]{10,80}$/i.test(emailId)) {
     return acknowledge("event carried no usable email id");
   }
+
+  /* Two kinds of mail arrive on one receiving domain, told apart by the local
+     part alone: dmarc-<token>@ is a receiver's daily aggregate report, and a
+     bare hex id is somebody's campaign. The DMARC branch is tried first because
+     its local part is the more specific pattern. */
+  const reportToken = to
+    .map((address) => tokenFromAddress(address))
+    .find((candidate): candidate is string => Boolean(candidate));
+
+  if (reportToken) {
+    try {
+      const outcome = await ingestReports(emailId, reportToken);
+      return acknowledge(
+        `dmarc ${reportToken.slice(0, 8)}…: ${outcome.stored} stored, ${outcome.duplicate} already had, ` +
+          `${outcome.rejected.length} rejected${outcome.rejected.length ? ` (${outcome.rejected.join("; ")})` : ""}`,
+      );
+    } catch (error) {
+      console.error("[inbound] failed while ingesting a DMARC report:", error);
+      return acknowledge("dmarc ingest failed");
+    }
+  }
+
+  const id = to
+    .map((address) => checkIdFromAddress(address))
+    .find((candidate): candidate is string => Boolean(candidate));
+  if (!id) return acknowledge("no recipient matched a one-time check or reporting address");
 
   try {
     /* The webhook is metadata only. Content comes from the API, over a

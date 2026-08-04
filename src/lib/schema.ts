@@ -153,4 +153,47 @@ export const SCHEMA = `
   );
   create index if not exists esp_candidates_status_idx
     on esp_candidates (status, first_seen_at desc);
+
+  /* A DMARC reporting address, with no account behind it.
+
+     Every other tool in this category makes you sign up before it will accept
+     your reports. The one-time message check on this site already proved a
+     token in a URL is enough: the address is the key, the page is the key, and
+     there is nothing to log into or leak.
+
+     domain is what the reader typed, kept only so the setup page can print the
+     record back and the results page can say whose reports these are. A report
+     whose policy_published/domain disagrees with it is still stored — the
+     receiver is the authority on what it saw, not us — and the results page
+     shows the disagreement rather than hiding the rows. */
+  create table if not exists dmarc_endpoints (
+    token        text primary key,
+    domain       text not null,
+    created_at   timestamptz not null default now(),
+    last_seen_at timestamptz,
+    report_count int not null default 0
+  );
+
+  /* One row per aggregate report.
+
+     id is org_name|report_id, which is the pair receivers guarantee unique, so
+     a redelivered webhook is an upsert rather than a double count — the failure
+     mode that makes a DMARC dashboard quietly overstate every volume on it.
+
+     records holds the parsed rows as JSONB. Summarising happens in JS through
+     the same pure function the tests cover, rather than in SQL where it would
+     be a second implementation of the classification nobody could test. */
+  create table if not exists dmarc_reports (
+    id          text primary key,
+    token       text not null,
+    domain      text not null,
+    org_name    text not null,
+    begins_at   timestamptz not null,
+    ends_at     timestamptz not null,
+    policy      jsonb not null,
+    records     jsonb not null,
+    received_at timestamptz not null default now()
+  );
+  create index if not exists dmarc_reports_token_idx
+    on dmarc_reports (token, ends_at desc);
 `;

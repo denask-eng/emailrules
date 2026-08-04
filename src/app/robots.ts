@@ -29,7 +29,11 @@ export default function robots(): MetadataRoute.Robots {
          absent from the sitemap; publishing a record of somebody else's domain
          is a decision to take deliberately, not one to arrive at because a
          crawler found a page nobody meant to expose. */
-      { userAgent: "*", allow: "/", disallow: ["/api/", "/admin", "/domain"] },
+      /* "/dmarc/" with the slash blocks the token pages without blocking
+         /dmarc itself. A results URL is a credential: it is never linked from
+         anywhere crawlable, carries noindex, and is kept out of here too,
+         because one of those three failing should not be enough. */
+      { userAgent: "*", allow: "/", disallow: ["/api/", "/admin", "/domain", "/dmarc/"] },
       ...aiAgents.map((ua) => ({ userAgent: ua, allow: "/" })),
     ],
     sitemap: `${SITE.url}/sitemap.xml`,

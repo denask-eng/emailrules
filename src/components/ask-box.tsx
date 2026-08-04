@@ -82,6 +82,11 @@ export function AskBox({
  */
 const SURFACES = [
   {
+    href: "/dmarc",
+    label: "Who is sending as you",
+    note: "Every mailbox provider already mails you this daily. We read it. No account.",
+  },
+  {
     href: "/check/message",
     label: "Send a real campaign",
     note: "DNS cannot name the address that actually sent your mail. A message can.",
@@ -100,7 +105,12 @@ const SURFACES = [
 
 export function Surfaces({ className }: { className?: string }) {
   return (
-    <ul className={cn("grid list-none gap-px overflow-hidden border-y bg-border p-0 sm:grid-cols-3", className)}>
+    <ul
+      className={cn(
+        "grid list-none gap-px overflow-hidden border-y bg-border p-0 sm:grid-cols-2 lg:grid-cols-4",
+        className,
+      )}
+    >
       {SURFACES.map((s) => (
         <li key={s.href} className="bg-bg">
           <Link href={s.href} className="group block h-full px-5 py-6 text-left hover:bg-muted/60">

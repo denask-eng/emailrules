@@ -44,6 +44,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
        Indexable because it is a genuine primary source: nobody else publishes
        which of these zones can still answer. */
     { url: `${SITE.url}/blocklists`, lastModified: newest, changeFrequency: "daily", priority: 0.8 },
+    /* The setup page only. A results URL is a credential and is noindex. */
+    { url: `${SITE.url}/dmarc`, lastModified: newest, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE.url}/coverage`, lastModified: newest, changeFrequency: "weekly", priority: 0.75 },
     { url: `${SITE.url}/how-email-works`, lastModified: newest, changeFrequency: "monthly", priority: 0.75 },
     /* One URL per word. Not thin content: each carries the artefact, the
