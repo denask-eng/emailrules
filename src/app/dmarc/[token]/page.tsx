@@ -5,6 +5,7 @@ import { resolveTxt } from "node:dns/promises";
 import { CopyField } from "@/components/copy-field";
 import { getEndpoint, isToken, reportAddress, reportsFor, RETENTION_DAYS } from "@/lib/dmarc-store";
 import { summarise, type Source, type SourceKind } from "@/lib/dmarc-report";
+import { ProofBar, ShareBar } from "@/components/proof-bar";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -28,44 +29,69 @@ export const metadata: Metadata = {
    referrer log. noindex is above; the layout's canonical is suppressed here. */
 export const dynamic = "force-dynamic";
 
-const GROUPS: { kinds: SourceKind[]; title: string; blurb: string; tone: string }[] = [
-  {
-    kinds: ["unauthenticated", "dkim-broken"],
-    title: "Needs you",
-    blurb:
-      "Nothing here authenticated the way your policy expects. Each row is either a sender you set up and forgot or a setup that was never finished.",
-    tone: "text-live",
-  },
-  {
-    kinds: ["aligned"],
-    title: "Working",
-    blurb: "Both SPF and DKIM aligned. This is your mail, arriving as you intended.",
-    tone: "text-ok",
-  },
-  {
-    kinds: ["forwarded"],
-    title: "Ignore this",
-    blurb:
-      "SPF failed and DKIM passed on every one of these. That is a forwarded message, not a forged one — and it is the bulk of what other tools print in red.",
-    tone: "text-dim",
-  },
-];
+const TONE: Record<SourceKind, "ok" | "warn" | "bad" | "quiet"> = {
+  aligned: "ok",
+  "dkim-broken": "warn",
+  unauthenticated: "bad",
+  forwarded: "quiet",
+};
 
-function Row({ source }: { source: Source }) {
+const ACCENT: Record<SourceKind, string> = {
+  aligned: "before:bg-ok",
+  "dkim-broken": "before:bg-soon",
+  unauthenticated: "before:bg-live",
+  forwarded: "before:bg-dim/45",
+};
+
+/**
+ * One sender, as a card with its own share of the total drawn on it.
+ *
+ * A list of addresses with counts beside them makes the reader do the
+ * arithmetic to find out which one is big. The bar does it for them, and the
+ * coloured spine says which of the four things this is before any word is read.
+ */
+function SourceCard({
+  source,
+  total,
+  explain,
+}: {
+  source: Source;
+  total: number;
+  /** The paragraph is the same for every source of a kind, so it is printed
+      once and the rest of the group carries the headline alone. Repeating it
+      six times is what turns a result into something you have to read. */
+  explain: boolean;
+}) {
   return (
-    <li className="border-b border-border-soft py-4">
+    <li
+      className={cn(
+        "relative rounded-xl border bg-card p-5 pl-6",
+        "before:absolute before:top-5 before:bottom-5 before:left-0 before:w-[3px] before:rounded-r-full before:content-['']",
+        ACCENT[source.verdict.kind],
+      )}
+      style={{ boxShadow: "var(--lift)" }}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <p className="num text-[14.5px] font-medium">{source.sourceIp}</p>
-        <p className="num text-[12.5px] text-dim">
-          {source.messages.toLocaleString("en-GB")} message{source.messages === 1 ? "" : "s"}
+        <p className="num text-[15px] font-medium">{source.sourceIp}</p>
+        <p className="num text-[1.15rem] font-semibold tracking-[-0.03em]">
+          {source.messages.toLocaleString("en-GB")}
+          <span className="ml-1.5 text-[12px] font-normal text-dim">
+            message{source.messages === 1 ? "" : "s"}
+          </span>
         </p>
       </div>
-      <p className="mt-1 text-[13.5px] font-medium">{source.verdict.headline}</p>
-      <p className="mt-1.5 max-w-[70ch] text-[13px] leading-relaxed text-muted-fg">
-        {source.verdict.detail}
-      </p>
+
+      <ShareBar className="mt-3" value={source.messages} total={total} tone={TONE[source.verdict.kind]} />
+
+      <p className="mt-3.5 text-[14px] font-medium">{source.verdict.headline}</p>
+      {explain ? (
+        <p className="mt-1.5 max-w-[70ch] text-[13px] leading-relaxed text-muted-fg">
+          {source.verdict.detail}
+        </p>
+      ) : null}
+
       {source.dkimDomains.length || source.spfDomain ? (
-        <p className="num mt-2 text-[11.5px] text-dim">
+        <p className="num mt-3 border-t border-border-soft pt-2.5 text-[11.5px] text-dim">
           {source.dkimDomains.length ? `dkim d=${source.dkimDomains.join(", ")}` : "no dkim signature"}
           {" · "}
           {source.spfDomain ? `spf ${source.spfDomain}` : "no spf domain"}
@@ -103,7 +129,15 @@ export default async function DmarcResults({ params }: { params: Promise<{ token
 
   const sources = summarise(reports);
   const needsYou = sources.filter((s) => s.verdict.yours && s.verdict.kind !== "aligned");
+  const working = sources.filter((s) => s.verdict.kind === "aligned");
+  const forwarded = sources.filter((s) => s.verdict.kind === "forwarded");
   const messages = sources.reduce((total, s) => total + s.messages, 0);
+  const receivers = new Set(reports.map((r) => r.orgName)).size;
+
+  /* Volume, not row count — the bar is about how much mail, and one address
+     sending a million is not one four-hundredth of a page of forwarders. */
+  const volume = (kind: SourceKind) =>
+    sources.filter((s) => s.verdict.kind === kind).reduce((total, s) => total + s.messages, 0);
 
   /* The record to publish: their own, with our address appended, so nobody has
      to work out how to merge a rua list by hand. */
@@ -117,6 +151,17 @@ export default async function DmarcResults({ params }: { params: Promise<{ token
       : `v=DMARC1; p=none; rua=mailto:${address}`
     : null;
 
+  /* First card of each kind carries the explanation; the rest carry the
+     headline alone. */
+  const firstOfKind = (list: Source[]) => {
+    const seen = new Set<SourceKind>();
+    return list.map((s) => {
+      const first = !seen.has(s.verdict.kind);
+      seen.add(s.verdict.kind);
+      return { source: s, explain: first };
+    });
+  };
+
   return (
     <div className="shell py-12 sm:py-16">
       <p className="num label">
@@ -126,42 +171,101 @@ export default async function DmarcResults({ params }: { params: Promise<{ token
 
       {reports.length ? (
         <>
-          <h1 className="mt-4 max-w-[22ch] text-[clamp(2rem,6vw,3.4rem)] leading-[1.0] tracking-[-0.045em]">
+          <h1
+            className={cn(
+              "mt-4 max-w-[20ch] text-[clamp(2.3rem,7.5vw,4.4rem)] leading-[0.96] tracking-[-0.05em]",
+              needsYou.length === 0 ? "text-ok" : "text-live",
+            )}
+          >
             {needsYou.length === 0
               ? "Nothing here needs you."
-              : `${needsYou.length} thing${needsYou.length === 1 ? "" : "s"} need${needsYou.length === 1 ? "s" : ""} you.`}
+              : `${needsYou.length} sender${needsYou.length === 1 ? "" : "s"} need${needsYou.length === 1 ? "s" : ""} you.`}
           </h1>
-          <p className="mt-5 max-w-[62ch] text-[1.02rem] leading-relaxed text-muted-fg">
-            {reports.length} report{reports.length === 1 ? "" : "s"} from{" "}
-            {new Set(reports.map((r) => r.orgName)).size} receiver
-            {new Set(reports.map((r) => r.orgName)).size === 1 ? "" : "s"}, covering{" "}
-            {messages.toLocaleString("en-GB")} message{messages === 1 ? "" : "s"}. Your published
-            policy is{" "}
-            <span className="num text-fg">p={reports[0]?.policy.p ?? "unknown"}</span>
-            {reports[0]?.policy.p === "none"
-              ? " — monitoring only, which asks receivers to report and instructs them to block nothing."
-              : "."}
-          </p>
 
-          {GROUPS.map((group) => {
-            const rows = sources.filter((s) => group.kinds.includes(s.verdict.kind));
-            if (!rows.length) return null;
-            return (
-              <section key={group.title} className="mt-12">
-                <h2 className={cn("num text-[12px] font-medium tracking-[0.07em] uppercase", group.tone)}>
-                  {group.title} · {rows.length}
-                </h2>
-                <p className="mt-2 max-w-[64ch] text-[13.5px] leading-relaxed text-muted-fg">
-                  {group.blurb}
-                </p>
-                <ul className="mt-5 list-none border-t p-0">
-                  {rows.map((s) => (
-                    <Row key={`${s.sourceIp}-${s.verdict.kind}`} source={s} />
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
+          {/* The proof, immediately, at the size of the claim. */}
+          <ProofBar
+            className="mt-9"
+            segments={[
+              {
+                key: "aligned",
+                label: "authenticated as you",
+                tone: "ok",
+                value: volume("aligned"),
+              },
+              {
+                key: "dkim-broken",
+                label: "you, but unsigned",
+                tone: "warn",
+                value: volume("dkim-broken"),
+              },
+              {
+                key: "unauthenticated",
+                label: "nothing proves it is you",
+                tone: "bad",
+                value: volume("unauthenticated"),
+                note: "The only band that has ever needed anybody to do anything.",
+              },
+              {
+                key: "forwarded",
+                label: "forwarded, not forged",
+                tone: "quiet",
+                value: volume("forwarded"),
+                note: "Drawn grey on purpose. Other tools print this in red.",
+              },
+            ]}
+            caption={`${messages.toLocaleString("en-GB")} message${messages === 1 ? "" : "s"} claimed to be ${endpoint.domain} across ${reports.length} report${reports.length === 1 ? "" : "s"} from ${receivers} receiver${receivers === 1 ? "" : "s"}. Your published policy is p=${reports[0]?.policy.p ?? "unknown"}${reports[0]?.policy.p === "none" ? ", which asks receivers to report and instructs them to block nothing." : "."}`}
+          />
+
+          {needsYou.length ? (
+            <section className="mt-14">
+              <h2 className="num text-[12px] font-medium tracking-[0.07em] text-live uppercase">
+                Needs you · {needsYou.length}
+              </h2>
+              <ul className="mt-4 grid list-none gap-3 p-0">
+                {firstOfKind(needsYou).map(({ source, explain }) => (
+                  <SourceCard key={`${source.sourceIp}-${source.verdict.kind}`} source={source} total={messages} explain={explain} />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {working.length ? (
+            <section className="mt-12">
+              <h2 className="num text-[12px] font-medium tracking-[0.07em] text-ok uppercase">
+                Working · {working.length}
+              </h2>
+              <ul className="mt-4 grid list-none gap-3 p-0">
+                {firstOfKind(working).map(({ source, explain }) => (
+                  <SourceCard key={`${source.sourceIp}-${source.verdict.kind}`} source={source} total={messages} explain={explain} />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {/* Folded shut on purpose. Every other tool in this category makes the
+              forwarded pile the bulk of what you scroll through; putting it
+              behind one click is the argument made physical rather than
+              written down again. */}
+          {forwarded.length ? (
+            <details className="group mt-12 rounded-xl border bg-bg-2 px-5 py-4">
+              <summary className="flex cursor-pointer list-none items-center gap-3 text-[14px] [&::-webkit-details-marker]:hidden">
+                <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-[3px] bg-dim/60" />
+                <span className="font-medium">
+                  {forwarded.length} forwarded source{forwarded.length === 1 ? "" : "s"}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-muted-fg">
+                  — nothing here needs you.
+                </span>
+                <span className="num shrink-0 text-[12px] text-dim group-open:hidden">Show anyway</span>
+                <span className="num hidden shrink-0 text-[12px] text-dim group-open:inline">Hide</span>
+              </summary>
+              <ul className="mt-4 grid list-none gap-3 p-0">
+                {firstOfKind(forwarded).map(({ source, explain }) => (
+                  <SourceCard key={`${source.sourceIp}-${source.verdict.kind}`} source={source} total={messages} explain={explain} />
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </>
       ) : (
         <>

@@ -196,6 +196,26 @@
     70%, 100% { transform: scale(1.9); opacity: 0; }
   }
 
+  /* A proportion, drawn.
+     The segments settle from nothing to their real share, which is the one
+     moment the page gets to say "this is measured" without a sentence. Width
+     rather than scaleX because these carry a label and a scaled label lies
+     about its own size. No JS: the delay is a custom property on the element. */
+  .grow-x {
+    width: 0;
+    animation: grow-x 0.85s var(--ease-out) forwards;
+    animation-delay: var(--grow-delay, 0ms);
+  }
+  @keyframes grow-x {
+    from { width: 0; }
+    to { width: var(--w); }
+  }
+
+  /* Nothing above animates for a reader who has asked for stillness. */
+  @media (prefers-reduced-motion: reduce) {
+    .grow-x { width: var(--w); animation: none; }
+  }
+
   /* Scroll / list reveal — human, quiet */
   .reveal {
     opacity: 0;
