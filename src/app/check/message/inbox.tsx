@@ -130,14 +130,13 @@ export function Inbox({
     );
     router.prefetch(`/check/message/${id}`);
     const handoff = setTimeout(() => router.push(`/check/message/${id}`), HANDOFF_MS);
-    /* A safety net: if a prefetch stalls or the push is swallowed, a hard
-       navigation still gets the reader to their result. Nobody should ever
-       watch this screen for two minutes again. */
-    const fallback = setTimeout(() => {
-      if (typeof window !== "undefined" && !window.location.pathname.endsWith(id)) {
-        window.location.href = `/check/message/${id}`;
-      }
-    }, HANDOFF_MS + 2_500);
+    /* A safety net: if a prefetch stalls or the push is swallowed, a second
+       App Router transition still gets the reader to their result. Nobody
+       should ever watch this screen for two minutes again. */
+    const fallback = setTimeout(
+      () => router.replace(`/check/message/${id}`),
+      HANDOFF_MS + 2_500,
+    );
     return () => {
       ticks.forEach(clearTimeout);
       clearTimeout(handoff);

@@ -95,11 +95,13 @@ export default async function Blocklists() {
         </div>
 
         <div className="px-5 pt-9 pb-8 sm:px-7 sm:pt-11">
-          <p className="num text-[clamp(3.4rem,13vw,6.5rem)] leading-[0.85] font-semibold tracking-[-0.05em] text-[#ff9d94]">
-            {Math.round((silent.length / rows.length) * 100)}%
-          </p>
-          <h1 className="mt-5 max-w-[24ch] text-[clamp(1.25rem,3.6vw,1.9rem)] leading-[1.1] font-semibold tracking-[-0.03em] text-white text-balance">
-            of the blocklists this industry checks publish no test entry.
+          <h1>
+            <span className="num block text-[clamp(3.4rem,13vw,6.5rem)] leading-[0.85] font-semibold tracking-[-0.05em] text-[#ff9d94]">
+              {Math.round((silent.length / rows.length) * 100)}%
+            </span>
+            <span className="mt-5 block max-w-[24ch] text-[clamp(1.25rem,3.6vw,1.9rem)] leading-[1.1] font-semibold tracking-[-0.03em] text-white text-balance">
+              of the blocklists this industry checks publish no test entry.
+            </span>
           </h1>
           <p className="mt-5 max-w-[54ch] text-[0.95rem] leading-relaxed text-white/55">
             {silent.length} of {rows.length} zones answer nothing at all. A dead zone returns

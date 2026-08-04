@@ -283,7 +283,7 @@ export function JurisdictionMatrix({
   const totals = geos.map((j) => rules.filter((r) => r.jurisdictions.includes(j)).length);
 
   return (
-    <figure className={cn("m-0 min-w-0 max-w-full", className)}>
+    <figure className={cn("m-0 min-w-0 max-w-full overflow-hidden", className)}>
       <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
         <table className="min-w-[42rem] border-collapse text-[12px]">
           <caption className="sr-only">
@@ -292,7 +292,7 @@ export function JurisdictionMatrix({
           </caption>
           <thead>
             <tr>
-              <th scope="col" className="label sticky left-0 z-10 bg-bg py-2 pr-3 text-left">
+              <th scope="col" className="label bg-bg py-2 pr-3 text-left sm:sticky sm:left-0 sm:z-10">
                 Rule
               </th>
               {geos.map((j) => (
@@ -314,7 +314,7 @@ export function JurisdictionMatrix({
               <tr key={r.slug} className="hover:bg-muted/50">
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 max-w-[24rem] truncate bg-bg py-1.5 pr-3 text-left font-normal"
+                  className="max-w-[24rem] truncate bg-bg py-1.5 pr-3 text-left font-normal sm:sticky sm:left-0 sm:z-10"
                 >
                   <Link href={`/rules/${r.slug}`} className="hover:text-accent" title={r.title}>
                     {r.title}
@@ -346,7 +346,7 @@ export function JurisdictionMatrix({
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-fg/25">
-              <th scope="row" className="label sticky left-0 bg-bg py-2 pr-3 text-left">
+              <th scope="row" className="label bg-bg py-2 pr-3 text-left sm:sticky sm:left-0">
                 Rules that hit you
               </th>
               {totals.map((n, i) => (
