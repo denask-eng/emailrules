@@ -13,7 +13,6 @@ import {
   IMPACT_LABEL,
   type Freshness,
   type ChangeKind,
-  type Impact,
 } from "@/lib/rule-signals";
 import { displayTldr, displayWhy, displayPlain } from "@/content/plain-overrides";
 import { Reveal } from "@/components/reveal";
@@ -168,15 +167,6 @@ const FRESH_TONE: Record<Freshness, string> = {
   new: "text-accent bg-accent-soft border-accent/25",
   updated: "text-soon bg-soon-bg border-soon/30",
   stable: "text-dim bg-bg-2 border-border-soft",
-};
-
-const IMPACT_TONE: Record<Impact, string> = {
-  inbox: "text-live bg-live-bg border-live/20",
-  legal: "text-soon bg-soon-bg border-soon/25",
-  measure: "text-muted-fg bg-muted border-border",
-  hygiene: "text-ok bg-ok-bg border-ok/25",
-  auth: "text-fg bg-bg-2 border-border",
-  content: "text-muted-fg bg-muted border-border",
 };
 
 /** The at-a-glance answer to "is this mine?", for index and topic listings. */
@@ -343,16 +333,19 @@ export function SectionHead({
   title,
   lede,
   center = false,
+  as = "h2",
 }: {
   label: string;
   title: string;
   lede?: string;
   center?: boolean;
+  as?: "h1" | "h2";
 }) {
+  const Heading = as;
   return (
     <div className={cn("mb-7", center && "mx-auto max-w-2xl text-center")}>
       <p className="label">{label}</p>
-      <h2 className="mt-3 text-[clamp(24px,3.4vw,34px)]">{title}</h2>
+      <Heading className="mt-3 text-[clamp(24px,3.4vw,34px)]">{title}</Heading>
       {lede ? (
         <p
           className={cn(

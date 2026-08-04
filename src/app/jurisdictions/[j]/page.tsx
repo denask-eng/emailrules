@@ -80,7 +80,7 @@ export default async function JurisdictionPage({
   return (
     <div className={"shell shell-tight py-12 sm:py-16"}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <SectionHead label="Jurisdiction" title={meta.label} lede={meta.blurb} />
+      <SectionHead as="h1" label="Jurisdiction" title={meta.label} lede={meta.blurb} />
       <p className="mt-2 text-[13.5px] text-muted-fg">
         {rules.length} {rules.length === 1 ? "rule" : "rules"} with sources for this place ·{" "}
         <Link href="/rules" className="font-medium text-fg underline underline-offset-2">

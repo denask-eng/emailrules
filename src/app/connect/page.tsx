@@ -58,6 +58,7 @@ export default function ConnectPage() {
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <SectionHead
+        as="h1"
         label="Connect"
         title="Your ESP, when it earns the right."
         lede="We will not fake a “Connect Klaviyo” button that does nothing useful. Below is the brutal path: live steps first, OAuth only after the free product is habit-forming."

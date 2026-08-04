@@ -93,6 +93,8 @@
 @layer base {
   * { border-color: var(--border); }
 
+  html { scroll-padding-top: 4.25rem; }
+
   body {
     background: var(--bg);
     color: var(--fg);
@@ -401,6 +403,16 @@
     padding-top: 7px;
     font-size: 8pt;
     color: #63635e;
+  }
+}
+
+/* Safari zooms the whole page when a focused form control renders below
+   16px. Keep compact desktop typography while making every phone form stable. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 }
 

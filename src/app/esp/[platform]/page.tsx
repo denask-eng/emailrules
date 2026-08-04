@@ -107,6 +107,7 @@ export default async function EspPlatformPage({
       </p>
 
       <SectionHead
+        as="h1"
         label="Platform ledger"
         title={`What ${meta.name} changed.`}
         lede={meta.note}

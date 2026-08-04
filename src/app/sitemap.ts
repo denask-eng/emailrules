@@ -76,6 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE.url}/corrections`, lastModified: newest, changeFrequency: "weekly", priority: 0.5 },
     { url: `${SITE.url}/sources`, lastModified: newest, changeFrequency: "weekly", priority: 0.5 },
     { url: `${SITE.url}/methodology`, lastModified: newest, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE.url}/agents`, lastModified: newest, changeFrequency: "monthly", priority: 0.5 },
     ...(Object.keys(JURISDICTIONS) as Jurisdiction[])
       .filter((j) => rules.some((r) => r.jurisdictions.includes(j)))
       .map((j) => ({

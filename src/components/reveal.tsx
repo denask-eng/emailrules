@@ -32,7 +32,6 @@ export function Reveal({
     if (!el) return;
 
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setOn(true);
       return;
     }
 

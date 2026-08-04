@@ -16,6 +16,7 @@ export default async function CorrectionsPage() {
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <SectionHead
+        as="h1"
         label="Record"
         title="Corrections"
         lede="Corrections are published, dated and kept visible. A reference that hides being wrong cannot be checked."

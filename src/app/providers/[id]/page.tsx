@@ -128,16 +128,16 @@ export default async function ProviderPage({ params }: { params: Promise<{ id: s
       <p className="mt-5 max-w-[62ch] text-[1.04rem] leading-relaxed text-muted-fg">{p.what}</p>
 
       {p.postmasterUrl ? (
-        <p className="num mt-4 text-[13px]">
+        <p className="num mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[13px]">
           <a
             href={p.postmasterUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-accent underline underline-offset-3"
+            className="min-w-0 break-all text-accent underline underline-offset-3"
           >
             {p.postmasterUrl.replace(/^https?:\/\//, "")}
           </a>
-          <span className="ml-2 text-dim">their postmaster page</span>
+          <span className="text-dim">their postmaster page</span>
         </p>
       ) : null}
 
@@ -257,12 +257,12 @@ export default async function ProviderPage({ params }: { params: Promise<{ id: s
             <li key={d.path} className="mt-5 rounded-xl border p-5 first:mt-0">
               <p className="text-[1.02rem] leading-snug font-semibold">{d.path}</p>
               {d.url ? (
-                <p className="num mt-2 text-[0.78rem]">
+                <p className="num mt-2 max-w-full text-[0.78rem]">
                   <a
                     href={d.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-accent underline underline-offset-3"
+                    className="break-all text-accent underline underline-offset-3"
                   >
                     {d.url.replace(/^https?:\/\//, "")}
                   </a>

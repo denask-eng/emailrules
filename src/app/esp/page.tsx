@@ -47,6 +47,7 @@ export default async function EspIndex() {
       />
 
       <SectionHead
+        as="h1"
         label="Platform changes"
         title="What your email platform changed."
         lede="The weekly question is rarely what a regulator did. It is whether anything moved in the tool you open every morning. Platforms ship those changes constantly and publish them badly, scattered across release notes nobody reads."

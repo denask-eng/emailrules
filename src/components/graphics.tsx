@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { fmtDate, daysSince } from "@/lib/format";
+import { daysSince } from "@/lib/format";
 import { OWNERSHIP, JURISDICTIONS } from "@/lib/types";
 import type { Rule, Ownership, Jurisdiction } from "@/lib/types";
 import { Signal } from "@/components/signal";
@@ -283,9 +283,9 @@ export function JurisdictionMatrix({
   const totals = geos.map((j) => rules.filter((r) => r.jurisdictions.includes(j)).length);
 
   return (
-    <figure className={cn("m-0", className)}>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-[12px]">
+    <figure className={cn("m-0 min-w-0 max-w-full", className)}>
+      <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
+        <table className="min-w-[42rem] border-collapse text-[12px]">
           <caption className="sr-only">
             Which jurisdictions each rule applies in. A filled cell means the rule names that
             jurisdiction.

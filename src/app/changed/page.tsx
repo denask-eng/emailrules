@@ -43,6 +43,7 @@ export default async function Changed() {
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <SectionHead
+        as="h1"
         label="What changed"
         title="Skim in thirty seconds."
         lede="Each line answers three things: what changed, why a working email person should care, and what to do next. Open the full rule only if you need sources."

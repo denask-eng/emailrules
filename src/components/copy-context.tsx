@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { fmtDate } from "@/lib/format";
-import { OWNERSHIP, type Ownership } from "@/lib/types";
 
 /**
  * "Copy as context" — borrowed from branch B, and the one idea from it that

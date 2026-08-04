@@ -16,6 +16,7 @@ export default async function Methodology() {
   return (
     <div className={"shell shell-tight py-12 sm:py-16"}>
       <SectionHead
+        as="h1"
         label="How this works"
         title="Methodology"
         lede="A reference is only worth citing if you can see how it was made. This page is the contract."

@@ -137,15 +137,18 @@ export function BriefClient({
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setA(readAudience());
-    try {
-      const q = new URLSearchParams(window.location.search);
-      const c = q.get("label") || q.get("client");
-      if (c) setLabel(decodeURIComponent(c).slice(0, 80));
-    } catch {
-      /* */
-    }
-    setHydrated(true);
+    const frame = window.requestAnimationFrame(() => {
+      setA(readAudience());
+      try {
+        const q = new URLSearchParams(window.location.search);
+        const c = q.get("label") || q.get("client");
+        if (c) setLabel(decodeURIComponent(c).slice(0, 80));
+      } catch {
+        /* */
+      }
+      setHydrated(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -168,8 +171,10 @@ export function BriefClient({
     return rules.filter((r) => matchesAudience(r, a)).map(toSortable);
   }, [rules, a]);
 
-  const boost = (topic: string) => roleTopicBoost(topic, a.role);
-  const sorted = useMemo(() => sortForMarketer(filtered, boost), [filtered, a.role]);
+  const sorted = useMemo(
+    () => sortForMarketer(filtered, (topic) => roleTopicBoost(topic, a.role)),
+    [filtered, a.role],
+  );
   const top = useMemo(() => {
     const priority = sorted.filter(
       (r) => r.ownership === "yours" || r.status === "upcoming" || r.ownership === "shared",

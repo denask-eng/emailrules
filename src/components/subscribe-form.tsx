@@ -23,15 +23,18 @@ export function SubscribeForm({ defaultDomain = "", compact = false, className }
   const [hasSetup, setHasSetup] = useState(false);
 
   useEffect(() => {
-    try {
-      const a = readStoredAudience();
-      if (audienceActive(a)) {
-        setAudienceJson(JSON.stringify(a));
-        setHasSetup(true);
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        const a = readStoredAudience();
+        if (audienceActive(a)) {
+          setAudienceJson(JSON.stringify(a));
+          setHasSetup(true);
+        }
+      } catch {
+        /* */
       }
-    } catch {
-      /* */
-    }
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   return (

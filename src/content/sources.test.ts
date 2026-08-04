@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { RULES } from "./rules";
-import { PROVIDERS, providerSources } from "./providers";
+import { providerSources } from "./providers";
 import type { RuleSource } from "@/lib/types";
 
 /* ── Why this file exists ─────────────────────────────────────────────────

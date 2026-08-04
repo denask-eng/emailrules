@@ -21,7 +21,6 @@ import { createHash } from "node:crypto";
 import { sql, hasDatabase } from "@/lib/db";
 import { contentHash } from "@/lib/esp-extract";
 import { getAllRules } from "@/lib/rules";
-import { stalenessOf } from "./freshness";
 
 /**
  * How many sources one run checks.

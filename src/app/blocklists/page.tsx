@@ -98,9 +98,9 @@ export default async function Blocklists() {
           <p className="num text-[clamp(3.4rem,13vw,6.5rem)] leading-[0.85] font-semibold tracking-[-0.05em] text-[#ff9d94]">
             {Math.round((silent.length / rows.length) * 100)}%
           </p>
-          <p className="mt-5 max-w-[24ch] text-[clamp(1.25rem,3.6vw,1.9rem)] leading-[1.1] font-semibold tracking-[-0.03em] text-white text-balance">
+          <h1 className="mt-5 max-w-[24ch] text-[clamp(1.25rem,3.6vw,1.9rem)] leading-[1.1] font-semibold tracking-[-0.03em] text-white text-balance">
             of the blocklists this industry checks publish no test entry.
-          </p>
+          </h1>
           <p className="mt-5 max-w-[54ch] text-[0.95rem] leading-relaxed text-white/55">
             {silent.length} of {rows.length} zones answer nothing at all. A dead zone returns
             NXDOMAIN, and so does a healthy one saying you are clean, so every checker that asks

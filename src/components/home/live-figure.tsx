@@ -95,7 +95,8 @@ export async function LiveFigure() {
      When nobody in the rotation is misconfigured, it falls through to the
      plain reading rather than manufacturing a conflict to keep the graphic
      interesting — which is the entire reason this stopped being a transcript. */
-  const slot = Math.floor(Date.now() / 3_600_000);
+  const checkedHour = readings.find((r) => r !== null)?.checkedAt.slice(11, 13) ?? "0";
+  const slot = Number(checkedHour) || 0;
   const result =
     conflicts.length > 0
       ? conflicts[slot % conflicts.length]

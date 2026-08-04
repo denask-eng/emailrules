@@ -97,7 +97,7 @@ export const FOOTER_NAV = [
       { href: "/methodology", label: "Methodology" },
       /* The machine interface was reachable from nowhere. An agent finds it by
          convention; a person deciding whether to trust one needs to see it. */
-      { href: "/mcp", label: "For agents (MCP)" },
+      { href: "/agents", label: "For agents (MCP)" },
       { href: "/corrections", label: "Corrections" },
       { href: "/start", label: "How to use this site" },
       { href: "/connect", label: "Connect roadmap" },

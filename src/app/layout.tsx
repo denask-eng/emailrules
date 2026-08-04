@@ -213,8 +213,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="flex min-h-dvh flex-col">
         <SiteJsonLd />
         <AuthorJsonLd siteUrl={SITE.url} />
+        <a
+          href="#main-content"
+          className="fixed top-3 left-3 z-[60] -translate-y-20 rounded-lg bg-fg px-4 py-2 text-sm font-medium text-bg transition-transform focus:translate-y-0 focus:outline-none focus-visible:ring-3 focus-visible:ring-accent/35"
+        >
+          Skip to content
+        </a>
         <Nav />
-        <main className="flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1">
+          {children}
+        </main>
         <SiteFaq />
         <Footer />
         {/* The only instrumentation on this site, and the only one it will get.

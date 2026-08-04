@@ -34,6 +34,7 @@ export default async function Sources() {
   return (
     <div className={"shell shell-tight py-12 sm:py-16"}>
       <SectionHead
+        as="h1"
         label="Receipts"
         title="Every source"
         lede="If a claim on this site is not traceable to something on this page, it should not be here. Tell us and we will fix it."

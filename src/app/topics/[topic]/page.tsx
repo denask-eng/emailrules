@@ -65,7 +65,7 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
   return (
     <div className={"shell shell-tight py-12 sm:py-16"}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <SectionHead label="Topic" title={meta.label} lede={meta.blurb} />
+      <SectionHead as="h1" label="Topic" title={meta.label} lede={meta.blurb} />
 
       {TOPIC_BRIEFS[topic as Topic] ? (
         <div className="mt-8 max-w-[36rem] border-l-2 border-accent/35 pl-4 sm:pl-5">

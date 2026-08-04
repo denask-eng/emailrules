@@ -27,6 +27,7 @@ export default async function HowToUse() {
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <SectionHead
+        as="h1"
         label="How to use this site"
         title="Pick your role. Get five rules. That is the whole method."
         lede="There is no course and no onboarding to complete. The shelf is small on purpose, and it filters itself to your desk."

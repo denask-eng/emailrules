@@ -48,6 +48,7 @@ export default async function Coverage() {
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <SectionHead
+        as="h1"
         label="Coverage map"
         title={`${stats.total} rules on purpose — not 400 of folklore.`}
         lede="What a page has to prove before it goes on the shelf, what we refuse to shelve at all, and the running tally against both. Thin and checkable beats fat and embarrassing."
