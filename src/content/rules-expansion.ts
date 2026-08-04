@@ -174,16 +174,26 @@ export const RULES_EXPANSION: Rule[] = [
         actor: "standards-body",
       },
       {
-        name: "Spamhaus, check.spamhaus.org",
-        url: "https://check.spamhaus.org/",
+        /* Was `https://check.spamhaus.org/`, which is the lookup tool rather
+           than a document — the same failure as citing a regulator's front
+           door. The FAQ is where Spamhaus actually states listing and removal
+           policy, and it is what a reader needs to see. */
+        name: "Spamhaus, Spamhaus Blocklist (SBL) FAQ",
+        url: "https://www.spamhaus.org/faqs/spamhaus-blocklist/",
+        actor: "standards-body",
+      },
+      {
+        name: "Spamhaus, Domain Blocklist (DBL) FAQ",
+        url: "https://www.spamhaus.org/faqs/domain-blocklist/",
         actor: "standards-body",
       },
     ],
     related: ["spam-trap-hits-mean-data-failure", "bounce-suppression-is-platform-specific"],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
-    changelog: [{ date: "2026-08-02", note: "Added from Spamhaus policy pages." }],
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
+    changelog: [
+      { date: "2026-08-04", note: "Correction: this page cited a publisher's front door rather than the document it relies on. Repointed to the primary source itself. Four pages on this shelf had the same fault; a test now rejects any citation that is a bare origin." },{ date: "2026-08-02", note: "Added from Spamhaus policy pages." }],
   },
 
   {
@@ -276,21 +286,36 @@ export const RULES_EXPANSION: Rule[] = [
       "No single \"bot form\" fine. Outcomes are trap hits, blocklist listings and ESP review. The public record is operational (Spamhaus, M3AAWG), not a regulator tariff.",
     sources: [
       {
-        name: "M3AAWG, Sender Best Common Practices",
-        url: "https://www.m3aawg.org/sites/default/files/m3aawg-senders-bcp.pdf",
+        name: "M3AAWG Sender Best Common Practices, version 3.0",
+        url: "https://www.m3aawg.org/documents/en/m3aawg-sender-best-common-practices-version-30",
         actor: "standards-body",
       },
       {
-        name: "M3AAWG, Spamtrap Best Common Practices",
-        url: "https://www.m3aawg.org/sites/default/files/m3aawg-spamtrap-bcp.pdf",
+        /* Titled as M3AAWG titles it. This page previously cited "M3AAWG
+           Spamtrap Best Common Practices", which is not a document M3AAWG
+           publishes — see the changelog below. */
+        name: "M3AAWG, Help! I Hit a Spam Trap!",
+        url: "https://www.m3aawg.org/sites/default/files/legacy/help_i_hit_a_spam_trap.pdf",
+        actor: "standards-body",
+      },
+      {
+        name: "M3AAWG Position on Cold Email",
+        url: "https://www.m3aawg.org/sites/default/files/doc_files/m3aawg_position_on_cold_email.2025_0.pdf",
+        published: "2025-11-13",
         actor: "standards-body",
       },
     ],
     related: ["spam-trap-hits-mean-data-failure", "bounce-suppression-is-platform-specific"],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
-    changelog: [{ date: "2026-08-02", note: "Added from M3AAWG BCPs." }],
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
+    changelog: [
+      {
+        date: "2026-08-04",
+        note: "Correction: both sources on this page were dead links, and one of them named a document that does not exist. The M3AAWG sender guidance had moved, and there is no M3AAWG \"Spamtrap Best Common Practices\" — the spam-trap document is titled \"Help! I Hit a Spam Trap!\". Repointed both, corrected the title, and added M3AAWG's dated position paper on cold email. This page carried a verification date against URLs that returned 404, which is the failure this site exists to refuse; a test now checks every cited link on the shelf.",
+      },
+      { date: "2026-08-02", note: "Added from M3AAWG BCPs." },
+    ],
   },
 
   // ─────────────────────────────────────────── provider rules (US/global)
@@ -335,8 +360,13 @@ export const RULES_EXPANSION: Rule[] = [
         actor: "mailbox-provider",
       },
       {
-        name: "Yahoo Sender Hub / FAQ materials",
-        url: "https://senders.yahooinc.com/",
+        /* "Sender Hub / FAQ materials" pointed at the front door and named no
+           document. The requirements this page relies on — SPF and DKIM both,
+           DMARC that passes, one-click unsubscribe, honour within two days,
+           spam rate under 0.3% — are all on Best Practices, which is also what
+           `content/providers.ts` quotes. */
+        name: "Yahoo Sender Hub, Best practices",
+        url: "https://senders.yahooinc.com/best-practices/",
         actor: "mailbox-provider",
       },
     ],
@@ -346,9 +376,10 @@ export const RULES_EXPANSION: Rule[] = [
       "outlook-high-volume-sender-authentication",
     ],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
     changelog: [
+      { date: "2026-08-04", note: "Correction: this page cited a publisher's front door rather than the document it relies on. Repointed to the primary source itself. Four pages on this shelf had the same fault; a test now rejects any citation that is a bare origin." },
       { date: "2026-08-02", note: "Re-verified against primary sources (bulk/auth/consent core)." },{ date: "2026-08-02", note: "Added standalone Yahoo requirements (was only a Gmail footnote)." }],
   },
 
@@ -542,8 +573,11 @@ export const RULES_EXPANSION: Rule[] = [
       "California AG and CPPA enforce sale/share opt-outs; public actions have targeted dark patterns and non-honoured opt-outs. Misdescribing GPC as mandatory email stop is a training error more than a statute.",
     sources: [
       {
-        name: "California Privacy Protection Agency / CCPA regulations materials",
-        url: "https://cppa.ca.gov/",
+        /* Fourth citation on the shelf that named "materials" and linked a
+           front door. The regulations themselves are the thing this page turns
+           on, so they are what it now cites. */
+        name: "California Privacy Protection Agency, CCPA regulations",
+        url: "https://cppa.ca.gov/regulations/consumer_privacy_act.html",
         actor: "regulator",
       },
       {
@@ -558,9 +592,10 @@ export const RULES_EXPANSION: Rule[] = [
       "one-click-unsubscribe-rfc-8058",
     ],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
-    changelog: [{ date: "2026-08-02", note: "Added to correct email-marketing overclaims about GPC." }],
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
+    changelog: [
+      { date: "2026-08-04", note: "Correction: this page cited a publisher's front door rather than the document it relies on. Repointed to the primary source itself. Four pages on this shelf had the same fault; a test now rejects any citation that is a bare origin." },{ date: "2026-08-02", note: "Added to correct email-marketing overclaims about GPC." }],
   },
 
   {
@@ -641,16 +676,30 @@ export const RULES_EXPANSION: Rule[] = [
       "State AG enforcement risk; details evolve with litigation. Do not invent per-email fine figures without a primary order.",
     sources: [
       {
-        name: "Maryland Age-Appropriate Design Code / youth privacy materials (state legislature and AG guidance as published)",
-        url: "https://www.marylandattorneygeneral.gov/",
+        /* Was a link to the Attorney General's homepage, under a name that
+           hand-waved at "materials as published". A citation has to land on the
+           thing it cites. */
+        name: "Maryland Age-Appropriate Design Code Act, Md. Code Com. Law § 14-4601 et seq.",
+        url: "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gcl&section=14-4601&enactments=True&archived=False",
+        published: "2024-10-01",
+        actor: "regulator",
+      },
+      {
+        name: "Maryland General Assembly, HB 603 (2024), Chapter 461 as enacted",
+        url: "https://mgaleg.maryland.gov/2024RS/Chapters_noln/CH_461_hb0603t.pdf",
+        published: "2024-05-09",
         actor: "regulator",
       },
     ],
     related: ["california-gpc-stops-sale-and-sharing-not-email"],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
     changelog: [
+      {
+        date: "2026-08-04",
+        note: "Correction: this page cited the Attorney General's homepage under a name that described \"materials as published\" rather than naming a document. Replaced with the statute itself, Md. Code Com. Law § 14-4601 et seq., and the enacted chapter text of HB 603, both dated. A citation has to land on the thing it cites.",
+      },
       {
         date: "2026-08-02",
         note: "Added with narrow email interpretation; not a blanket household email ban.",
@@ -855,8 +904,13 @@ export const RULES_EXPANSION: Rule[] = [
         actor: "regulator",
       },
       {
-        name: "BGH authority on email advertising and consent evidence (e.g. I ZR 164/09; VI ZR 721/15 line of cases)",
-        url: "https://www.bundesgerichtshof.de/",
+        /* Was "a line of cases" pointed at the court's homepage, which is not a
+           citation of anything. This is the leading decision itself: the BGH
+           holding that double opt-in is an adequate method and that the
+           advertiser carries the burden of proving consent for each address. */
+        name: "BGH, Urteil vom 10.02.2011 — I ZR 164/09 (Double-opt-in-Verfahren)",
+        url: "https://juris.bundesgerichtshof.de/cgi-bin/rechtsprechung/document.py?Gericht=bgh&Art=en&nr=57082&pos=0&anz=1",
+        published: "2011-02-10",
         actor: "court",
       },
     ],
@@ -866,9 +920,10 @@ export const RULES_EXPANSION: Rule[] = [
       "uk-pecr-email-needs-consent-or-a-complete-soft-opt-in",
     ],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
-    changelog: [{ date: "2026-08-02", note: "Added with honest DOI vs statute distinction." }],
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
+    changelog: [
+      { date: "2026-08-04", note: "Correction: this page cited a publisher's front door rather than the document it relies on. Repointed to the primary source itself. Four pages on this shelf had the same fault; a test now rejects any citation that is a bare origin." },{ date: "2026-08-02", note: "Added with honest DOI vs statute distinction." }],
   },
 
   {
@@ -968,7 +1023,7 @@ export const RULES_EXPANSION: Rule[] = [
         actor: "regulator",
       },
       {
-        name: "UWG §7",
+        name: "Gesetz gegen den unlauteren Wettbewerb (UWG) § 7, Unzumutbare Belästigungen",
         url: "https://www.gesetze-im-internet.de/uwg_2004/__7.html",
         actor: "regulator",
       },
@@ -978,9 +1033,10 @@ export const RULES_EXPANSION: Rule[] = [
       "eprivacy-email-consent-soft-optin",
     ],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
-    changelog: [{ date: "2026-08-02", note: "Added France/Germany B2B contrast." }],
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
+    changelog: [
+      { date: "2026-08-04", note: "Correction: this page cited a publisher's front door rather than the document it relies on. Repointed to the primary source itself. Four pages on this shelf had the same fault; a test now rejects any citation that is a bare origin." },{ date: "2026-08-02", note: "Added France/Germany B2B contrast." }],
   },
 
   // ─────────────────────────────────────────── P0 technical (WttW / senior deliv gaps)
@@ -1019,8 +1075,8 @@ export const RULES_EXPANSION: Rule[] = [
       "No mailbox provider fines you for lacking BIMI. Without it, mail can still pass bulk requirements. With broken auth, BIMI will not save you.",
     sources: [
       {
-        name: "BIMI Group, Brand Indicators for Message Identification",
-        url: "https://bimigroup.org/",
+        name: "BIMI Group, BIMI implementation guide",
+        url: "https://bimigroup.org/implementation-guide/",
         actor: "standards-body",
       },
       {
@@ -1040,9 +1096,10 @@ export const RULES_EXPANSION: Rule[] = [
       "dmarc-policy-none-is-not-enforcement",
     ],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
     changelog: [
+      { date: "2026-08-04", note: "Correction: this page cited a publisher's front door rather than the document it relies on. Repointed to the primary source itself. Four pages on this shelf had the same fault; a test now rejects any citation that is a bare origin." },
       {
         date: "2026-08-02",
         note: "Added BIMI as optional brand display after primary BIMI Group and Google docs; not a bulk mandate.",
@@ -1164,8 +1221,11 @@ export const RULES_EXPANSION: Rule[] = [
         actor: "mailbox-provider",
       },
       {
-        name: "Google Postmaster Tools",
-        url: "https://postmaster.google.com/",
+        /* Pointed at the Postmaster Tools sign-in. The thing this page is
+           about — the Feedback-ID header and who is eligible for FBL data —
+           is documented, so it is what gets cited. */
+        name: "Gmail Help, Feedback Loop",
+        url: "https://support.google.com/mail/answer/6254652",
         actor: "mailbox-provider",
       },
     ],
@@ -1175,9 +1235,10 @@ export const RULES_EXPANSION: Rule[] = [
       "yahoo-requires-authentication-and-low-complaints",
     ],
     added: "2026-08-02",
-    updated: "2026-08-02",
-    lastVerified: "2026-08-02",
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
     changelog: [
+      { date: "2026-08-04", note: "Correction: this page cited a publisher's front door rather than the document it relies on. Repointed to the primary source itself. Four pages on this shelf had the same fault; a test now rejects any citation that is a bare origin." },
       {
         date: "2026-08-02",
         note: "Added provider-specific complaint telemetry map; Gmail is not treated as a classic FBL.",

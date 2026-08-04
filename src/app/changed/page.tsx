@@ -109,28 +109,38 @@ export default async function Changed() {
         )}
       </section>
 
-      <section className="mt-14">
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-fg/15 pb-3">
-          <div>
-            <h2 className="text-[1.1rem] font-semibold tracking-tight">We put it on the shelf</h2>
-            <p className="mt-1 max-w-[52ch] text-[13.5px] leading-relaxed text-muted-fg">
-              Already true in the world; we added a dated page. Lower urgency than the list above.
-            </p>
+      {/* Folded. These are pages we wrote about things that were already true,
+          and expanded they ran to forty-two rows — four times the length of
+          the news above them, which made a ledger of market moves read as a
+          list of our own publishing. Present, dated and indexable; just no
+          longer the bulk of the page. */}
+      {documented.length > 0 ? (
+        <details className="faq-item group mt-14 border-t pt-5">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 outline-none marker:content-none focus-visible:bg-muted/60 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1 text-[1.05rem] font-semibold tracking-tight">
+              We put it on the shelf{" "}
+              <span className="num ml-1 text-[13px] font-normal text-dim">
+                {documented.length}
+              </span>
+            </span>
+            <span
+              aria-hidden
+              className="num shrink-0 text-[13px] text-dim transition-transform duration-300 ease-out group-open:rotate-45"
+            >
+              +
+            </span>
+          </summary>
+          <div className="faq-body">
+            <ul className="mt-1 list-none p-0">
+              {documented.map((c) => (
+                <li key={`a-${c.rule.slug}-${c.date}-${c.note}`}>
+                  <ChangeRow rule={c.rule} date={c.date} note={c.note} />
+                </li>
+              ))}
+            </ul>
           </div>
-          <p className="num text-[12px] text-dim">{documented.length}</p>
-        </div>
-        {documented.length === 0 ? (
-          <p className="mt-6 text-[0.95rem] text-muted-fg">No new pages in this window.</p>
-        ) : (
-          <ul className="mt-1 list-none p-0">
-            {documented.map((c) => (
-              <li key={`a-${c.rule.slug}-${c.date}-${c.note}`}>
-                <ChangeRow rule={c.rule} date={c.date} note={c.note} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        </details>
+      ) : null}
 
       {other.length > 0 ? (
         <section className="mt-14">
