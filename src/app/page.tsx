@@ -6,10 +6,9 @@ import type { Topic } from "@/lib/types";
 import { TrustStrip } from "@/components/trust-strip";
 import { Figures, SectionHead, StatusDot } from "@/components/bits";
 import { SiteFaqJsonLd } from "@/components/site-faq";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { isMarketChange, stickyRisks } from "@/lib/rule-signals";
 import { AnswerHere } from "@/components/home/answer-here";
+import { AskBox, Surfaces } from "@/components/ask-box";
 import { Ledger } from "@/components/home/ledger";
 import { buildFiveSets } from "@/components/home/five";
 
@@ -63,13 +62,22 @@ export default async function Home() {
         {/* Opens on the reader, not on the shelf. The old line ended on how many
             rules are not yours; ending on how few actually need a person says the
             same thing and is the surprising half. */}
+        {/* Five lines of hero pushed the only thing you can act on below the
+            fold. The ownership arithmetic that used to close this paragraph is
+            already stated twice further down — in the figures directly beneath
+            and in "Why care" — so it goes, and the sentence now hands you the
+            box and the shelf in that order. */}
         <p className="mx-auto mt-5 max-w-[34rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.12rem]">
-          You ship campaigns. You do not have a free afternoon for folklore PDFs. Pick your desk
-          below and the five that matter appear{" "}
-          <b className="font-medium text-fg">on this page</b> — whose job each one is, and what to
-          do first. Of {stats.total} rules, {yours} are yours outright and {stats.shared} more are
-          half yours: the platform does the mechanics, the judgement stays on your desk.
+          You ship campaigns. You do not have a free afternoon for folklore PDFs. Paste anything you
+          already have below — or pick your desk and the five rules that matter appear{" "}
+          <b className="font-medium text-fg">on this page</b>.
         </p>
+
+        {/* The box, at the top, because the sentence people arrive with is
+            "our emails are going to spam" and it used to sit below five
+            screens of shelf. Nothing about the site changes — this is the
+            same box with the same copy, moved to where the question is. */}
+        <AskBox className="mt-9" />
 
         <TrustStrip className="mt-10" />
 
@@ -84,6 +92,11 @@ export default async function Home() {
           />
         </div>
       </section>
+
+      {/* Three destinations that were footer-only until now. */}
+      <div className="shell">
+        <Surfaces />
+      </div>
 
       {/* The answer, in place. Nothing between the question and the five. */}
       <AnswerHere sets={fiveSets} />
@@ -229,61 +242,6 @@ export default async function Home() {
                 <p className="mt-3 text-[15px] leading-relaxed text-muted-fg">{p}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* One box, on the homepage, taking the same anything the check page
-          takes. Two different-shaped inputs for the same engine was the site
-          asking the reader to know which question they had. */}
-      <section className="border-t bg-bg-2 py-12 sm:py-16">
-        <div className="shell">
-          <div className="mx-auto max-w-2xl">
-            <p className="label">The check</p>
-            <h2 className="mt-3 text-[clamp(1.6rem,4vw,2.4rem)] tracking-tight">
-              Paste anything. We work out what it is.
-            </h2>
-            <p className="mt-3 max-w-[54ch] text-[15px] leading-relaxed text-muted-fg">
-              A domain, an address, an IP, or a whole campaign pasted in. Authentication, twenty-three
-              blocklists and the consent rules nobody else reads. Free, no account, and never a score.
-            </p>
-
-            <form method="post" action="/api/detect" className="mt-6">
-              <label htmlFor="home-q" className="sr-only">
-                A domain, an address, an IP, or a whole message
-              </label>
-              <textarea
-                id="home-q"
-                name="q"
-                required
-                rows={2}
-                spellCheck={false}
-                placeholder={"yourbrand.com   ·   hello@yourbrand.com   ·   23.83.223.10\n…or paste a whole message"}
-                className="num field-sizing-content max-h-[32vh] min-h-[4.5rem] w-full resize-y rounded-xl border bg-card px-3.5 py-3 text-[14px] leading-relaxed outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25"
-                style={{ boxShadow: "var(--lift)" }}
-              />
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <button
-                  type="submit"
-                  className={cn(
-                    buttonVariants({ size: "lg" }),
-                    "h-11 rounded-[10px] px-5 font-medium",
-                  )}
-                >
-                  Read it
-                </button>
-                <span className="text-[13px] text-dim">
-                  Nothing stored but the findings.{" "}
-                  <Link
-                    href="/check/message"
-                    className="underline underline-offset-3 hover:text-fg"
-                  >
-                    Or send us one
-                  </Link>
-                  .
-                </span>
-              </div>
-            </form>
           </div>
         </div>
       </section>

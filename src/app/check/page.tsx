@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { AskBox, Surfaces } from "@/components/ask-box";
 
 export const metadata: Metadata = {
   title: "Check my domain",
@@ -30,39 +31,18 @@ export default async function Check({
         answer the question that string can actually answer.
       </p>
 
-      {/* A plain form posting to a route handler. Not a server action: the one
-          on /check/message posted nothing at all from a real browser once an
-          extension broke hydration, and the way into the product does not get
-          to depend on React being alive. */}
-      <form method="post" action="/api/detect" className="mt-6 max-w-[620px]">
-        <label htmlFor="q" className="sr-only">
-          A domain, an address, an IP, or a whole message
-        </label>
-        <textarea
-          id="q"
-          name="q"
-          required
-          rows={3}
-          spellCheck={false}
-          placeholder={"yourbrand.com\nhello@yourbrand.com\n23.83.223.10\n…or paste a whole message"}
-          className="num field-sizing-content max-h-[40vh] min-h-[5.5rem] w-full resize-y rounded-xl border border-border bg-card px-3.5 py-3 text-[0.92rem] leading-relaxed outline-none focus-visible:ring-3 focus-visible:ring-accent/25"
-        />
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button
-            type="submit"
-            className={cn(buttonVariants({ size: "lg" }), "h-10 rounded-[10px] px-5 font-semibold")}
-          >
-            Read it
-          </button>
-          <span className="text-[13px] text-dim">No signup. Nothing stored but the findings.</span>
-        </div>
-      </form>
+      <AskBox rows={3} align="start" className="mt-6" />
 
       {e ? (
         <p role="alert" className="mt-3 max-w-[58ch] text-[0.9rem] leading-relaxed text-live">
           {e}
         </p>
       ) : null}
+
+      {/* The same three surfaces the homepage now names. A visitor who lands
+          here from search has the box and, immediately under it, the two
+          answers no DNS lookup can give. */}
+      <Surfaces className="mt-10" />
 
       <section className="mt-14 border-t pt-10">
         <h2 className="text-[1.3rem]">What you get, and what we refuse to give you</h2>

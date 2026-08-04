@@ -118,6 +118,7 @@ async function Nav() {
                 "inline-flex h-11 items-center gap-1.5 rounded-lg px-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:h-auto sm:px-2.5 sm:py-1.5",
                 "at" in n && n.at === "min-[440px]" && "hidden min-[440px]:inline-flex",
                 "at" in n && n.at === "min-[620px]" && "hidden min-[620px]:inline-flex",
+                "at" in n && n.at === "min-[900px]" && "hidden min-[900px]:inline-flex",
               )}
             >
               {n.label}

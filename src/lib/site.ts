@@ -59,6 +59,11 @@ export const NAV = [
   { href: "/rules", label: "Rules" },
   { href: "/how-email-works", label: "How email works", at: "min-[620px]", flag: true },
   { href: "/changed", label: "What changed", short: "Changed", at: "min-[440px]" },
+  /* The census is the most linkable thing on this site and it was reachable
+     only from the footer. It takes the widest slot rather than displacing
+     anything: below 900px the header is already full, and a link nobody can
+     read is worse than a link in the footer. */
+  { href: "/blocklists", label: "Blocklists", at: "min-[900px]" },
 ] as const;
 
 /**
