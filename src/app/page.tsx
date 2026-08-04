@@ -62,15 +62,15 @@ export default async function Home() {
         {/* Opens on the reader, not on the shelf. The old line ended on how many
             rules are not yours; ending on how few actually need a person says the
             same thing and is the surprising half. */}
-        {/* Five lines of hero pushed the only thing you can act on below the
-            fold. The ownership arithmetic that used to close this paragraph is
-            already stated twice further down — in the figures directly beneath
-            and in "Why care" — so it goes, and the sentence now hands you the
-            box and the shelf in that order. */}
-        <p className="mx-auto mt-5 max-w-[34rem] text-[1.05rem] leading-relaxed text-muted-fg sm:text-[1.12rem]">
-          You ship campaigns. You do not have a free afternoon for folklore PDFs. Paste anything you
-          already have below — or pick your desk and the five rules that matter appear{" "}
-          <b className="font-medium text-fg">on this page</b>.
+        {/* This line has one job: say what you get back. It previously opened
+            on a joke about folklore PDFs and closed on "pick your desk", which
+            is vocabulary we invented — a first-time reader could not tell from
+            it whether this was a blog, a newsletter or a tool. Input, output,
+            and the one thing nobody else does, in that order. */}
+        <p className="mx-auto mt-5 max-w-[34rem] text-[1.06rem] leading-relaxed text-balance text-muted-fg sm:text-[1.15rem]">
+          Paste a domain, an address, or a whole campaign. You get what is broken,{" "}
+          <b className="font-medium text-fg">whose job it is to fix it</b>, and the dated rule that
+          says so.
         </p>
 
         {/* The box, at the top, because the sentence people arrive with is

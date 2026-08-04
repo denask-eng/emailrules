@@ -37,16 +37,18 @@ export function AskBox({
       <label htmlFor={id} className="sr-only">
         A domain, an address, an IP, or a whole message
       </label>
+      {/* One example, not three. The old placeholder printed a domain, an
+          address and an IP separated by interpuncts, which told you the field
+          was clever before it told you what to type — it read as configuration.
+          What it accepts is said in words underneath, where it belongs. */}
       <textarea
         id={id}
         name="q"
         required
         rows={rows}
         spellCheck={false}
-        placeholder={
-          "yourbrand.com   ·   hello@yourbrand.com   ·   23.83.223.10\n…or paste a whole message"
-        }
-        className="num field-sizing-content max-h-[32vh] min-h-[4.75rem] w-full resize-y rounded-xl border bg-card px-4 py-3.5 text-left text-[14px] leading-relaxed outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25"
+        placeholder="yourbrand.com"
+        className="num field-sizing-content max-h-[32vh] min-h-[3.6rem] w-full resize-y rounded-xl border border-input bg-card px-4 py-4 text-left text-[1.05rem] leading-relaxed outline-none placeholder:text-dim focus-visible:border-accent focus-visible:ring-[3px] focus-visible:ring-accent/20"
         style={{ boxShadow: "var(--lift)" }}
       />
       <div
@@ -55,14 +57,19 @@ export function AskBox({
           align === "center" ? "justify-center sm:justify-start" : "justify-start",
         )}
       >
+        {/* "Read it" was a pun on the paste box and told nobody what happens
+            next. A button on a checker says the thing it does. */}
         <button
           type="submit"
-          className={cn(buttonVariants({ size: "lg" }), "h-11 rounded-[10px] px-6 font-medium")}
+          className={cn(buttonVariants({ size: "lg" }), "h-12 rounded-[10px] px-7 text-[15px] font-medium")}
         >
-          Read it
+          Check it
         </button>
-        <span className="text-[13px] text-dim">
-          No account. Nothing stored but the findings. Never a score.
+        {/* Three beats, one line. The long version repeated what the sentence
+            above the box already said and wrapped to three ragged lines beside
+            the button, which made the button look like an afterthought. */}
+        <span className="text-[13.5px] whitespace-nowrap text-dim">
+          No account. Free. Never a score.
         </span>
       </div>
     </form>
