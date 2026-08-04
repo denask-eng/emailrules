@@ -115,6 +115,15 @@ const SURFACES = [
     label: "Your sending platform",
     note: "What Klaviyo, Mailchimp, Sendgrid and the rest changed, with dates.",
   },
+  /* Added after shipping the corpus and discovering it was reachable only from
+     the footer. "How does Gmail decide" is the question this whole audience
+     arrives with, and the answer — including the part where Google never said
+     it — was three clicks from the front page. */
+  {
+    href: "/providers",
+    label: "What Gmail actually said",
+    note: "Their words, with the date. And the things they have never said at all.",
+  },
   {
     href: "/freshness",
     label: "How old is this shelf",
@@ -126,7 +135,10 @@ export function Surfaces({ className }: { className?: string }) {
   return (
     <ul
       className={cn(
-        "grid list-none gap-px overflow-hidden border-y bg-border p-0 sm:grid-cols-2 lg:grid-cols-4",
+        /* Five doors now, so the wide breakpoint fits five. Leaving it at four
+           would strand the newest one alone on a second row, which reads as an
+           afterthought rather than as a shelf. */
+        "grid list-none gap-px overflow-hidden border-y bg-border p-0 sm:grid-cols-2 lg:grid-cols-5",
         className,
       )}
     >

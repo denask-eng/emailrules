@@ -64,6 +64,11 @@ export const NAV = [
      anything: below 900px the header is already full, and a link nobody can
      read is worse than a link in the footer. */
   { href: "/blocklists", label: "Blocklists", at: "min-[900px]" },
+  /* The widest slot, because it is the newest and the header is already full.
+     It earns a permanent place rather than a footer link: "what did Gmail
+     actually say" is the question this audience arrives with, and it is the
+     one page here that answers it without inventing a mechanism. */
+  { href: "/providers", label: "Providers", at: "min-[1100px]" },
 ] as const;
 
 /**
