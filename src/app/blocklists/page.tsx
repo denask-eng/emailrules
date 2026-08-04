@@ -4,6 +4,7 @@ import { census, type CensusRow } from "@/lib/blocklist-check";
 import { ProofBar } from "@/components/proof-bar";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { CensusRecord } from "@/components/census-record";
 
 /**
  * A census, not an opinion.
@@ -234,6 +235,13 @@ dig +short @1.1.1.1 2.0.0.127.ubl.unsubscore.com   # → nothing`}
           .
         </p>
       </section>
+
+      {/* The reading above is taken fresh on every request. This is that
+          reading kept, one row per zone per day — which is what turns "this
+          list is dead" from an opinion into a date, and what makes a zone
+          going dark overnight something we report rather than something a
+          reader has to notice. */}
+      <CensusRecord />
     </div>
   );
 }
