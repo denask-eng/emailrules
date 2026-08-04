@@ -3,6 +3,7 @@ import { checkDomain, normaliseDomain } from "@/lib/dns-check";
 import { runMessageCheck } from "@/lib/message-check";
 import { getAllRules, getChangelog, getRule, fmtDate } from "@/lib/rules";
 import { SITE } from "@/lib/site";
+import { daysSinceVerified, stalenessOf } from "@/lib/source-watch";
 import { OWNERSHIP } from "@/lib/types";
 
 /**
@@ -236,6 +237,12 @@ async function callTool(name: string, args: Record<string, unknown>) {
           jurisdictions: r.jurisdictions,
           effective: r.effectiveDate,
           last_verified: r.lastVerified,
+          /* A date alone makes the caller do the arithmetic and decide what
+             counts as old. An LLM already knows email rules approximately;
+             what it cannot generate is how long ago a human checked one, so
+             that is handed over already computed and already judged. */
+          days_since_verified: daysSinceVerified(r.lastVerified),
+          verification: stalenessOf(r.lastVerified),
           whose_job: OWNERSHIP[r.ownership].label,
           cite: CITE(`/rules/${r.slug}`),
         })),
@@ -261,6 +268,9 @@ async function callTool(name: string, args: Record<string, unknown>) {
         status: rule.status,
         effective: rule.effectiveDate,
         last_verified: rule.lastVerified,
+        days_since_verified: daysSinceVerified(rule.lastVerified),
+        verification: stalenessOf(rule.lastVerified),
+        freshness_policy: CITE("/freshness"),
         sources: rule.sources.map((s) => ({
           name: s.name,
           url: s.url,

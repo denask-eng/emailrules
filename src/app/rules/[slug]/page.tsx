@@ -209,7 +209,14 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
 
       {age > 90 ? (
         <p className="mt-5 rounded-xl border border-soon/35 bg-soon-bg px-4 py-3 text-[13px] leading-relaxed text-soon">
-          Not re-verified in {age} days. Treat as probably current, not certainly current.
+          Not re-verified in {age} days. Treat as probably current, not certainly current.{" "}
+          {/* The warning was already honest; what it lacked was somewhere to go.
+              How old the whole shelf is, and which sources moved since, is a
+              page rather than a number the reader has to take on trust. */}
+          <Link href="/freshness" className="underline underline-offset-2 hover:text-fg">
+            How old the rest of the shelf is
+          </Link>
+          .
         </p>
       ) : null}
 

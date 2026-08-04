@@ -82,6 +82,7 @@ export const FOOTER_NAV = [
       { href: "/how-email-works", label: "How email works" },
       { href: "/esp", label: "Your platform" },
       { href: "/blocklists", label: "Blocklist census" },
+      { href: "/freshness", label: "How old is this shelf" },
       { href: "/coverage", label: "Coverage map" },
       { href: "/embed", label: "Embed the check" },
     ],
@@ -90,6 +91,9 @@ export const FOOTER_NAV = [
     title: "About this site",
     links: [
       { href: "/methodology", label: "Methodology" },
+      /* The machine interface was reachable from nowhere. An agent finds it by
+         convention; a person deciding whether to trust one needs to see it. */
+      { href: "/mcp", label: "For agents (MCP)" },
       { href: "/corrections", label: "Corrections" },
       { href: "/start", label: "How to use this site" },
       { href: "/connect", label: "Connect roadmap" },

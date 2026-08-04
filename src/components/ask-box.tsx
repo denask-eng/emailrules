@@ -37,41 +37,46 @@ export function AskBox({
       <label htmlFor={id} className="sr-only">
         A domain, an address, an IP, or a whole message
       </label>
-      {/* One example, not three. The old placeholder printed a domain, an
-          address and an IP separated by interpuncts, which told you the field
-          was clever before it told you what to type — it read as configuration.
-          What it accepts is said in words underneath, where it belongs. */}
-      <textarea
-        id={id}
-        name="q"
-        required
-        rows={rows}
-        spellCheck={false}
-        placeholder="yourbrand.com"
-        className="num field-sizing-content max-h-[32vh] min-h-[3.6rem] w-full resize-y rounded-xl border border-input bg-card px-4 py-4 text-left text-[1.05rem] leading-relaxed outline-none placeholder:text-dim focus-visible:border-accent focus-visible:ring-[3px] focus-visible:ring-accent/20"
-        style={{ boxShadow: "var(--lift)" }}
-      />
+      {/* The button lives inside the field.
+          It used to sit underneath and left-aligned while everything above it
+          was centred, so on a wide screen the one thing you click drifted off
+          the axis of the one thing you read. Putting it in the composer is not
+          a borrowed fashion — it is the arrangement that keeps the action on
+          the same axis as the input at every width. */}
       <div
-        className={cn(
-          "mt-3 flex flex-wrap items-center gap-x-4 gap-y-2",
-          align === "center" ? "justify-center sm:justify-start" : "justify-start",
-        )}
+        className="relative w-full rounded-2xl border border-input bg-card focus-within:border-accent focus-within:ring-[3px] focus-within:ring-accent/20"
+        style={{ boxShadow: "var(--lift)" }}
       >
+        {/* One example, not three. The old placeholder printed a domain, an
+            address and an IP separated by interpuncts, which told you the field
+            was clever before it told you what to type — it read as
+            configuration. What it accepts is said in words underneath. */}
+        <textarea
+          id={id}
+          name="q"
+          required
+          rows={rows}
+          spellCheck={false}
+          placeholder="yourbrand.com"
+          className="num field-sizing-content max-h-[32vh] min-h-[3.5rem] w-full resize-none bg-transparent px-4 pt-4 pb-14 text-left text-[1.05rem] leading-relaxed outline-none placeholder:text-dim sm:pl-5"
+        />
         {/* "Read it" was a pun on the paste box and told nobody what happens
             next. A button on a checker says the thing it does. */}
         <button
           type="submit"
-          className={cn(buttonVariants({ size: "lg" }), "h-12 rounded-[10px] px-7 text-[15px] font-medium")}
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "absolute right-2.5 bottom-2.5 h-10 rounded-xl px-5 text-[14.5px] font-medium",
+          )}
         >
           Check it
         </button>
-        {/* Three beats, one line. The long version repeated what the sentence
-            above the box already said and wrapped to three ragged lines beside
-            the button, which made the button look like an afterthought. */}
-        <span className="text-[13.5px] whitespace-nowrap text-dim">
-          No account. Free. Never a score.
-        </span>
       </div>
+
+      {/* Three beats, one line, on the same axis as everything above it. */}
+      <p className={cn("mt-3 text-[13.5px] text-dim", align === "center" && "text-center")}>
+        No account. Free. Never a score.
+      </p>
     </form>
   );
 }
@@ -87,12 +92,14 @@ export function AskBox({
  * called; "Blocklist census" tells a marketer nothing, "which lists answer and
  * which publish nothing" tells them whether to click.
  */
+/**
+ * Four doors, and the DMARC reader is deliberately not one of them.
+ *
+ * It stays live and works, but it is a product with per-user state on a site
+ * that has one subscriber, and promoting it costs attention the shelf needs
+ * more. It comes back when there is an audience to bring to it.
+ */
 const SURFACES = [
-  {
-    href: "/dmarc",
-    label: "Who is sending as you",
-    note: "Every mailbox provider already mails you this daily. We read it. No account.",
-  },
   {
     href: "/check/message",
     label: "Send a real campaign",
@@ -107,6 +114,11 @@ const SURFACES = [
     href: "/esp",
     label: "Your sending platform",
     note: "What Klaviyo, Mailchimp, Sendgrid and the rest changed, with dates.",
+  },
+  {
+    href: "/freshness",
+    label: "How old is this shelf",
+    note: "Every claim's date, published — including the ones that are getting old.",
   },
 ] as const;
 

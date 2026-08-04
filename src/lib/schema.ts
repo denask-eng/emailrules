@@ -196,4 +196,55 @@ export const SCHEMA = `
   );
   create index if not exists dmarc_reports_token_idx
     on dmarc_reports (token, ends_at desc);
+
+  /* One row per primary source cited by a rule.
+
+     Every rule on this shelf carries a "last verified" date that a person set
+     by hand. All 39 were stamped on the two days the site was built, and until
+     this table existed nothing moved them — a corpus whose entire claim is
+     "dated and verified" was ageing silently, which is the one failure that
+     kills a reference in five years.
+
+     This watches the 66 URLs the corpus cites and records when one changes. It
+     does NOT decide the rule is wrong: a regulator can reformat a page without
+     changing a word of law, and a page can keep its wording while the law under
+     it moves. Detection is mechanical, judgement is human, and rule_source_changes
+     is the seam — the same division esp_watch_sources already draws.
+
+     slugs is an array because one source backs several rules: RFC 5782 is cited
+     by every blocklist rule, and a change to it should surface once per rule
+     that leans on it rather than once per URL.
+
+     content_length rides alongside the hash because these are regulator pages
+     and vendor help centres wrapped in navigation, cookie banners and build
+     stamps. A hash change with a two-byte length delta is almost certainly
+     furniture; a large delta is worth opening. The reviewer sees both rather
+     than us guessing with a scraper that would break silently. */
+  create table if not exists rule_source_watch (
+    url             text primary key,
+    slugs           text[] not null default '{}',
+    content_hash    text,
+    content_length  int,
+    last_checked_at timestamptz,
+    last_ok_at      timestamptz,
+    last_error      text
+  );
+  create index if not exists rule_source_watch_checked_idx
+    on rule_source_watch (last_checked_at nulls first);
+
+  /* A cited page moved. Queued for a person, never published by a machine. */
+  create table if not exists rule_source_changes (
+    id            text primary key,
+    url           text not null,
+    slugs         text[] not null default '{}',
+    old_hash      text,
+    new_hash      text not null,
+    length_delta  int,
+    first_seen_at timestamptz not null default now(),
+    /* new | dismissed | reverified */
+    status        text not null default 'new',
+    note          text
+  );
+  create index if not exists rule_source_changes_status_idx
+    on rule_source_changes (status, first_seen_at desc);
 `;
