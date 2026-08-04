@@ -316,7 +316,7 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
         ownership: "shared",
         mondayMorning:
           "Read your own record and name the tool behind every include. The ones you no longer pay for come out today, and that part is yours. If you are still over ten after that, ask each remaining platform whether it publishes a flattened include — several do, and none will volunteer it.",
-        rule: "gmail-bulk-sender-requirements",
+        rule: "spf-ten-lookup-limit-returns-permerror",
         term: "spf",
       });
     }
@@ -385,7 +385,7 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
       ownership: "yours",
       mondayMorning:
         "Find the wildcard entry under _domainkey in your DNS and remove it. Until it is gone, neither you nor any tool you hire can tell a working key from an absent one on this domain.",
-      rule: "dkim-alignment-vs-dkim-passing",
+      rule: "empty-dkim-p-value-is-a-revoked-key",
       term: "dkim",
       evidence: wildcardProbe[0],
     });

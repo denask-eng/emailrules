@@ -1312,4 +1312,124 @@ export const RULES_EXPANSION: Rule[] = [
       },
     ],
   },
+
+  // ─────────────────────────────────────────── authentication, in depth
+  /* The shelf was thirteen pages of consent law against four of
+     authentication, which is the wrong shape for the people who open a
+     deliverability reference. These two exist because the domain check already
+     detects both faults and had no page to send anyone to. */
+  {
+    slug: "spf-ten-lookup-limit-returns-permerror",
+    title: "SPF stops evaluating after ten DNS lookups and returns permerror",
+    question: "What happens when an SPF record goes over the 10 lookup limit?",
+    status: "in_force",
+    effectiveDate: "2014-04-01",
+    jurisdictions: ["Global"],
+    topic: "authentication",
+    answer:
+      "RFC 7208 requires an evaluator to stop after ten DNS-querying terms and return permerror. The terms that count are include, a, mx, ptr, exists and the redirect modifier; all, ip4, ip6 and exp do not count. A permerror is not a soft failure a receiver forgives: your record has failed to evaluate, so nothing in it authorises anything, and a domain at p=quarantine or p=reject that relied on SPF alignment loses it. Two separate limits sit alongside it: the mx mechanism may not query more than ten address records, and evaluators should cap void lookups at two.",
+    appliesTo:
+      "Any domain whose SPF record contains more than ten of the counting mechanisms — which in practice means anyone who has added a new tool without removing an old one.",
+    plain:
+      "Every include: is a DNS lookup, and you get ten. Past that your SPF does not fail politely, it fails to run at all, and everything it would have authorised is now unauthorised. It breaks the day somebody adds the eleventh tool, and nothing announces it.",
+    ownership: "shared",
+    handled: {
+      already:
+        "Your platform publishes its own include and keeps it working. Several vendors also publish a flattened or macro-based include that resolves in fewer lookups, and some SPF-hosting services exist precisely to keep you under the ceiling.",
+      stillYours:
+        "Counting your own record, and deciding which tools come out. Nobody else knows which of the includes on your domain belong to a platform you stopped paying for.",
+    },
+    mondayMorning:
+      "Count the counting terms in your own SPF record — include, a, mx, ptr, exists, redirect — and remember that each include drags in whatever that vendor nested inside it, so ten written terms can be fifteen real lookups. Anything you no longer send from comes out today. If you are still over after that, ask each remaining vendor whether it publishes a flattened include; several do and none volunteer it.",
+    ignoreIf:
+      "Your SPF record contains three or four includes and has not changed in a year.",
+    whatToDo: [
+      "Count include, a, mx, ptr, exists and redirect. Do not count all, ip4, ip6 or exp.",
+      "Remove includes for platforms you no longer send from, which is almost always the cheapest fix.",
+      "Do not flatten a vendor's include into raw ip4 addresses unless you own a process to re-flatten it — their addresses change and yours will silently go stale.",
+      "Read your DMARC aggregate reports for spf permerror before assuming the record is fine.",
+    ],
+    enforcement:
+      "No regulator is involved. The consequence is mechanical and immediate: receivers treat permerror as a failed evaluation, so SPF-based DMARC alignment stops working. Mail that also aligns on DKIM survives; mail that relied on SPF alone does not.",
+    sources: [
+      {
+        name: "RFC 7208 § 4.6.4, Processing Limits",
+        url: "https://www.rfc-editor.org/rfc/rfc7208#section-4.6.4",
+        published: "2014-04-01",
+        actor: "standards-body",
+      },
+      {
+        name: "Google Workspace Admin Help, Email sender guidelines",
+        url: "https://support.google.com/a/answer/81126",
+        actor: "mailbox-provider",
+      },
+    ],
+    related: [
+      "gmail-bulk-sender-requirements",
+      "dmarc-policy-none-is-not-enforcement",
+      "dkim-alignment-vs-dkim-passing",
+    ],
+    added: "2026-08-04",
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
+    changelog: [
+      {
+        date: "2026-08-04",
+        note: "Added. The domain check has flagged records over the limit since it shipped and had no page to link to.",
+      },
+    ],
+  },
+
+  {
+    slug: "empty-dkim-p-value-is-a-revoked-key",
+    title: "An empty p= in a DKIM record is a revoked key, not a published one",
+    question: "What does an empty p= value mean in a DKIM DNS record?",
+    status: "in_force",
+    effectiveDate: "2011-09-01",
+    jurisdictions: ["Global"],
+    topic: "authentication",
+    answer:
+      "RFC 6376 is explicit: an empty value in the p= tag means the public key has been revoked, and verifiers should return an error for any signature referencing it. The record still resolves, so a checker that only asks whether a selector exists reports DKIM as present. It is not present. Anything signed with that selector fails, and a domain relying on DKIM alignment for DMARC loses it silently, because the DNS answer looks healthy from the outside.",
+    appliesTo:
+      "Any domain where a selector was rotated, retired or revoked and the empty record was left behind — including the wildcard case, where a record under _domainkey answers every selector name and makes probing meaningless.",
+    plain:
+      "p= with nothing after it does not mean the key is missing. It means somebody revoked it and said so in public. The record answers, so most tools tick the box, and the mail still fails.",
+    ownership: "shared",
+    handled: {
+      already:
+        "Your platform generates and publishes the key material and will rotate it. It cannot see what else is sitting under _domainkey on your domain.",
+      stillYours:
+        "Removing revoked and wildcard records from your own DNS. A leftover empty key is yours, and so is the decision to delete rather than keep it for tidiness.",
+    },
+    mondayMorning:
+      "Run dig TXT <selector>._domainkey.yourdomain.com for every selector you know about, and read what comes back rather than whether something came back. Any record whose p= is empty is a revoked key that should be deleted. Then probe a selector you invented — if that answers too, you have a wildcard under _domainkey and no selector check on this domain means anything until it is gone.",
+    ignoreIf:
+      "You have never rotated a DKIM key and publish exactly the selectors your platform gave you.",
+    whatToDo: [
+      "Treat an answering selector as inconclusive until you have read the p= value.",
+      "Delete revoked records rather than leaving them; they are indistinguishable from a working key to most tooling.",
+      "Probe an impossible selector to rule out a wildcard before trusting any selector result.",
+      "Confirm on a real message: dkim=pass with header.d matching your From domain is the only proof that survives.",
+    ],
+    enforcement:
+      "None, in the regulatory sense. The failure is mechanical: verifiers error on the signature, DKIM alignment is lost, and a domain at p=reject that has no aligned SPF path has its own mail rejected.",
+    sources: [
+      {
+        name: "RFC 6376 § 3.6.1, Textual Representation of DKIM Key Records",
+        url: "https://www.rfc-editor.org/rfc/rfc6376#section-3.6.1",
+        published: "2011-09-01",
+        actor: "standards-body",
+      },
+    ],
+    related: ["dkim-alignment-vs-dkim-passing", "dmarc-policy-none-is-not-enforcement"],
+    added: "2026-08-04",
+    updated: "2026-08-04",
+    lastVerified: "2026-08-04",
+    changelog: [
+      {
+        date: "2026-08-04",
+        note: "Added. The domain check has probed an impossible selector and required real base64 after p= since it shipped; neither behaviour had a page explaining why.",
+      },
+    ],
+  },
 ];
