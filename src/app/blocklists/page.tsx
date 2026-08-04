@@ -77,11 +77,48 @@ export default async function Blocklists() {
 
   return (
     <div className="shell py-12 sm:py-16">
-      <p className="num label">Census · re-probed hourly · {fmtDate(today)}</p>
-      <h1 className="mt-4 max-w-[20ch] text-[clamp(2.1rem,6.5vw,3.6rem)] leading-[0.98] tracking-[-0.045em]">
-        Which blocklists are actually answering.
-      </h1>
-      <p className="mt-6 max-w-[64ch] text-[1.04rem] leading-relaxed text-muted-fg">
+      {/* A live measurement of somebody else's infrastructure, on the surface
+          this site uses for live measurements. This page is the strongest thing
+          here and it was set as an article: a headline, four paragraphs, and
+          the finding somewhere in the middle. The finding goes first now, at
+          the size of a finding. */}
+      <figure className="m-0 overflow-hidden rounded-2xl bg-[#141417] shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]">
+        <div className="num flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-white/8 px-5 py-3.5 text-[11px] tracking-[0.11em] text-white/38 uppercase sm:px-7">
+          <span className="flex items-center gap-2.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="listening absolute inset-0 rounded-full" aria-hidden />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#7ee0a8]" />
+            </span>
+            Live · re-probed hourly
+          </span>
+          <span>{fmtDate(today)}</span>
+        </div>
+
+        <div className="px-5 pt-9 pb-8 sm:px-7 sm:pt-11">
+          <p className="num text-[clamp(3.4rem,13vw,6.5rem)] leading-[0.85] font-semibold tracking-[-0.05em] text-[#ff9d94]">
+            {Math.round((silent.length / rows.length) * 100)}%
+          </p>
+          <p className="mt-5 max-w-[24ch] text-[clamp(1.25rem,3.6vw,1.9rem)] leading-[1.1] font-semibold tracking-[-0.03em] text-white text-balance">
+            of the blocklists this industry checks publish no test entry.
+          </p>
+          <p className="mt-5 max-w-[54ch] text-[0.95rem] leading-relaxed text-white/55">
+            {silent.length} of {rows.length} zones answer nothing at all. A dead zone returns
+            NXDOMAIN, and so does a healthy one saying you are clean, so every checker that asks
+            those {silent.length} is printing a green tick for silence.
+          </p>
+          <p className="num mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] tracking-[0.08em] text-white/30 uppercase">
+            <span>{rows.length} zones probed</span>
+            <span aria-hidden>·</span>
+            <span>RFC 5782 control entry</span>
+            <span aria-hidden>·</span>
+            <span>two independent resolvers</span>
+            <span aria-hidden>·</span>
+            <span>no competitor named</span>
+          </p>
+        </div>
+      </figure>
+
+      <p className="mt-9 max-w-[64ch] text-[1.04rem] leading-relaxed text-muted-fg">
         A checker can advertise sixty lists and quietly ask a dozen zones that answer nothing, and
         every one of those silences arrives as a green tick. This is the same question put to every
         zone at the same moment, using the entry each one is required by{" "}

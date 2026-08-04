@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllRules } from "@/lib/rules";
+import { getAllRules, getStats, fmtDate } from "@/lib/rules";
 import { TOPICS, JURISDICTIONS } from "@/lib/types";
 import type { Topic, Jurisdiction } from "@/lib/types";
 import { EMPTY_AUDIENCE, parseAudienceParam } from "@/lib/audience";
@@ -47,7 +47,10 @@ export default async function RulesIndex({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [rules, params] = await Promise.all([getAllRules(), searchParams]);
+  const [rules, params, stats] = await Promise.all([getAllRules(), searchParams, getStats()]);
+  /* `notYours` folds shared, context and esp together, so "yours outright" is
+     the remainder — the same arithmetic the homepage uses. */
+  const yours = stats.total - stats.notYours;
 
   /**
    * A setup link is a real growth surface — the homepage picker sends people
@@ -69,15 +72,61 @@ export default async function RulesIndex({
 
   return (
     <div className="shell py-12 sm:py-16">
-      {/* SectionHead's grammar, promoted to h1: this is the page, not a band on it. */}
-      <div className="mb-9">
-        <p className="label">Rules</p>
-        <h1 className="mt-3 text-[clamp(24px,3.4vw,34px)]">What matters for you</h1>
-        <p className="mt-3 max-w-[56ch] text-[16px] leading-relaxed text-muted-fg">
-          One question, then the five that matter. <span className="num">{rules.length}</span>{" "}
-          pages, each one dated, sourced, and straight about whose job it is.
-        </p>
-      </div>
+      {/* The ownership split is this site's entire argument and it was a grey
+          sentence inside the filter. It is a measurement of the shelf, so it
+          gets the surface the other measurements get. */}
+      <figure className="m-0 mb-10 overflow-hidden rounded-2xl bg-[#141417] shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]">
+        <div className="num flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-white/8 px-5 py-3.5 text-[11px] tracking-[0.11em] text-white/38 uppercase sm:px-7">
+          <span>The shelf · {rules.length} rules</span>
+          <span>verified {fmtDate(stats.lastReview)}</span>
+        </div>
+
+        <div className="px-5 pt-9 pb-8 sm:px-7 sm:pt-10">
+          <h1 className="max-w-[16ch] text-[clamp(2rem,5.6vw,3.2rem)] leading-[1.0] font-semibold tracking-[-0.04em] text-white text-balance">
+            {yours} of {rules.length} need a person.
+          </h1>
+
+          {/* Four values, drawn to scale. The proportion is the claim. */}
+          <div className="mt-8 flex h-2 w-full overflow-hidden rounded-full">
+            {(
+              [
+                ["bg-[#ff9d94]", yours],
+                ["bg-[#f0c26a]", stats.shared],
+                ["bg-white/25", stats.nothingToDo],
+                ["bg-[#7ee0a8]", stats.fullyHandled],
+              ] as const
+            ).map(([tone, n], i) => (
+              <span
+                key={i}
+                className={tone}
+                style={{ width: `${(n / rules.length) * 100}%` }}
+                aria-hidden
+              />
+            ))}
+          </div>
+
+          <dl className="num mt-5 grid gap-x-6 gap-y-2 text-[11px] tracking-[0.06em] text-white/45 uppercase sm:grid-cols-4">
+            {(
+              [
+                ["#ff9d94", yours, "yours outright"],
+                ["#f0c26a", stats.shared, "shared with your tool"],
+                ["rgb(255 255 255 / 0.25)", stats.nothingToDo, "nothing to do"],
+                ["#7ee0a8", stats.fullyHandled, "your tool handles"],
+              ] as const
+            ).map(([hex, n, label]) => (
+              <div key={label} className="flex items-baseline gap-2">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: hex }}
+                  aria-hidden
+                />
+                <dt className="text-[1.15rem] leading-none font-semibold text-white">{n}</dt>
+                <dd className="m-0">{label}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </figure>
 
       <RuleFilter rules={rules} initial={initial} />
 
