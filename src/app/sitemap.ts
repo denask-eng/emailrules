@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { countsByTopic, getAllRules } from "@/lib/rules";
 import { getEspPlatformSummaries } from "@/lib/esp-changes";
+import { PROVIDERS } from "@/content/providers";
 import { GLOSSARY } from "@/content/how-email-works";
 import { TOPICS, JURISDICTIONS } from "@/lib/types";
 import type { Topic, Jurisdiction } from "@/lib/types";
@@ -40,6 +41,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly" as const,
         priority: 0.7,
       })),
+    /* One page per mailbox provider, each carrying quoted requirements and —
+       the part that is genuinely unpublished elsewhere — the claims the
+       provider has never made and the delisting path with an owner on it.
+       "How do I get delisted from Outlook" is a query people type at 2am. */
+    { url: `${SITE.url}/providers`, lastModified: newest, changeFrequency: "weekly", priority: 0.8 },
+    ...PROVIDERS.map((p) => ({
+      url: `${SITE.url}/providers/${p.id}`,
+      lastModified: p.lastVerified,
+      changeFrequency: "weekly" as const,
+      priority: 0.75,
+    })),
     /* A live measurement of somebody else's infrastructure, re-probed hourly.
        Indexable because it is a genuine primary source: nobody else publishes
        which of these zones can still answer. */

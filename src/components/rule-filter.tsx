@@ -366,8 +366,15 @@ export function RuleFilter({ rules, initial }: { rules: Rule[]; initial: Audienc
         <span className="text-dim"> · </span>
         <b className="num font-medium text-fg">{count.shared}</b> shared with your tool
         <span className="text-dim"> · </span>
-        <b className="num font-medium text-fg">{count.handled + count.fyi}</b> your tool already
-        handles
+        {/* These two were added together and printed as "your tool already
+            handles", which on the whole shelf says 6 while the homepage says
+            exactly 1 — the same corpus, contradicting itself, on the one
+            number the entire position rests on. Context is not handled: it is
+            a risk you carry or a figure you report, and nobody did it for
+            you. Kept apart, even though apart is the less flattering pair. */}
+        <b className="num font-medium text-fg">{count.handled}</b> your tool already handles
+        <span className="text-dim"> · </span>
+        <b className="num font-medium text-fg">{count.fyi}</b> nothing to do today
         {count.upcoming > 0 ? (
           <>
             <span className="text-dim"> · </span>

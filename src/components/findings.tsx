@@ -48,15 +48,30 @@ export function FindingList({
       finding gains its ownership verdict and its first move. */
   ownership?: Record<string, FindingOwnership>;
 }) {
-  /* One rule can produce four findings on a single message. The ownership
-     verdict and the Monday move belong to the rule, not to each finding, so
-     they print once — against the most severe occurrence, which is the first,
-     because the caller sorted by severity. */
+  /* Two sources, and the difference matters.
+
+     A DNS finding carries its own verdict, because one rule produces findings
+     with different owners: an absent DKIM key is a support ticket on a domain
+     that authorises Klaviyo and an afternoon of your own on a domain that
+     authorises nobody. Those always print.
+
+     A message finding inherits its verdict from the cited rule, where one rule
+     can produce four findings on a single message. Those print once, against
+     the most severe occurrence — which is the first, because the caller sorted
+     by severity. */
   const claimed = new Set<string>();
-  const showsOwnership = findings.map((finding) => {
-    if (!finding.rule || !ownership?.[finding.rule] || claimed.has(finding.rule)) return false;
+  const verdicts = findings.map((finding): FindingOwnership | null => {
+    if (finding.ownership) {
+      /* "Looks fine → Good to know, nothing to fix" is two labels for one
+         thought, and printed under every passing record it turns the answer
+         into wallpaper. A context verdict earns its line only when it has
+         something to say. */
+      if (finding.ownership === "context" && !finding.mondayMorning) return null;
+      return { ownership: finding.ownership, mondayMorning: finding.mondayMorning ?? "" };
+    }
+    if (!finding.rule || !ownership?.[finding.rule] || claimed.has(finding.rule)) return null;
     claimed.add(finding.rule);
-    return true;
+    return ownership[finding.rule];
   });
 
   return (
@@ -114,21 +129,18 @@ export function FindingList({
                 ) : null}
               </p>
             ) : null}
-            {showsOwnership[index] && finding.rule && ownership?.[finding.rule] ? (
+            {verdicts[index] ? (
               <div className="mt-2.5 border-l pl-3.5">
-                <p
-                  className={cn(
-                    "text-[0.78rem] font-medium",
-                    OWN_TONE[ownership[finding.rule].ownership],
-                  )}
-                >
-                  {OWNERSHIP[ownership[finding.rule].ownership].label}
+                <p className={cn("text-[0.78rem] font-medium", OWN_TONE[verdicts[index].ownership])}>
+                  {OWNERSHIP[verdicts[index].ownership].label}
                 </p>
-                <Explained
-                  as="p"
-                  className="mt-1 max-w-[62ch] text-[0.86rem] leading-relaxed text-muted-fg"
-                  text={ownership[finding.rule].mondayMorning}
-                />
+                {verdicts[index].mondayMorning ? (
+                  <Explained
+                    as="p"
+                    className="mt-1 max-w-[62ch] text-[0.86rem] leading-relaxed text-muted-fg"
+                    text={verdicts[index].mondayMorning}
+                  />
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -136,6 +148,25 @@ export function FindingList({
       ))}
     </ul>
   );
+}
+
+/**
+ * How many of these are actually the reader's.
+ *
+ * The headline of a check used to be a severity total, which answers "how
+ * alarmed should I be" — a question nobody arrives with. The question people
+ * arrive with is whether any of this is theirs to do, and a domain can be
+ * entirely unenforced while every single finding reads green to a severity
+ * counter. Counting owners instead is what stopped this page printing
+ * "Nothing here needs you" over a domain at p=none.
+ */
+export function countYours(findings: Finding[]): {
+  yours: number;
+  shared: number;
+  handled: number;
+} {
+  const n = (o: Ownership) => findings.filter((f) => f.ownership === o).length;
+  return { yours: n("yours"), shared: n("shared"), handled: n("esp") };
 }
 
 /**

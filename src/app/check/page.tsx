@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { AskBox, Surfaces } from "@/components/ask-box";
+import { LISTS } from "@/lib/blocklist-lists";
 
 export const metadata: Metadata = {
   title: "Check my domain",
@@ -79,7 +80,11 @@ export default async function Check({
         <h2 className="text-[1.3rem]">What the box does with each thing</h2>
         <dl className="num mt-5 grid max-w-[62ch] grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-3 text-[0.9rem] sm:gap-x-8">
           {[
-            ["a domain", "authentication, then twenty-three blocklists"],
+            /* Was the word "twenty-three", frozen the day it was written and
+               already disagreeing with the census page by one. The number of
+               lists worth asking moves whenever a zone stops answering, so it
+               is read from the same array the check itself queries. */
+            ["a domain", `authentication, then ${LISTS.length} blocklists`],
             ["an address", "the domain it sends from"],
             ["an IP", "every list that answered today, sorted by whether the entry is even about it"],
             ["a message", "all of the above, plus the consent and content rules no other checker reads"],

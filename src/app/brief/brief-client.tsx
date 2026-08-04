@@ -21,6 +21,22 @@ import type { Ownership, Topic, Jurisdiction, Rule } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/**
+ * The reader's own domain, resolved on the server. Findings are titles only —
+ * the brief names what is theirs and links to the check for the reasoning,
+ * because a one-pager that reproduces eight paragraphs of DNS analysis is no
+ * longer a one-pager.
+ */
+export type DomainBrief = {
+  domain: string;
+  checkedAt: string;
+  /** "You send through Klaviyo" / "Your SPF authorises Klaviyo" / null. */
+  platform: string | null;
+  spfManager: string | null;
+  yours: string[];
+  shared: string[];
+};
+
 type LightRule = {
   slug: string;
   title: string;
@@ -108,7 +124,13 @@ function toSortable(r: LightRule): Rule {
   };
 }
 
-export function BriefClient({ rules }: { rules: LightRule[] }) {
+export function BriefClient({
+  rules,
+  domain = null,
+}: {
+  rules: LightRule[];
+  domain?: DomainBrief | null;
+}) {
   const [a, setA] = useState<Audience>(EMPTY_AUDIENCE);
   const [label, setLabel] = useState("");
   const [copied, setCopied] = useState<"link" | "slack" | null>(null);
@@ -164,6 +186,9 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
       audienceToSearch(a).startsWith("?") ? audienceToSearch(a).slice(1) : audienceToSearch(a),
     );
     if (label.trim()) params.set("label", label.trim());
+    /* Without this the copied link drops the domain and the recipient opens a
+       generic shelf — the exact page this block exists to stop being. */
+    if (domain) params.set("domain", domain.domain);
     const s = params.toString();
     return `${window.location.origin}/brief${s ? `?${s}` : ""}`;
   };
@@ -183,7 +208,21 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
     title: titleLine,
     filter: roleLabel(a),
     date: today,
-    tally: `Of ${counts.total} rules in this filter: ${counts.act} need a person, ${counts.shared} shared with your email tool, ${counts.handled + counts.fyi} handled or FYI, ${counts.upcoming} upcoming.`,
+    /* "handled or FYI" merged two answers that point opposite ways: one says
+       somebody else did it, the other says nobody did and there is still
+       nothing to do. A brief that is forwarded to a VP is the last place to
+       round the first number up. */
+    tally: `Of ${counts.total} rules in this filter: ${counts.act} need a person, ${counts.shared} shared with your email tool, ${counts.handled} already handled by your tool, ${counts.fyi} nothing to do today, ${counts.upcoming} upcoming.`,
+    /* The pasted version has to say what the page says. A brief that looks
+       specific on screen and generic in the channel is worse than one that was
+       generic in both places, because only one of them gets read. */
+    domain: domain
+      ? `${domain.domain}, checked ${domain.checkedAt}${domain.platform ? ` — ${domain.platform.toLowerCase()}` : ""}. ${
+          domain.yours.length
+            ? `Yours: ${domain.yours.join("; ")}.`
+            : "Nothing on its authentication is yours today."
+        }`
+      : null,
     items: top.map((r, i) => ({
       n: i + 1,
       title: r.title,
@@ -208,6 +247,7 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
       "<div>",
       line(`<b>${esc(m.title)}</b> · ${esc(m.filter)} · as of ${esc(m.date)}`),
       line(esc(m.tally)),
+      ...(m.domain ? [gap, line(`<b>${esc(m.domain)}</b>`)] : []),
       gap,
       line("<b>Open these five first</b>"),
       ...m.items.map((it) =>
@@ -227,6 +267,7 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
     return [
       `${m.title} · ${m.filter} · as of ${m.date}`,
       m.tally,
+      ...(m.domain ? ["", m.domain] : []),
       "",
       "Open these five first",
       ...m.items.map((it) => `${it.n}. ${it.title} — Do first: ${it.move}`),
@@ -350,9 +391,61 @@ export function BriefClient({ rules }: { rules: LightRule[] }) {
           Of <b className="text-fg">{counts.total}</b> rules in this filter,{" "}
           <b className="text-fg">{counts.act}</b> need a person,{" "}
           <b className="text-fg">{counts.shared}</b> shared with your email tool,{" "}
-          <b className="text-fg">{counts.handled + counts.fyi}</b> handled or FYI,{" "}
+          <b className="text-fg">{counts.handled}</b> already handled by your tool,{" "}
+          <b className="text-fg">{counts.fyi}</b> nothing to do today,{" "}
           <b className="text-fg">{counts.upcoming}</b> upcoming.
         </p>
+
+        {/* The reader's own programme, above the general shelf. Everything
+            else on this page is equally true of every company on earth, which
+            is precisely why there was never a version of it worth forwarding
+            upward. Four lines about one domain changes that. */}
+        {domain ? (
+          <div className="mt-5 rounded-xl border bg-bg-2 px-4 py-4">
+            <p className="num text-[12px] text-dim">
+              {domain.domain} · checked {domain.checkedAt}
+              {domain.platform ? ` · ${domain.platform.toLowerCase()}` : ""}
+            </p>
+            {domain.yours.length ? (
+              <>
+                <p className="mt-2.5 text-[14px] font-semibold">
+                  {domain.yours.length === 1
+                    ? "One thing on this domain is yours"
+                    : `${domain.yours.length} things on this domain are yours`}
+                </p>
+                <ul className="mt-1.5 list-none p-0 text-[13.5px] leading-relaxed text-muted-fg">
+                  {domain.yours.map((t) => (
+                    <li key={t} className="before:mr-2 before:text-dim before:content-['—']">
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="mt-2.5 text-[14px] font-semibold">
+                Nothing on this domain&rsquo;s authentication is yours today
+              </p>
+            )}
+            {domain.shared.length ? (
+              <p className="mt-2.5 text-[13.5px] leading-relaxed text-muted-fg">
+                <b className="font-medium text-fg">{domain.shared.length} shared</b> with the
+                sending platform: {domain.shared.join("; ")}.
+              </p>
+            ) : null}
+            {domain.spfManager ? (
+              <p className="mt-2.5 text-[13px] leading-relaxed text-dim">
+                The sender list is held by {domain.spfManager}, so this is what the domain&rsquo;s
+                own record says rather than the whole picture.
+              </p>
+            ) : null}
+            <Link
+              href={`/check/${domain.domain}`}
+              className="no-print mt-3 inline-block text-[13px] text-accent underline underline-offset-3"
+            >
+              The full check, with the record and the dated rules →
+            </Link>
+          </div>
+        ) : null}
       </header>
 
       <section className="mt-8">

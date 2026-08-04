@@ -89,6 +89,7 @@ ${t.rules
 - [Check a received header for alignment](${SITE.url}/check/headers)
 - [Check a whole message against the rules](${SITE.url}/check/message)
 - [Dated changes at Klaviyo, Mailchimp and Braze](${SITE.url}/esp)
+- [What each mailbox provider published, and what it never said](${SITE.url}/providers)
 - [Embed a live authentication badge](${SITE.url}/embed)
 `;
 

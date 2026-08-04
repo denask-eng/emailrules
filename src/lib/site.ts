@@ -81,6 +81,7 @@ export const FOOTER_NAV = [
       { href: "/sources", label: "Sources" },
       { href: "/how-email-works", label: "How email works" },
       { href: "/esp", label: "Your platform" },
+      { href: "/providers", label: "Mailbox providers" },
       { href: "/blocklists", label: "Blocklist census" },
       { href: "/freshness", label: "How old is this shelf" },
       { href: "/coverage", label: "Coverage map" },
