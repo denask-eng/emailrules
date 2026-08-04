@@ -8,6 +8,7 @@ import {
   detectSpfManager,
   primarySender,
   signingButUnauthorised,
+  spfSendersAreReadable,
   spfAuthorised,
   type DetectedPlatform,
   type SpfManager,
@@ -433,7 +434,48 @@ export async function checkDomain(domain: string): Promise<CheckResult> {
      in this category does and why they all miss this. A domain whose SPF is
      "present" and whose DKIM is "present" reads as healthy right up until you
      notice they name different companies. */
+  /* …but only when the record can actually be read.
+
+     An SPF containing a macro is evaluated per message against the connecting
+     IP, so there is no expansion of it available to anyone reading DNS. The
+     mismatch finding used to fire regardless, which told gymshark.com that
+     "your SPF does not list SendGrid anywhere" about a record that lists
+     nobody anywhere by design. A specific, confident, false accusation is
+     worse than no finding, so when the list is unreadable we say that
+     instead — and say that no tool reading DNS can do better. */
+  /* Two ways the sender list can be out of reach, and both were being ignored:
+
+     1. A macro record (`%{i}`, `%{ir}`) is evaluated per message against the
+        connecting IP and has no readable expansion at all.
+     2. A hosted SPF manager — Valimail, EasyDMARC, dmarcian, Proofpoint — holds
+        the real list behind an include we do not recurse into. allbirds.com
+        delegates to `_es.easydmarc.com`; SendGrid may well be inside it.
+
+     In both cases "your SPF does not list X" is a claim we cannot support.
+     Suppressing a true finding here is a false negative, which costs a reader
+     one check they can run themselves. Printing a false one costs them a
+     morning and costs us the only thing this site sells. */
+  const spfReadable = spfSendersAreReadable(facts.spf) && !spfManager;
+
   for (const orphan of signingButUnauthorised(platforms)) {
+    if (!spfReadable) {
+      findings.push({
+        severity: "info",
+        title: `${orphan.name} signs your mail, and your SPF cannot be read to confirm it`,
+        detail: `${orphan.dkimSelectors} of ${orphan.name}'s selectors carry live keys on this domain, so ${orphan.name} is signing mail as you. Whether your SPF authorises it is not answerable by reading DNS. ${
+          spfSendersAreReadable(facts.spf)
+            ? `Your record delegates the sender list to ${spfManager?.name ?? "a hosted SPF service"}, and the real list lives inside that include rather than in your own record.`
+            : `Your record uses SPF macros${spfManager ? ` (${spfManager.name})` : ""}, so the authorised senders are resolved per message from the connecting IP and are never published as a list.`
+        } No checker can settle it from DNS, including this one — anyone who tells you this record does or does not list ${orphan.name} is guessing.`,
+        ownership: "context",
+        mondayMorning: `Send one real campaign through ${orphan.name} and read the Authentication-Results header on what arrives. That header is the only place this question gets answered, because it is the receiver evaluating the macro against the real sending IP.`,
+        rule: "gmail-bulk-sender-requirements",
+        term: "spf",
+        evidence: facts.spf ?? "no SPF record",
+      });
+      continue;
+    }
+
     findings.push({
       severity: "fail",
       title: `${orphan.name} signs your mail, and your SPF does not authorise it`,

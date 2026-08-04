@@ -537,6 +537,21 @@ const addressCases: Array<[string, boolean]> = [
   ["Brand Ltd, 12 Old Street, London EC1V 9BE", true],
   ["emailrules.today, Verkiu g. 39, Vilnius 09109, Lithuania", true],
   ["Musterfirma GmbH, Hauptstraße 12, 10115 Berlin", true],
+  /* Regression: a real campaign footer reported as having no address. The
+     state was written out and the street line alone is one weak signal. */
+  [
+    "Beyond Body Fasting, 505 Montgomery Street, 10th & 11th Floors, San Francisco, California, 94111, USA",
+    true,
+  ],
+  /* The same miss without the street word, so the state name carries it. */
+  ["Brand Inc, San Francisco, California, 94111", true],
+  /* A comma between the abbreviation and the ZIP used to break the match. */
+  ["Brand Inc, 125 Summer Street, Boston, MA, 02110", true],
+  ["Brand Inc, 350 Fifth Avenue, New York, New York 10118", true],
+  ["Brand Inc, Austin, Texas 78701", true],
+  /* Two-letter codes stay case-sensitive: "ca." here is circa, not California,
+     and a citation is not a postal address. */
+  ["Founded ca. 12345 members ago, we still answer every email.", false],
   ["© 2026 Brand. All rights reserved. Sent because you signed up.", false],
   ["Save 30% today only. 24 hours left on everything in the sale.", false],
   ["Questions? Reply to this email or call us on 0800 100 200.", false],
@@ -547,6 +562,58 @@ for (const [line, expected] of addressCases) {
     assert.equal(hasPostalAddress(line), expected);
   });
 }
+
+function headerFindingsOf(raw: string) {
+  const result = analyzeHeaders(raw);
+  assert.equal(result.ok, true, "expected the header block to parse");
+  return result.ok ? result.findings : [];
+}
+
+test("a forwarded message does not get blamed for the headers the forward stripped", () => {
+  /* Gmail removes List-Unsubscribe when a human forwards a campaign. Before
+     this, a compliant bulk send arrived here reported as having no one-click
+     unsubscribe — telling a sender to fix something that was never broken. */
+  const raw = `From: Brand <hello@brand.com>
+To: reader@example.com
+X-Forwarded-For: reader@gmail.com friend@gmail.com
+Subject: Fwd: Three new coats
+Content-Type: text/plain
+
+Three new coats landed this morning and the wool one is the reason we made this.`;
+  const findings = headerFindingsOf(raw);
+  assert.equal(hasPair(findings, "warn", "one-click-unsubscribe-rfc-8058"), false);
+  assert.equal(hasPair(findings, "info", "one-click-unsubscribe-rfc-8058"), true);
+});
+
+test("a message that was not forwarded still gets the missing-unsubscribe warning", () => {
+  const raw = `From: Brand <hello@brand.com>
+To: reader@example.com
+Subject: Three new coats
+Content-Type: text/plain
+
+Three new coats landed this morning and the wool one is the reason we made this.`;
+  assert.equal(
+    hasPair(headerFindingsOf(raw), "warn", "one-click-unsubscribe-rfc-8058"),
+    true,
+  );
+});
+
+test("extractFacts records why it thinks a message was forwarded", () => {
+  const headers = unfoldHeaders(
+    `From: Brand <hello@brand.com>\r\nResent-From: reader@gmail.com\r\nSubject: FW: sale\r\n`,
+  );
+  const facts = extractFacts(headers);
+  assert.equal(facts.forwarded.likely, true);
+  assert.ok(facts.forwarded.signals.includes("resent-from"));
+  assert.ok(facts.forwarded.signals.includes("subject prefix"));
+});
+
+test("an ordinary campaign is not mistaken for a forward", () => {
+  const headers = unfoldHeaders(
+    `From: Brand <hello@brand.com>\r\nSubject: Three new coats landed\r\n`,
+  );
+  assert.equal(extractFacts(headers).forwarded.likely, false);
+});
 
 test("an image-only campaign fails the Apple summary rule", () => {
   const raw = `From: Brand <hello@brand.com>

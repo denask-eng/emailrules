@@ -92,62 +92,21 @@ export default async function RulesIndex({
             {yours} of {rules.length} need a person.
           </h1>
 
-          {/* Four values, drawn to scale. The proportion is the claim. */}
-          <div className="mt-8 flex h-2 w-full overflow-hidden rounded-full">
-            {(
-              [
-                ["bg-[#ff9d94]", yours],
-                ["bg-[#f0c26a]", stats.shared],
-                ["bg-white/25", stats.nothingToDo],
-                ["bg-[#7ee0a8]", stats.fullyHandled],
-              ] as const
-            ).map(([tone, n], i) => (
-              <span
-                key={i}
-                className={tone}
-                style={{ width: `${(n / rules.length) * 100}%` }}
-                aria-hidden
-              />
-            ))}
-          </div>
+          {/* Four values, drawn to scale. The proportion is the claim.
 
-          <dl className="num mt-5 grid gap-x-6 gap-y-2 text-[11px] tracking-[0.06em] text-white/45 uppercase sm:grid-cols-4">
-            {(
-              [
-                ["#ff9d94", yours, "yours outright"],
-                ["#f0c26a", stats.shared, "shared with your tool"],
-                ["rgb(255 255 255 / 0.25)", stats.nothingToDo, "nothing to do"],
-                ["#7ee0a8", stats.fullyHandled, "your tool handles"],
-              ] as const
-            ).map(([hex, n, label]) => (
-              <div key={label} className="flex items-baseline gap-2">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: hex }}
-                  aria-hidden
-                />
-                <dt className="text-[1.15rem] leading-none font-semibold text-white">{n}</dt>
-                <dd className="m-0">{label}</dd>
-              </div>
-            ))}
-          </dl>
+              The bar, its colours, its order and its labels all come from the
+              one component now. This panel used to hardcode four hex values
+              and a second bar directly below it used four different ones for
+              the same numbers — same data, two palettes, two orderings, on one
+              screen. */}
+          <OwnershipBar
+            counts={own}
+            total={rules.length}
+            surface="dark"
+            className="mt-8"
+          />
         </div>
       </figure>
-
-      {/* The shape of the shelf, before the filter that reshapes it. Branch C
-          was right that this is a proportion and the page never drew it. */}
-      <OwnershipBar
-        counts={own}
-        total={stats.total}
-        className="mb-9"
-        caption={
-          <>
-            Sorted by whose desk it lands on, not by how alarming it sounds. Exactly{" "}
-            <b className="font-medium text-fg">{stats.fullyHandled}</b> of these is finished for you
-            by any mainstream tool, and that segment is drawn at its real width.
-          </>
-        }
-      />
 
       <RuleFilter rules={rules} initial={initial} />
 

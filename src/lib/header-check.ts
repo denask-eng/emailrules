@@ -39,6 +39,24 @@ export interface HeaderFacts {
     hasHttps: boolean;
   };
   listUnsubscribePost: string | null;
+  /**
+   * Whether this message reached us via a forward or a resend.
+   *
+   * This matters more than it sounds. Forwarding strips `List-Unsubscribe`
+   * and `List-Unsubscribe-Post` — Gmail removes both — so a perfectly
+   * compliant bulk campaign arrives here looking like one that never set them.
+   * Reporting that as a finding tells a sender to fix something that is not
+   * broken, which is the worst failure this site can have.
+   *
+   * We cannot re-create the headers a forward destroyed. What we can do is
+   * notice the forward and say the evidence is gone instead of pretending its
+   * absence is a result.
+   */
+  forwarded: {
+    likely: boolean;
+    /** The header or pattern that gave it away, for the reader to check. */
+    signals: string[];
+  };
 }
 
 export type HeaderCheckError = "gmail-summary" | "no-headers" | "too-large";
@@ -256,6 +274,34 @@ function unsubscribeUris(headers: HeaderField[]): string[] {
   return uris;
 }
 
+/**
+ * Signals that a message was forwarded or resent rather than delivered to us.
+ *
+ * Deliberately conservative: every one of these is a header a mail client
+ * writes when a human forwards something, or the RFC 5322 resend block. A
+ * long Received chain is NOT used — legitimate bulk mail routes through
+ * several hops and that would flag half the campaigns we see.
+ */
+function forwardSignals(headers: HeaderField[]): string[] {
+  const signals: string[] = [];
+
+  for (const name of ["x-forwarded-for", "x-forwarded-to", "x-forwarded-message-id"]) {
+    if (headers.some((h) => h.lower === name)) signals.push(name);
+  }
+  for (const name of ["resent-from", "resent-to", "resent-date", "resent-message-id"]) {
+    if (headers.some((h) => h.lower === name)) signals.push(name);
+  }
+
+  /* Localised forward prefixes. Anchored, so a subject that merely discusses
+     forwarding does not qualify. */
+  const subject = headers.find((h) => h.lower === "subject")?.value ?? "";
+  if (/^\s*(?:fwd?|fw|wg|tr|rv|vs|vb|enc|i|továbbítás)\s*:/i.test(subject)) {
+    signals.push("subject prefix");
+  }
+
+  return signals;
+}
+
 export function extractFacts(headers: HeaderField[]): HeaderFacts {
   const from = headers.find((header) => header.lower === "from");
   const returnPath = headers.find((header) => header.lower === "return-path");
@@ -281,6 +327,10 @@ export function extractFacts(headers: HeaderField[]): HeaderFacts {
     },
     listUnsubscribePost:
       headers.find((header) => header.lower === "list-unsubscribe-post")?.value ?? null,
+    forwarded: (() => {
+      const signals = forwardSignals(headers);
+      return { likely: signals.length > 0, signals };
+    })(),
   };
 }
 
@@ -641,6 +691,20 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       detail: "RFC 8058 requires an HTTPS URI; mailto alone is not one-click unsubscribe.",
       rule: RULE.oneClick,
       evidence: unsubscribeEvidence,
+    });
+  } else if (facts.forwarded.likely) {
+    /* The headers are absent, and we know why: this message was forwarded,
+       and a forward strips List-Unsubscribe. Saying "these are missing" here
+       would be reporting the courier's damage as the sender's mistake.
+       `info` rather than `warn`, because there is nothing for anyone to do
+       about it except send us the original. */
+    findings.push({
+      severity: "info",
+      title: "One-click unsubscribe cannot be read from a forwarded message",
+      detail:
+        "No List-Unsubscribe headers are present, but this message reached us as a forward, and forwarding removes them — Gmail strips both. That means their absence here proves nothing about the campaign as it was sent. To have this checked, send the campaign straight from your platform to the address on the check page rather than forwarding a copy you received.",
+      rule: RULE.oneClick,
+      evidence: `forwarded: ${facts.forwarded.signals.join(", ")}`,
     });
   } else {
     findings.push({

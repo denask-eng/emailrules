@@ -243,10 +243,19 @@ export function RuleRow({ rule, index = 0 }: { rule: Rule; index?: number }) {
   );
 }
 
+/**
+ * The badges speak the same four colours as the ownership bar.
+ *
+ * "yours" was blue here — the interactive accent — while every bar on the site
+ * drew it red. Same word, same value, two colours, so the scale had to be
+ * relearned on every surface. Red is the one that survives: it is what the
+ * bar, the check findings and the shelf panel all use, and blue is reserved
+ * for things you can click.
+ */
 const OWN_TONE: Record<Ownership, { box: string; text: string }> = {
   esp: { box: "border-ok/35 bg-ok-bg", text: "text-ok" },
   shared: { box: "border-soon/35 bg-soon-bg", text: "text-soon" },
-  yours: { box: "border-accent/30 bg-accent-soft", text: "text-accent" },
+  yours: { box: "border-live/30 bg-live-bg", text: "text-live" },
   context: { box: "border-border bg-bg-2", text: "text-muted-fg" },
 };
 

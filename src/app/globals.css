@@ -439,16 +439,61 @@
   /* Charts on this site are ink-on-paper with one accent, like the rest of
      it. Four steps, ordered so a stacked bar reads left-to-right as
      "handled → yours" without a legend. */
-  --plot-1: #b8b4a6;   /* platform's job   — quietest */
-  --plot-2: var(--soon);
-  --plot-3: var(--accent);
-  --plot-4: #dedac9;   /* nothing to do    — paper-adjacent */
+  /* The staleness meter only. Ownership has its own scale above — this ramp
+     is a single-hue age gradient and must never be reused for a category. */
+  --plot-1: #b8b4a6;
+  --plot-2: #8d8878;
+  --plot-3: #5f5b4e;
+  --plot-4: #dedac9;
   --plot-grid: #e2ded1;
   --plot-axis: #56564f;
 
   /* Long enough to read as a measurement settling, short enough that nobody
      waits for it. */
   --t-plot: 0.75s;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Ownership — the one scale, used everywhere.
+
+   This site's whole argument is a four-state split, and it was being drawn in
+   three different palettes: salmon/gold/mint on the dark shelf panel, a
+   beige-and-mustard bar underneath it, and blue-for-"yours" on the badges in
+   bits.tsx. Same four values, three colour languages, two orderings. Nobody
+   can learn that.
+
+   One scale now, and it reads as a traffic light so it only has to be learned
+   once:
+
+     yours    red     — nobody does this for you
+     shared   amber   — the platform does half of it
+     esp      green   — done, move on
+     context  neutral — not a task at all
+
+   Order is fixed everywhere: yours → shared → esp → context, descending by
+   how much of it lands on your desk.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  /* On paper. Deep enough to hold white numerals, muted enough not to shout. */
+  --own-yours: #d1483c;
+  --own-shared: #c08422;
+  --own-esp: #2f8f60;
+  --own-context: #c9c4b4;
+
+  /* On the near-black panels. Same four hues, lifted for a dark ground —
+     these are the values the shelf panel and the homepage figure already
+     used, promoted from hardcoded hex into the token system. */
+  --own-yours-dark: #ff9d94;
+  --own-shared-dark: #f0c26a;
+  --own-esp-dark: #7ee0a8;
+  --own-context-dark: rgb(255 255 255 / 0.25);
+}
+
+@theme inline {
+  --color-own-yours: var(--own-yours);
+  --color-own-shared: var(--own-shared);
+  --color-own-esp: var(--own-esp);
+  --color-own-context: var(--own-context);
 }
 
 @theme inline {

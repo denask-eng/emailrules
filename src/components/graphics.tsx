@@ -30,40 +30,58 @@ import { Signal } from "@/components/signal";
  * 1. Ownership bar — the thesis, drawn once
  * ------------------------------------------------------------------ */
 
-const OWN_ORDER: { key: Ownership; short: string; fill: string }[] = [
-  { key: "esp", short: "Platform's job", fill: "var(--plot-1)" },
-  { key: "shared", short: "Shared", fill: "var(--plot-2)" },
-  { key: "yours", short: "Yours", fill: "var(--plot-3)" },
-  { key: "context", short: "Nothing to do", fill: "var(--plot-4)" },
+/**
+ * The canonical order and vocabulary. Fixed everywhere on the site.
+ *
+ * Descending by how much of it lands on your desk, so the bar reads left to
+ * right as "this is yours … this is not". The labels are the ones the dark
+ * shelf panel already used, because they are the plainer set: "your tool
+ * handles it" beats "esp", and "nothing to do" beats "context".
+ */
+const OWN_ORDER: { key: Ownership; label: string; paper: string; dark: string }[] = [
+  { key: "yours", label: "yours outright", paper: "var(--own-yours)", dark: "var(--own-yours-dark)" },
+  { key: "shared", label: "shared with your tool", paper: "var(--own-shared)", dark: "var(--own-shared-dark)" },
+  { key: "esp", label: "your tool handles", paper: "var(--own-esp)", dark: "var(--own-esp-dark)" },
+  { key: "context", label: "nothing to do", paper: "var(--own-context)", dark: "var(--own-context-dark)" },
 ];
 
 /**
- * One stacked horizontal bar: platform's job / shared / yours / nothing to do.
+ * One stacked bar: yours / shared / your tool handles / nothing to do.
  *
- * This single graphic says in one glance what the numbered "Why care" item
- * needs two hundred words to say. It does not replace those words — they sit
- * underneath it — it just means nobody has to read them to get the shape.
+ * This is the site's entire argument drawn once, and it was previously drawn
+ * three different ways — a hardcoded salmon-and-gold bar on the shelf panel, a
+ * beige-and-mustard one directly beneath it, and blue-for-"yours" on the
+ * badges. Same numbers, three palettes, two orderings, two label sets. This
+ * component is now the only place any of them is decided.
  *
- * The segment for "a mainstream tool has finished this for you" is one rule
- * wide on the real corpus, and it is drawn one rule wide.
+ * The counts live in the legend, never inside the segments. A numeral sitting
+ * on a coloured bar has to survive whatever width the data gives it, and a
+ * one-rule segment cannot hold one — so it either disappears or forces the
+ * colour lighter than the design wants. The legend has no such constraint and
+ * reads better at a glance.
  */
 export function OwnershipBar({
   counts,
   total,
-  height = 30,
+  surface = "paper",
+  height = 8,
   showLegend = true,
   className,
   caption,
 }: {
   counts: Record<Ownership, number>;
   total: number;
+  /** `dark` on the near-black panels, `paper` on the page. Same hues. */
+  surface?: "paper" | "dark";
   height?: number;
   showLegend?: boolean;
   className?: string;
   caption?: React.ReactNode;
 }) {
+  const dark = surface === "dark";
   const segs = OWN_ORDER.map((o) => ({
     ...o,
+    fill: dark ? o.dark : o.paper,
     n: counts[o.key] ?? 0,
     pct: total > 0 ? ((counts[o.key] ?? 0) / total) * 100 : 0,
   })).filter((s) => s.n > 0);
@@ -71,17 +89,15 @@ export function OwnershipBar({
   return (
     <figure className={cn("m-0", className)}>
       <div
-        className="flex w-full gap-px overflow-hidden rounded-[3px] border border-border bg-border"
+        className="flex w-full overflow-hidden rounded-full"
         style={{ height }}
         role="img"
-        aria-label={`Of ${total} rules: ${segs
-          .map((s) => `${s.n} ${OWNERSHIP[s.key].label}`)
-          .join("; ")}.`}
+        aria-label={`Of ${total} rules: ${segs.map((s) => `${s.n} ${s.label}`).join("; ")}.`}
       >
         {segs.map((s, i) => (
-          <div
+          <span
             key={s.key}
-            className="grow-x flex items-center justify-center"
+            className="grow-x block h-full"
             style={
               {
                 "--w": `${s.pct}%`,
@@ -89,38 +105,46 @@ export function OwnershipBar({
                 background: s.fill,
               } as React.CSSProperties
             }
-            title={`${s.n} of ${total} — ${OWNERSHIP[s.key].label}`}
-          >
-            {s.pct > 9 ? (
-              <span
-                className="num text-[11px] font-semibold"
-                style={{ color: s.key === "yours" ? "var(--accent-fg)" : "var(--fg)" }}
-              >
-                {s.n}
-              </span>
-            ) : null}
-          </div>
+            title={`${s.n} of ${total} — ${s.label}`}
+          />
         ))}
       </div>
 
       {showLegend ? (
-        <ul className="mt-2.5 flex list-none flex-wrap gap-x-4 gap-y-1.5 p-0">
+        <dl
+          className={cn(
+            "num mt-5 grid gap-x-6 gap-y-2 text-[11px] tracking-[0.06em] uppercase sm:grid-cols-4",
+            dark ? "text-white/45" : "text-dim",
+          )}
+        >
           {segs.map((s) => (
-            <li key={s.key} className="flex items-center gap-1.5 text-[12px] text-muted-fg">
+            <div key={s.key} className="flex items-baseline gap-2">
               <span
                 aria-hidden
-                className="inline-block h-2.5 w-2.5 shrink-0 rounded-[2px] border border-border"
+                className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-full"
                 style={{ background: s.fill }}
               />
-              <span className="num font-semibold text-fg">{s.n}</span>
-              <span>{s.short}</span>
-            </li>
+              <dt
+                className={cn(
+                  "text-[1.15rem] leading-none font-semibold",
+                  dark ? "text-white" : "text-fg",
+                )}
+              >
+                {s.n}
+              </dt>
+              <dd className="m-0">{s.label}</dd>
+            </div>
           ))}
-        </ul>
+        </dl>
       ) : null}
 
       {caption ? (
-        <figcaption className="mt-2.5 max-w-[58ch] text-[13px] leading-relaxed text-muted-fg">
+        <figcaption
+          className={cn(
+            "mt-4 max-w-[62ch] text-[13px] leading-relaxed",
+            dark ? "text-white/55" : "text-muted-fg",
+          )}
+        >
           {caption}
         </figcaption>
       ) : null}

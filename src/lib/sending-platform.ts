@@ -231,7 +231,33 @@ const SPF_MANAGERS: { name: string; match: string[] }[] = [
   { name: "PowerDMARC", match: ["_spf.powerdmarc.com", "powerdmarc.com"] },
   { name: "Fraudmarc", match: ["spf.fraudmarc.com", "fraudmarc.com"] },
   { name: "Skysnag", match: ["_spf.skysnag.com", "skysnag.com"] },
+  /* Security gateways. Not "DMARC vendors", but they hold the sender list the
+     same way, and Proofpoint in particular publishes a macro record — which is
+     how gymshark.com came to be told its SPF "does not list SendGrid anywhere"
+     when its SPF does not list anybody anywhere by design. */
+  { name: "Proofpoint", match: ["spf.has.pphosted.com", "pphosted.com"] },
+  { name: "Mimecast", match: ["_netblocks.mimecast.com", "mimecast.com"] },
+  { name: "Cisco Secure Email", match: ["iphmx.com"] },
+  { name: "Barracuda", match: ["spf.barracudanetworks.com", "barracudanetworks.com"] },
 ];
+
+/**
+ * Can the list of authorised senders be read out of DNS at all?
+ *
+ * An SPF record containing a macro — `%{i}`, `%{ir}`, `%{d}` — is evaluated
+ * per message against the connecting IP. There is no expansion of it that a
+ * checker can perform by reading DNS, because the answer depends on who is
+ * connecting. Proofpoint's hosted SPF is the common case.
+ *
+ * This matters far beyond cosmetics. Every "your SPF does not authorise X"
+ * claim on this site is only true if the record can be read, and against a
+ * macro record it cannot. Saying it anyway is a confident, specific, false
+ * accusation — the exact failure this site exists to not commit.
+ */
+export function spfSendersAreReadable(spf: string | null): boolean {
+  if (!spf) return true;
+  return !spf.includes("%{");
+}
 
 export interface SpfManager {
   name: string;

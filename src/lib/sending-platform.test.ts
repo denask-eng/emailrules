@@ -6,6 +6,7 @@ import {
   platformClaim,
   primarySender,
   signingButUnauthorised,
+  spfSendersAreReadable,
   spfAuthorised,
   spfIncludes,
 } from "./sending-platform";
@@ -183,4 +184,41 @@ test("a plain hosted SPF is named without claiming macros", () => {
 test("an ordinary record has no manager", () => {
   assert.equal(detectSpfManager("v=spf1 include:_spf.klaviyo.com ~all"), null);
   assert.equal(detectSpfManager(null), null);
+});
+
+
+/* ── The sender list is not always readable ───────────────────────────────
+   Both of these produced a confident, specific, false accusation against a
+   real brand before they were caught: gymshark.com was told its SPF "does not
+   list SendGrid anywhere" about a Proofpoint macro record that lists nobody
+   anywhere by design, and allbirds.com delegates its list to EasyDMARC. */
+
+test("an SPF macro record is not readable", () => {
+  assert.equal(
+    spfSendersAreReadable("v=spf1 include:%{ir}.%{v}.%{d}.spf.has.pphosted.com ~all"),
+    false,
+  );
+  assert.equal(
+    spfSendersAreReadable("v=spf1 include:%{i}._ip.%{h}._ehlo.%{d}._spf.vali.email ~all"),
+    false,
+  );
+});
+
+test("an ordinary SPF record is readable", () => {
+  assert.equal(spfSendersAreReadable("v=spf1 include:sendgrid.net -all"), true);
+  assert.equal(spfSendersAreReadable(null), true);
+});
+
+test("Proofpoint's hosted SPF is recognised as a manager", () => {
+  const m = detectSpfManager("v=spf1 include:%{ir}.%{v}.%{d}.spf.has.pphosted.com ~all");
+  assert.equal(m?.name, "Proofpoint");
+  assert.equal(m?.macro, true);
+});
+
+test("EasyDMARC holds the list even when the record has no macro", () => {
+  const m = detectSpfManager(
+    "v=spf1 include:allbirds_com._es.easydmarc.com include:spf.protection.outlook.com ~all",
+  );
+  assert.equal(m?.name, "EasyDMARC");
+  assert.equal(m?.macro, false);
 });

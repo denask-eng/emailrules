@@ -406,6 +406,30 @@ const US_STATES =
   "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC|PR";
 
 /**
+ * The same states written out, because plenty of footers do.
+ *
+ * This list exists because of a real miss: a campaign whose footer read
+ * "505 Montgomery Street, 10th & 11th Floors, San Francisco, California,
+ * 94111, USA" — an unambiguous, complete US address — was reported as having
+ * no readable postal address. The two-letter pattern could not see
+ * "California", and the street line alone is only one weak signal.
+ *
+ * Longest-first, so "New Hampshire" is not consumed by an earlier "New York"
+ * style prefix and "Virginia" never shadows "West Virginia".
+ */
+const US_STATE_NAMES = [
+  "District of Columbia", "North Carolina", "South Carolina", "West Virginia",
+  "New Hampshire", "Massachusetts", "Pennsylvania", "Rhode Island", "North Dakota",
+  "South Dakota", "Puerto Rico", "Connecticut", "Mississippi", "Washington",
+  "California", "New Jersey", "New Mexico", "Louisiana", "Minnesota", "Tennessee",
+  "Wisconsin", "Michigan", "Nebraska", "Oklahoma", "Arkansas", "Colorado",
+  "Delaware", "Illinois", "Kentucky", "Maryland", "Missouri", "Montana",
+  "New York", "Virginia", "Alabama", "Arizona", "Florida", "Georgia", "Indiana",
+  "Vermont", "Wyoming", "Alaska", "Hawaii", "Kansas", "Nevada", "Oregon",
+  "Texas", "Idaho", "Maine", "Ohio", "Iowa", "Utah",
+].join("|");
+
+/**
  * Two tiers on purpose. A US ZIP behind a real state code or a PO Box is a
  * postal address and nothing else; a street word or a postcode-then-town pair
  * is suggestive on its own and only counts when something else agrees with it.
@@ -414,25 +438,110 @@ const US_STATES =
  * they already have, a false positive tells them they are compliant when they
  * are not, and this site publishes the $53,088 figure on the next page over.
  */
+/**
+ * Countries, as a footer writes them. A weak signal only — "we ship to Canada,
+ * Ireland and the UK" is a sentence, not an address — but a country name sitting
+ * behind a street line is the thing that makes an Irish or Singaporean footer
+ * legible when it carries no postcode we can pattern-match.
+ */
+const COUNTRY_NAMES = [
+  "United States", "United Kingdom", "New Zealand", "Netherlands", "Switzerland",
+  "Luxembourg", "Lithuania", "Singapore", "Australia", "Portugal", "Denmark",
+  "Slovakia", "Slovenia", "Germany", "Belgium", "Bulgaria", "Croatia", "Czechia",
+  "Finland", "Hungary", "Ireland", "Romania", "Austria", "Estonia", "Iceland",
+  "Andorra", "Canada", "France", "Greece", "Latvia", "Norway", "Poland",
+  "Sweden", "Cyprus", "Israel", "Mexico", "Brazil", "Italy", "Spain", "Japan",
+  "Malta", "India", "USA", "U.S.A.", "UK", "Éire",
+].join("|");
+
+/**
+ * Street-type words, in the languages this corpus actually covers. Kept as one
+ * list so the English and continental patterns below stay in step.
+ */
+const STREET_WORDS =
+  "street|st|avenue|ave|road|rd|boulevard|blvd|drive|lane|ln|way|court|place|square|suite|ste|floor|parkway|highway|terrace|crescent|quay|wharf|circus";
+
+/**
+ * Continental street-type words. Several are a suffix on the street name
+ * itself (Hauptstraße, Storgatan, Keizersgracht), which is why the pattern
+ * below has no word boundary in front of them.
+ */
+const EURO_STREET =
+  String.raw`stra(?:ss|ß)e|\bstr\.|gatan|gata|gade|vej|gracht|straat|laan|weg|plein|\brue|\bavenue|\bboulevard|\bvia|\bviale|\bcorso|\bpiazza|\bcalle|\bavenida|\bplaza|\bpraça|\bprospektas|\bgatv[ėe]|\bg\.`;
+
+/**
+ * Two tiers on purpose. A US ZIP behind a real state, a PO Box, or a national
+ * postcode format is a postal address and nothing else; a street word or a
+ * postcode-then-town pair is suggestive on its own and only counts when
+ * something else agrees with it.
+ *
+ * The bias used to be set hard toward false negatives, on the theory that
+ * telling someone to check a footer they already have is cheap. A real
+ * campaign proved that wrong: its footer read "505 Montgomery Street, 10th &
+ * 11th Floors, San Francisco, California, 94111, USA" and this reported no
+ * readable address. Telling a compliant sender they are exposed to a $53,088
+ * penalty is not a cheap error — it is the one that costs us the reader.
+ */
 const POSTAL_SIGNALS: Array<{ strong: boolean; test: RegExp }> = [
   { strong: true, test: /\bp\.?\s?o\.?\s*box\s*#?\s*\d+/i },
-  { strong: true, test: new RegExp(String.raw`\b(?:${US_STATES})\.?\s+\d{5}(?:-\d{4})?\b`) },
+
+  /* The comma is optional and was not before. "San Francisco, CA, 94111" is
+     as ordinary as "San Francisco, CA 94111", and only the second matched.
+     Abbreviations stay case-sensitive: lowercasing them makes "ca. 12345" —
+     circa, in a citation — read as California. */
+  { strong: true, test: new RegExp(String.raw`\b(?:${US_STATES})\.?,?\s+\d{5}(?:-\d{4})?\b`) },
+
+  /* Written-out state names, any case. A full state name immediately in front
+     of a five-digit ZIP does not happen by accident in prose. */
+  { strong: true, test: new RegExp(String.raw`\b(?:${US_STATE_NAMES})\.?,?\s+\d{5}(?:-\d{4})?\b`, "i") },
+
+  /* UK, then Canada. */
   { strong: true, test: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/ },
   { strong: true, test: /\b[A-Z]\d[A-Z]\s?\d[A-Z]\d\b/ },
+
+  /* Netherlands: four digits then two capitals. Years are excluded because
+     "© 2026 AB" — a Swedish company suffix on a copyright line — is otherwise
+     indistinguishable from a Dutch postcode. */
+  { strong: true, test: /\b(?!19\d{2}|20\d{2})\d{4}\s?[A-Z]{2}\b/ },
+
+  /* Australia: state or territory then a four-digit postcode. No clash with
+     the US pattern, which requires five digits. */
+  { strong: true, test: /\b(?:NSW|VIC|QLD|WA|SA|TAS|ACT|NT)\.?,?\s+\d{4}\b/ },
+
+  /* Sweden and Norway: three digits, a space, two digits, then a town. The
+     town is required — "111 51" alone is a pair of numbers. */
+  { strong: true, test: /\b\d{3}\s\d{2}\s+[A-ZÀ-Ý][a-zà-ÿ]{2,}/ },
+
+  /* A number, up to four intervening words, then a street type. */
   {
     strong: false,
-    test: /\b\d{1,6}[a-z]?[,\s]+(?:[A-Za-z][\w'’.-]*[,\s]+){0,4}(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|lane|ln|way|court|place|square|suite|ste|floor|parkway|highway)\b/i,
+    test: new RegExp(
+      String.raw`\b\d{1,6}[a-z]?[,\s]+(?:[A-Za-z][\w'’.-]*[,\s]+){0,4}(?:${STREET_WORDS})\b`,
+      "i",
+    ),
   },
+
+  /* The continental forms, in both orders — "Via Roma 12" and "12 rue de
+     Rivoli" — with up to three words of street name in between. The number
+     used to have to sit immediately against the type word, which missed every
+     Italian and Spanish address that names its street. */
   {
     strong: false,
-    /* No word boundary before the German forms on purpose: the street name
-       and the word for street are one token there, as in Hauptstraße 12. */
-    test: /(?:(?:stra(?:ss|ß)e|\bstr\.|\brue|\bvia|\bviale|\bcalle|\bplaza|\bprospektas|\bgatv[ėe]|\bg\.)\s*,?\s*\d+|\d+\s*,?\s*(?:stra(?:ss|ß)e|rue|via|calle)\b)/i,
+    test: new RegExp(
+      String.raw`(?:(?:${EURO_STREET})(?:\s+[A-Za-zÀ-ÿ'’.-]+){0,3}\s*,?\s*\d+|\d+\s*,?\s*(?:${EURO_STREET}))`,
+      "i",
+    ),
   },
+
   /* A four or five digit group followed by a capitalised word is a European
      postcode and town. Years are excluded because a copyright line is not an
      address and would otherwise supply half of one. */
   { strong: false, test: /\b(?!19\d{2}\b|20\d{2}\b)\d{4,5}\b[,\s]+[A-ZÀ-Ý][a-zà-ÿ]{2,}/ },
+
+  /* A country name behind a comma. Weak by design — it takes a second signal
+     before it counts — but it is what makes a footer legible when the country
+     uses a postcode we cannot pattern-match, or prints none at all. */
+  { strong: false, test: new RegExp(String.raw`,\s*(?:${COUNTRY_NAMES})\b\.?\s*$|,\s*(?:${COUNTRY_NAMES})\b[,.]`, "im") },
 ];
 
 export function hasPostalAddress(text: string): boolean {

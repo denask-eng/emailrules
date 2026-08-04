@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { checkDomain } from "@/lib/dns-check";
-import { spfAuthorised, signingButUnauthorised } from "@/lib/sending-platform";
+import {
+  spfAuthorised,
+  signingButUnauthorised,
+  spfSendersAreReadable,
+  detectSpfManager,
+} from "@/lib/sending-platform";
 import { fmtDate } from "@/lib/format";
 
 /**
@@ -31,7 +36,19 @@ import { fmtDate } from "@/lib/format";
 
 /** Public domains whose authentication DNS is worth pointing at. Ordinary
     TXT lookups — the same records every receiver reads on every message. */
-const TARGETS = ["klaviyo.com", "kureapp.health", "monzo.com", "notion.so"] as const;
+/**
+ * Well-known senders, and deliberately not a small private company.
+ *
+ * `kureapp.health` used to be in this rotation. It is a real finding on a real
+ * domain, but printing one small company's misconfiguration on our front page
+ * indefinitely is punching down — the panel needs a live reading, not a
+ * hostage. These are large brands whose DNS is examined by strangers all day.
+ *
+ * None of them is here because it looks bad. The panel prints whatever is true
+ * at render, including "nothing wrong", and the disagreement diagram only
+ * appears when the records genuinely support it.
+ */
+const TARGETS = ["gymshark.com", "patagonia.com", "allbirds.com", "notion.so"] as const;
 
 /** Never let a slow resolver hold the homepage's largest paint hostage. */
 const BUDGET_MS = 4000;
@@ -51,11 +68,20 @@ export async function LiveFigure() {
     TARGETS.map((d) => withTimeout(checkDomain(d), BUDGET_MS)),
   );
 
+  /* The same bar the finding has to clear, applied here too.
+     This panel computed its own conflict and did not ask whether the SPF was
+     even readable, so it kept drawing the disagreement diagram for a domain
+     whose finding had already been suppressed as unsupportable — the same
+     false claim, in the louder place. */
+  const canClaimConflict = (r: NonNullable<(typeof readings)[number]>) =>
+    spfSendersAreReadable(r.facts.spf) &&
+    !detectSpfManager(r.facts.spf) &&
+    signingButUnauthorised(r.platforms).length > 0 &&
+    spfAuthorised(r.platforms).length > 0;
+
   const conflicts = readings
     .filter((r): r is NonNullable<typeof r> => r !== null)
-    .filter(
-      (r) => signingButUnauthorised(r.platforms).length > 0 && spfAuthorised(r.platforms).length > 0,
-    );
+    .filter(canClaimConflict);
 
   /* Prefer a domain currently showing the disagreement: it is the finding a
      tool that grades each record separately cannot produce, and therefore the
@@ -78,7 +104,7 @@ export async function LiveFigure() {
   const orphans = result ? signingButUnauthorised(result.platforms) : [];
   const authorised = result ? spfAuthorised(result.platforms) : [];
 
-  const conflict = Boolean(result && orphans.length > 0 && authorised.length > 0);
+  const conflict = Boolean(result && canClaimConflict(result));
 
   return (
     <figure className="mx-auto mt-14 max-w-[720px] overflow-hidden rounded-2xl bg-[#141417] text-left shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]">
@@ -134,7 +160,11 @@ export async function LiveFigure() {
             <p className="num mt-1 truncate text-[0.72rem] text-white/30">
               {authorised[0].evidence
                 .filter((e) => e.from === "spf")
-                .map((e) => `include:${e.value}`)
+                /* The stored token already carries its mechanism, so prefixing
+                   another "include:" printed include:include:mail.zendesk.com
+                   on a panel whose entire promise is that it quotes records
+                   verbatim. */
+                .map((e) => e.value)
                 .join(" ")}
             </p>
 
