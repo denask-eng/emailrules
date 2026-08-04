@@ -5,6 +5,8 @@ import { Panel } from "@/components/bits";
 import { CopyField } from "@/components/copy-field";
 import { FindingTally, type FindingOwnership } from "@/components/findings";
 import { MessageJourney } from "@/components/message-journey";
+import { Track } from "@/components/track";
+import { Verdict, toneOf } from "@/components/verdict";
 import { toJourney } from "@/lib/message-journey";
 import { SubscribeForm } from "@/components/subscribe-form";
 import { buttonVariants } from "@/components/ui/button";
@@ -142,33 +144,39 @@ async function Result({ check }: { check: MessageCheck }) {
       { ownership: rule.ownership, mondayMorning: rule.mondayMorning },
     ]),
   );
+  const journey = toJourney(check.findings);
   const checkedOn = check.createdAt.slice(0, 10);
   const expiresOn = check.expiresAt.slice(0, 10);
 
   return (
     <div className="shell shell-tight py-12 sm:py-16">
-      <p className="label">
-        Message check · <span className="num">{fmtDate(checkedOn)}</span>
-      </p>
-      <h1 className="num mt-3 text-[clamp(1.6rem,4.5vw,2.5rem)] break-all">
-        {check.fromDomain ?? "The message you sent"}
-      </h1>
+      {/* The domain is the label, the finding is the headline. The reader knows
+          which domain they asked about; what they do not know is whether
+          anything is wrong, and that used to be the smallest text up here. */}
+      <Verdict
+        label={
+          <>
+            Message check · {fmtDate(checkedOn)} · {check.fromDomain ?? "the message you sent"}
+          </>
+        }
+        headline={check.verdict}
+        tone={toneOf(check.findings)}
+      />
 
-      <p className="mt-5 max-w-[62ch] text-[1.04rem] leading-relaxed text-muted-fg">
-        {check.verdict} This is read off the message itself, not off your DNS. Every finding names
-        the dated rule it came from and whose job it is.
-      </p>
+      {/* The whole trip, before any of it is read. */}
+      <Track stops={journey.stops} className="mt-10" />
 
       <FindingTally findings={check.findings} />
+
+      <p className="mt-6 max-w-[62ch] text-[14.5px] leading-relaxed text-muted-fg">
+        This is read off the message itself, not off your DNS. Every finding names the dated rule it
+        came from and whose job it is.
+      </p>
 
       {/* The findings as a journey rather than a list. Same findings, told in
           the order they happened to the message, which is the order the
           explainer already teaches. */}
-      <MessageJourney
-        journey={toJourney(check.findings)}
-        ruleTitles={ruleTitles}
-        ownership={ownership}
-      />
+      <MessageJourney journey={journey} ruleTitles={ruleTitles} ownership={ownership} />
 
       <div className="mt-9 rounded-xl border bg-bg-2 p-5 text-[0.92rem] leading-relaxed text-muted-fg">
         <b className="text-fg">What this proves, and what it does not.</b> We read the signature; we

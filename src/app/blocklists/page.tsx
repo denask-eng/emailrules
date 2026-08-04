@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { census, type CensusRow } from "@/lib/blocklist-check";
+import { ProofBar } from "@/components/proof-bar";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -94,21 +95,33 @@ export default async function Blocklists() {
         to publish.
       </p>
 
-      {/* The three numbers, at the size of the argument. */}
-      <dl className="mt-10 grid gap-px overflow-hidden border-y bg-border sm:grid-cols-3">
-        {[
-          { n: rows.filter((r) => r.status === "answered").length, k: "answering today" },
-          { n: declining.length, k: "refusing automated queriers" },
-          { n: silent.length, k: "publish no test entry" },
-        ].map((f) => (
-          <div key={f.k} className="bg-bg px-5 py-7 sm:px-6">
-            <dd className="num text-[clamp(2.4rem,6vw,3.4rem)] leading-none font-semibold tracking-[-0.04em]">
-              {f.n}
-            </dd>
-            <dt className="mt-2.5 text-[13.5px] text-muted-fg">{f.k}</dt>
-          </div>
-        ))}
-      </dl>
+      {/* Three numbers in a row made the reader do the division. As one bar the
+          proportion is the argument: a fifth of what this industry checks
+          answers nothing at all, and you can see that it is a fifth. */}
+      <ProofBar
+        className="mt-10"
+        segments={[
+          {
+            key: "answered",
+            label: "answering today",
+            tone: "ok",
+            value: rows.filter((r) => r.status === "answered").length,
+          },
+          {
+            key: "refused",
+            label: "refusing automated queriers",
+            tone: "warn",
+            value: declining.length,
+          },
+          {
+            key: "silent",
+            label: "publish no test entry",
+            tone: "bad",
+            value: silent.length,
+            note: "Nothing to say about anyone. Counted as a pass by every checker that asks them.",
+          },
+        ]}
+      />
 
       <p className="mt-6 max-w-[64ch] text-[14.5px] leading-relaxed text-muted-fg">
         A zone that publishes no test entry is not reporting you clean. It is not reporting

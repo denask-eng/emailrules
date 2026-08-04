@@ -4,6 +4,7 @@ import type { FindingOwnership } from "@/components/findings";
 import type { Journey, JourneyStop } from "@/lib/message-journey";
 import { stopVerdict } from "@/lib/message-journey";
 import { OWNERSHIP, type Ownership } from "@/lib/types";
+import { stateOf, type StopState } from "@/components/track";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,6 +37,14 @@ const DOT: Record<string, string> = {
   info: "bg-dim",
 };
 
+/** Matches Track's palette exactly, from the same derived state. */
+const NODE_TONE: Record<StopState, string> = {
+  broke: "border-live bg-live text-white",
+  warn: "border-soon bg-soon text-white",
+  clean: "border-ok bg-ok text-white",
+  unseen: "border-dashed border-dim/60 bg-bg text-dim",
+};
+
 function Stop({
   stop,
   ruleTitles,
@@ -48,9 +57,16 @@ function Stop({
   claimed: Set<string>;
 }) {
   const quiet = stop.unseeable;
+  /* The same function the diagram uses. Two places deciding what "this stop is
+     fine" means is two places to disagree, and a summary that contradicts the
+     detail underneath it is worse than no summary. */
+  const state = stateOf(stop);
 
   return (
-    <li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-4 pb-9 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-x-6">
+    <li
+      id={`stop-${stop.stage.id}`}
+      className="relative grid scroll-mt-20 grid-cols-[2.25rem_minmax(0,1fr)] gap-x-4 pb-9 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-x-6"
+    >
       {/* The spine. It is the only continuous line on the page and it is what
           makes eight separate verdicts read as one trip. */}
       <span
@@ -61,11 +77,7 @@ function Stop({
       <span
         className={cn(
           "num relative z-10 flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-medium sm:h-[2.2rem] sm:w-[2.2rem] sm:text-[12px]",
-          stop.fails
-            ? "border-live bg-live text-white"
-            : quiet
-              ? "border-border bg-bg text-dim"
-              : "border-fg bg-fg text-bg",
+          NODE_TONE[state],
         )}
       >
         {String(stop.stage.n).padStart(2, "0")}
@@ -169,12 +181,12 @@ export function MessageJourney({
   const claimed = new Set<string>();
 
   return (
-    <section className="mt-12">
-      <p className="label">What happened to it</p>
-      <h2 className="mt-3 max-w-[24ch] text-[clamp(1.5rem,3.4vw,2.15rem)] leading-tight tracking-tight">
-        Your message, stop by stop.
-      </h2>
-      <p className="mt-3 max-w-[60ch] text-[14.5px] leading-relaxed text-muted-fg">
+    <section className="mt-14 border-t pt-10">
+      {/* The diagram is rendered by the page, above, so this is the detail the
+          reader drops into after the answer has already landed. It gets a
+          modest heading rather than a second announcement of the same thing. */}
+      <h2 className="text-[1.3rem] tracking-tight">Stop by stop</h2>
+      <p className="mt-2.5 max-w-[60ch] text-[14px] leading-relaxed text-muted-fg">
         The same eight stops{" "}
         <Link
           href="/how-email-works"
@@ -182,11 +194,10 @@ export function MessageJourney({
         >
           the explainer walks
         </Link>
-        , drawn on the message you just sent. The stops a single message cannot show are still
-        here, greyed, saying why.
+        . The five a single message cannot show are still here, hollow, saying why.
       </p>
 
-      <ol className="mt-10 list-none p-0">
+      <ol className="mt-9 list-none p-0">
         {journey.stops.map((stop) => (
           <Stop
             key={stop.stage.id}
