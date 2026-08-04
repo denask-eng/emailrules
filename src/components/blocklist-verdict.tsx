@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Hit, ListReport } from "@/lib/blocklist-check";
 import { describeStatus } from "@/lib/blocklist-check";
 import { cn } from "@/lib/utils";
+import { Signal } from "@/components/signal";
 
 /**
  * The one screen this whole checker exists for.
@@ -111,7 +112,14 @@ export function BlocklistVerdict({
         </h2>
       ) : null}
 
-      {/* The arithmetic, said once, in the order a person would ask it. */}
+      {/* The arithmetic, said once, in the order a person would ask it.
+
+          "0 with an entry" is the answer somebody came here for, and it was
+          set in the same grey as everything around it. The count that carries
+          the verdict now carries the verdict's colour and its glyph — green
+          and a disc when nothing is listed, red and a cross when something
+          is. The other two numbers stay quiet on purpose: they are the
+          method, not the result. */}
       <p className="num mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-muted-fg">
         <span>
           <b className="font-semibold text-fg">{answered.length}</b> lists asked
@@ -119,15 +127,26 @@ export function BlocklistVerdict({
         <span aria-hidden className="text-dim">
           ·
         </span>
-        <span>
-          <b className="font-semibold text-fg">{withEntry}</b> with an entry
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5",
+            withEntry === 0
+              ? "border-ok/30 bg-ok-bg text-ok"
+              : "border-live/30 bg-live-bg text-live",
+          )}
+        >
+          <Signal state={withEntry === 0 ? "pass" : "fail"} size={8} label={false} />
+          <b className="font-semibold">{withEntry}</b> with an entry
         </span>
         {unanswered.length ? (
           <>
             <span aria-hidden className="text-dim">
               ·
             </span>
-            <span className="text-dim">{unanswered.length} could not be asked</span>
+            <span className="inline-flex items-center gap-1.5 text-dim">
+              <Signal state="na" size={8} label={false} />
+              {unanswered.length} could not be asked
+            </span>
           </>
         ) : null}
       </p>
@@ -173,23 +192,49 @@ export function BlocklistVerdict({
         </p>
       ) : null}
 
-      <details className="group mt-8 border-t pt-4">
-        <summary className="cursor-pointer list-none text-[13px] text-muted-fg hover:text-fg">
+      {/* Open by default. This roster is the proof, not the appendix: the
+          claim above is "nothing has an entry for you", and the only thing
+          that makes it worth believing is seeing which lists were actually
+          asked. Hiding it behind a click buried the credibility. */}
+      <details className="group mt-8 border-t pt-4" open>
+        <summary className="min-h-9 cursor-pointer list-none text-[13px] text-muted-fg hover:text-fg">
           <span className="underline decoration-dotted underline-offset-4">
             Which lists, and which would not answer
           </span>
         </summary>
-        <ul className="mt-4 grid list-none gap-x-8 gap-y-1.5 p-0 text-[12.5px] sm:grid-cols-2">
-          {lists.map((l) => (
-            <li key={l.id} className="flex items-baseline justify-between gap-3">
-              <span className={l.status === "answered" ? "text-muted-fg" : "text-dim"}>
-                {l.label}
-              </span>
-              <span className={cn("num text-[11.5px]", l.status === "answered" ? "text-dim" : "text-soon")}>
-                {l.status === "answered" ? "answered" : describeStatus(l.status).split(" — ")[0]}
-              </span>
-            </li>
-          ))}
+
+        {/* The roster used to be twenty-three identical grey rows, which is
+            unskimmable and — worse — made a clean sweep look like a list of
+            nothing. The state carries a shape and the pass colour now, so the
+            green column *is* the result: you read it without reading it. */}
+        <ul className="mt-4 grid list-none gap-x-8 gap-y-0 p-0 text-[12.5px] sm:grid-cols-2">
+          {lists.map((l) => {
+            const ok = l.status === "answered";
+            return (
+              <li
+                key={l.id}
+                className="flex items-center justify-between gap-3 border-b border-border-soft py-1.5 last:border-b-0"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {/* Never colour alone: a disc for answered, a dash for a
+                      list that would not talk to us. */}
+                  <Signal state={ok ? "pass" : "na"} size={8} label={false} />
+                  <span className={cn("truncate", ok ? "text-fg" : "text-dim")}>{l.label}</span>
+                </span>
+                <span
+                  className={cn(
+                    "num shrink-0 text-[11px] tracking-[0.02em]",
+                    /* "declined" was mustard, which read as a warning about
+                       the reader. It is not — it is a list we could not ask,
+                       and it should recede, not shout. */
+                    ok ? "text-ok" : "text-dim",
+                  )}
+                >
+                  {ok ? "answered" : describeStatus(l.status).split(" — ")[0]}
+                </span>
+              </li>
+            );
+          })}
         </ul>
         <p className="mt-4 max-w-[64ch] text-[12.5px] leading-relaxed text-dim">
           Each of these answered an entry it is required to publish, and one it is required not to,
