@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { SubscribeForm } from "@/components/subscribe-form";
-import { getAllRules, getChangelog, getStats, countsByTopic, fmtDate } from "@/lib/rules";
+import {
+  getAllRules,
+  getChangelog,
+  getStats,
+  countsByTopic,
+  countsByOwnership,
+  fmtDate,
+} from "@/lib/rules";
 import { TOPICS } from "@/lib/types";
 import type { Topic } from "@/lib/types";
 import { TrustStrip } from "@/components/trust-strip";
@@ -13,17 +20,34 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Ledger } from "@/components/home/ledger";
 import { buildFiveSets } from "@/components/home/five";
+import { LiveFigure } from "@/components/home/live-figure";
+import { OwnershipBar } from "@/components/graphics";
+
+export const revalidate = 900;
 
 export default async function Home() {
-  const [changelogAll, stats, counts, allRules] = await Promise.all([
-    getChangelog(40),
+  const [changelogAll, stats, counts, own, allRules] = await Promise.all([
+    getChangelog(120),
     getStats(),
     countsByTopic(),
+    countsByOwnership(),
     getAllRules(),
   ]);
 
+  /* One clock reading for the whole page, so the timeline and the figure
+     cannot disagree about what "today" is. */
+  const now = new Date().toISOString().slice(0, 10);
+
   /* Homepage only shows real market moves — not "we documented a page". */
-  const marketLedger = changelogAll.filter((c) => isMarketChange(c.note)).slice(0, 7);
+  const marketMoves = changelogAll.filter((c) => isMarketChange(c.note));
+  const marketLedger = marketMoves.slice(0, 7);
+
+  /* Obligations that have not started yet. The timeline plots these ahead of
+     the now-line, which is the half of the story every other timeline in this
+     category leaves out. */
+  const upcoming = allRules
+    .filter((r) => r.status === "upcoming" && r.effectiveDate > now)
+    .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate));
   const sticky = stickyRisks(allRules, 3);
 
   const yours = stats.total - stats.notYours;
@@ -108,50 +132,13 @@ export default async function Home() {
         </details>
 
         {/* What the tool actually returns, shown rather than described.
-            A landing page for an instrument should print a reading off it —
-            this is a real finding from a real domain, in the same surface the
-            result page uses, so nothing here is a mockup of a thing that does
-            not exist. */}
-        <figure className="mx-auto mt-14 max-w-[720px] overflow-hidden rounded-2xl bg-[#141417] text-left shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]">
-          <div className="num flex items-center justify-between border-b border-white/8 px-5 py-3 text-[10.5px] tracking-[0.11em] text-white/38 uppercase sm:px-6">
-            <span className="flex items-center gap-2.5">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="listening absolute inset-0 rounded-full" aria-hidden />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#7ee0a8]" />
-              </span>
-              What comes back
-            </span>
-            <span>a real reading</span>
-          </div>
-          <div className="px-5 py-6 sm:px-6">
-            <p className="num text-[11px] tracking-[0.09em] text-white/30 uppercase">
-              Signs your mail
-            </p>
-            <p className="text-[1.15rem] leading-tight font-semibold text-[#ff9d94]">Klaviyo</p>
-            <p className="num mt-1 text-[0.72rem] text-white/30">
-              kl._domainkey kl2._domainkey
-            </p>
 
-            <div className="my-3 flex items-center gap-3">
-              <span className="h-6 w-px bg-[#ff9d94]/50" aria-hidden />
-              <span className="num text-[10.5px] tracking-[0.08em] text-[#ff9d94] uppercase">
-                ✗ these disagree
-              </span>
-            </div>
-
-            <p className="num text-[11px] tracking-[0.09em] text-white/30 uppercase">
-              SPF authorises
-            </p>
-            <p className="text-[1.15rem] leading-tight font-semibold text-[#f0c26a]">Zendesk</p>
-            <p className="num mt-1 text-[0.72rem] text-white/30">include:mail.zendesk.com</p>
-
-            <p className="mt-5 max-w-[52ch] text-[0.9rem] leading-relaxed text-white/60">
-              Klaviyo signs mail as this domain and its SPF has never listed Klaviyo. Those
-              campaigns fail SPF and pass DMARC on DKIM alignment alone. No other checker reads
-              the two records against each other.
-            </p>
-          </div>
-        </figure>
+            Same block, same size, same colours — it was the best thing on this
+            page. One thing changed: it used to be a hardcoded transcript of a
+            finding, and it is now the finding, read live from public DNS while
+            this page rendered. The caption says "a real reading", and this was
+            the one place on the site where that was not literally true. */}
+        <LiveFigure />
 
         <TrustStrip className="mt-10" />
 
@@ -190,6 +177,32 @@ export default async function Home() {
         </div>
 
         <Ledger entries={marketLedger} sticky={sticky} lastReview={stats.lastReview} />
+
+        {/* What is coming. The most valuable question a reader has, and it was
+            nowhere on this page. */}
+        {upcoming.length ? (
+          <div className="mt-6 rounded-xl border border-soon/30 bg-soon-bg px-4 py-4 sm:px-5">
+            <p className="label text-soon">Starting later</p>
+            <ul className="mt-2 list-none p-0">
+              {upcoming.slice(0, 4).map((r) => (
+                <li key={r.slug} className="border-b border-soon/15 last:border-b-0">
+                  <Link
+                    href={`/rules/${r.slug}`}
+                    className="flex flex-wrap gap-x-3 py-2 hover:underline"
+                  >
+                    <time
+                      dateTime={r.effectiveDate}
+                      className="num w-[5.5rem] shrink-0 text-[12px] font-medium text-soon"
+                    >
+                      {fmtDate(r.effectiveDate)}
+                    </time>
+                    <span className="min-w-0 flex-1 text-[14px] leading-snug">{r.title}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       {/*
@@ -210,7 +223,30 @@ export default async function Home() {
             </p>
           </div>
 
-          <ol className="mx-auto mt-12 max-w-2xl list-none border-t border-fg/12 p-0">
+          {/* The proportion, drawn, before the paragraph that describes it.
+              Branch C was right that this site argues about a ratio and never
+              showed one. The three items below keep every word they had — the
+              graphic just means nobody has to read 200 of them to get the
+              shape. */}
+          <div className="mx-auto mt-10 max-w-2xl">
+            <OwnershipBar
+              counts={own}
+              total={stats.total}
+              caption={
+                <>
+                  Every rule on the shelf, by whose desk it lands on. The leftmost segment is what a
+                  mainstream tool finishes for you, and it is{" "}
+                  <b className="font-medium text-fg">
+                    {stats.fullyHandled} rule{stats.fullyHandled === 1 ? "" : "s"}
+                  </b>{" "}
+                  wide — drawn to scale, because rounding that up is the overstatement everyone else
+                  in this category makes.
+                </>
+              }
+            />
+          </div>
+
+          <ol className="mx-auto mt-10 max-w-2xl list-none border-t border-fg/12 p-0">
             {[
               {
                 t: "Whose job is this, really?",

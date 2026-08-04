@@ -10,6 +10,8 @@ import { RuleTabs } from "@/components/rule/tabs";
 import { impactOf, IMPACT_LABEL, whyItMatters } from "@/lib/rule-signals";
 import { displayPlain, displayTldr, displayWhy } from "@/content/plain-overrides";
 import { resolveEspApplicability, espLabel, type EspId } from "@/lib/audience";
+import { CopyContext } from "@/components/copy-context";
+import { buildContext } from "@/lib/context-md";
 
 /* Search traffic lands here cold: one column, plain first, proof last. */
 const SHELL =
@@ -218,6 +220,20 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
           </Link>
           .
         </p>
+      ) : null}
+
+      {/* Borrowed from branch C. `ignoreIf` was a throwaway line near the
+          bottom of a tab, and it is the most reader-respecting sentence on the
+          site: telling somebody on the first screen that this one is not
+          theirs buys more trust than making them read to the end to find out.
+          It stays in its old position too — this is a promotion, not a move. */}
+      {rule.ignoreIf ? (
+        <aside className="stop-box mt-5">
+          <p className="label text-ok">Who can stop reading</p>
+          <p className="mt-1.5 max-w-[58ch] text-[14.5px] leading-relaxed">
+            <Explained as="span" text={rule.ignoreIf} />
+          </p>
+        </aside>
       ) : null}
 
       {/* Understand and act are the page. The citation apparatus waits behind
@@ -450,7 +466,45 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         </section>
       ) : null}
 
-      <footer className="mt-12 border-t pt-5 text-[12.5px] leading-relaxed text-dim">
+      {/* Borrowed from branch B. Two exits: one for the assistant a marketer
+          already has open, one for a program. The endpoint is printed rather
+          than left to convention — an agent finds it by guessing, but the
+          person deciding whether to trust this site cannot. */}
+      <section className="mt-12 rounded-xl border bg-bg-2 px-4 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+          <p className="text-[13.5px] font-medium">Take this with you</p>
+          <CopyContext
+            markdown={buildContext({
+              title: rule.title,
+              url: `${SITE.url}/rules/${rule.slug}`,
+              claim: rule.answer,
+              ownership: rule.ownership,
+              verified: rule.lastVerified,
+              effective: rule.effectiveDate,
+              mondayMorning: rule.mondayMorning,
+              sources: rule.sources.map((src) => ({
+                name: src.name,
+                url: src.url,
+                published: src.published,
+              })),
+            })}
+          />
+        </div>
+        <p className="num mt-2.5 text-[12px] break-all text-muted-fg">
+          GET {SITE.url}/rules/{rule.slug}?format=json
+        </p>
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-dim">
+          Same URL, same answer, every field including the ones behind the Proof tab. An{" "}
+          <code className="num">Accept: application/json</code> header on the plain URL does the
+          same thing.{" "}
+          <Link href="/agents" className="text-accent underline underline-offset-2">
+            All the endpoints
+          </Link>
+          .
+        </p>
+      </section>
+
+      <footer className="mt-8 border-t pt-5 text-[12.5px] leading-relaxed text-dim">
         <p>
           Added {fmtDate(rule.added)} · Updated {fmtDate(rule.updated)} · Last verified{" "}
           {fmtDate(rule.lastVerified)} ·{" "}

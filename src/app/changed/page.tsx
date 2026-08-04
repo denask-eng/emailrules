@@ -48,7 +48,7 @@ export default async function Changed() {
         lede="Each line answers three things: what changed, why a working email person should care, and what to do next. Open the full rule only if you need sources."
       />
 
-      <div className="mt-6 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-dim">
+      <div className="mt-8 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-dim">
         <span>
           <b className="font-medium text-muted-fg">Something changed</b> — obligation or status moved
         </span>

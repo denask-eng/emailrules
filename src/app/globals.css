@@ -403,3 +403,152 @@
     color: #63635e;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   VARIATION D — what the three exploration branches were actually right about.
+
+   Everything above this line is the existing system and is unchanged. Nothing
+   here overrides a token that already existed; it only adds. The homepage
+   hero, the warm paper, the single accent and the type scale are all kept,
+   because they were not the problem.
+
+   Three things were missing, one from each branch:
+
+     A ("The Instrument")  — a state should never be carried by colour alone,
+                             and the dark figure on the homepage should be a
+                             real reading rather than a picture of one.
+     B ("Agent-Native")    — the machine surface exists and is reachable from
+                             nowhere. Half the readers of this corpus are not
+                             people.
+     C ("The Broadsheet")  — there are no information graphics at all, on a
+                             site whose entire argument is a proportion.
+
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ---- A: the four-state signal system ------------------------------- */
+  /* These map onto the status colours that already exist. What is new is
+     that every one of them ships with a *shape* in <Signal>, so the state
+     survives greyscale, a screenshot and every kind of colour blindness. */
+  --sig-pass: var(--ok);
+  --sig-fail: var(--live);
+  --sig-pend: var(--soon);
+  --sig-na: var(--dim);
+
+  /* ---- C: the graphics palette ---------------------------------------- */
+  /* Charts on this site are ink-on-paper with one accent, like the rest of
+     it. Four steps, ordered so a stacked bar reads left-to-right as
+     "handled → yours" without a legend. */
+  --plot-1: #b8b4a6;   /* platform's job   — quietest */
+  --plot-2: var(--soon);
+  --plot-3: var(--accent);
+  --plot-4: #dedac9;   /* nothing to do    — paper-adjacent */
+  --plot-grid: #e2ded1;
+  --plot-axis: #56564f;
+
+  /* Long enough to read as a measurement settling, short enough that nobody
+     waits for it. */
+  --t-plot: 0.75s;
+}
+
+@theme inline {
+  --color-sig-pass: var(--sig-pass);
+  --color-sig-fail: var(--sig-fail);
+  --color-sig-pend: var(--sig-pend);
+  --color-sig-na: var(--sig-na);
+  --color-plot-1: var(--plot-1);
+  --color-plot-2: var(--plot-2);
+  --color-plot-3: var(--plot-3);
+  --color-plot-4: var(--plot-4);
+}
+
+@layer components {
+  /* ---- C: chart typography --------------------------------------------
+     Chart labels must not inherit the page's type. A numeral at 9px needs
+     its own face, its own weight and no letter-spacing inherited from a
+     heading. */
+  .chart-label {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    fill: var(--dim);
+  }
+  .chart-value {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    fill: var(--fg);
+  }
+
+  /* A tick on the timeline is a real link. The affordance has to be as
+     strong on keyboard focus as it is on hover, or the chart is mouse-only. */
+  .tick { cursor: pointer; }
+  .tick:focus-visible { outline: none; }
+  .tick:hover .tick-stem,
+  .tick:focus-visible .tick-stem { stroke-width: 3; }
+  .tick:focus-visible .tick-dot { stroke: var(--accent); stroke-width: 2; }
+
+  /* ---- C: "who can stop reading" ---------------------------------------
+     `ignoreIf` was a throwaway line at the bottom of a tab. It is the most
+     reader-respecting sentence on the site — telling someone on the first
+     screen that this one is not theirs buys more trust than making them read
+     to the end to find out. */
+  .stop-box {
+    border-left: 3px solid var(--ok);
+    background: var(--ok-bg);
+    padding: 0.85rem 1rem;
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  }
+
+  /* ---- B: the machine surface, shown ----------------------------------- */
+  .endpoint {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--muted-fg);
+    background: var(--bg-2);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-sm);
+    padding: 0.6rem 0.75rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+/*
+  ── C: a real print sheet ────────────────────────────────────────────────
+  People forward a check result to their boss. The existing print block
+  handled the brief; these rules make every other page survive paper too.
+*/
+@media print {
+  /* A citation with no address on paper is a dead end. */
+  .print-url a::after {
+    content: " (" attr(href) ")";
+    font-family: var(--mono);
+    font-size: 7.5pt;
+    color: #55554f;
+    word-break: break-all;
+  }
+
+  /* A finding split across a page break is two half-findings. */
+  .report-finding,
+  .stop-box,
+  figure,
+  .refs li { break-inside: avoid; }
+
+  h1, h2, h3 { break-after: avoid; }
+
+  /* Charts print as ink. The screen palette is calibrated against a lit
+     display and prints as four shades of nothing. */
+  :root {
+    --plot-1: #b0b0b0;
+    --plot-2: #7a7a7a;
+    --plot-3: #1a1a1a;
+    --plot-4: #dcdcdc;
+    --plot-grid: #cfcfcf;
+    --plot-axis: #333;
+  }
+}

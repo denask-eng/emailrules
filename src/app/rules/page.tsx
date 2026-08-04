@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllRules, getStats, fmtDate } from "@/lib/rules";
+import { getAllRules, getStats, countsByOwnership, fmtDate } from "@/lib/rules";
 import { TOPICS, JURISDICTIONS } from "@/lib/types";
 import type { Topic, Jurisdiction } from "@/lib/types";
 import { EMPTY_AUDIENCE, parseAudienceParam } from "@/lib/audience";
 import { RuleFilter } from "@/components/rule-filter";
+import { OwnershipBar, JurisdictionMatrix } from "@/components/graphics";
 
 export const metadata: Metadata = {
   title: "Rules for your setup",
@@ -47,7 +48,12 @@ export default async function RulesIndex({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [rules, params, stats] = await Promise.all([getAllRules(), searchParams, getStats()]);
+  const [rules, params, stats, own] = await Promise.all([
+    getAllRules(),
+    searchParams,
+    getStats(),
+    countsByOwnership(),
+  ]);
   /* `notYours` folds shared, context and esp together, so "yours outright" is
      the remainder — the same arithmetic the homepage uses. */
   const yours = stats.total - stats.notYours;
@@ -128,7 +134,36 @@ export default async function RulesIndex({
         </div>
       </figure>
 
+      {/* The shape of the shelf, before the filter that reshapes it. Branch C
+          was right that this is a proportion and the page never drew it. */}
+      <OwnershipBar
+        counts={own}
+        total={stats.total}
+        className="mb-9"
+        caption={
+          <>
+            Sorted by whose desk it lands on, not by how alarming it sounds. Exactly{" "}
+            <b className="font-medium text-fg">{stats.fullyHandled}</b> of these is finished for you
+            by any mainstream tool, and that segment is drawn at its real width.
+          </>
+        }
+      />
+
       <RuleFilter rules={rules} initial={initial} />
+
+      {/* "Does this hit me?" answered without prose — and as a real table, so
+          a screen reader walks it and a crawler reads the relationships. */}
+      <section className="mt-14">
+        <h2 className="text-[1.15rem] tracking-tight">Does this hit me?</h2>
+        <p className="mt-1.5 max-w-[56ch] text-[13.5px] leading-relaxed text-muted-fg">
+          Rules down, countries across. Find your column and read down it.
+        </p>
+        <JurisdictionMatrix
+          rules={rules}
+          geos={geos.map((g) => g.j)}
+          className="mt-4"
+        />
+      </section>
 
       {/*
         The topic and jurisdiction shelves are real routes and Google walks this

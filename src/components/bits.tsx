@@ -17,6 +17,7 @@ import {
 } from "@/lib/rule-signals";
 import { displayTldr, displayWhy, displayPlain } from "@/content/plain-overrides";
 import { Reveal } from "@/components/reveal";
+import { Signal, statusSignal, ownershipSignal } from "@/components/signal";
 
 export const SHELL = "shell";
 
@@ -48,7 +49,11 @@ export function StatusPill({ status, className }: { status: RuleStatus; classNam
         className,
       )}
     >
-      <span className={cn("h-1 w-1 rounded-full", t.dot)} />
+      {/* Branch A was right that a coloured dot is not a state: it is
+          invisible to about one man in twelve, and it dies in the greyscale
+          screenshots and printouts this site's readers actually make. The
+          glyph carries the state; the colour now only agrees with it. */}
+      <Signal state={statusSignal(status)} size={8} label={false} />
       {STATUS_LABEL[status]}
     </span>
   );
@@ -180,11 +185,12 @@ export function OwnershipTag({ ownership }: { ownership: Ownership }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium",
         tone.box,
         tone.text,
       )}
     >
+      <Signal state={ownershipSignal(ownership)} size={8} label={false} />
       {OWNERSHIP[ownership].short}
     </span>
   );

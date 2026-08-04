@@ -5,6 +5,7 @@ import { freshness, stalenessOf } from "@/lib/source-watch";
 import { getAllRules } from "@/lib/rules";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { StalenessMeter } from "@/components/graphics";
 
 /**
  * How old this shelf is, published.
@@ -55,7 +56,13 @@ export default async function Freshness() {
       <h1 className="mt-4 max-w-[20ch] text-[clamp(2.1rem,6.5vw,3.6rem)] leading-[0.98] tracking-[-0.045em]">
         How old is this shelf.
       </h1>
-      <p className="mt-6 max-w-[64ch] text-[1.04rem] leading-relaxed text-muted-fg">
+      {/* The decay, plotted. This page already published the number; branch C
+          was right that a distribution says in one glance what a paragraph of
+          bands says slowly — and that publishing our own weak spots is the
+          same move as the blocklist census. */}
+      <StalenessMeter rules={rules} className="mt-8 max-w-[36rem]" />
+
+      <p className="mt-8 max-w-[64ch] text-[1.04rem] leading-relaxed text-muted-fg">
         Every rule here names a primary source and the date a person last checked the claim against
         it. A reference that does not publish how old those dates are is asking you to assume they
         are recent. This page does not ask you to assume.
