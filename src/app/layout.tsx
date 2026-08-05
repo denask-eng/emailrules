@@ -198,9 +198,13 @@ function Footer() {
       </div>
 
       <div className="shell mt-12 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-t pt-6 text-[13px] text-muted-fg">
-        <a href={`mailto:${SITE.contact}`} className="inline-block py-2.5 hover:text-fg sm:py-0">
-          {SITE.contact}
-        </a>
+        {/* This printed corrections@ on every page of the site, and that
+            mailbox does not exist — the domain publishes no MX, so every
+            message to it bounced. The footer now points at the path that
+            actually receives one. */}
+        <Link href="/corrections#report" className="inline-block py-2.5 hover:text-fg sm:py-0">
+          Tell us we are wrong
+        </Link>
         <span className="label">Not legal advice · not affiliated with any ESP</span>
       </div>
     </footer>

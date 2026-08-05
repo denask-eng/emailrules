@@ -1,6 +1,6 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { sql, hasDatabase } from "@/lib/db";
 import { normaliseDomain } from "@/lib/dns-check";
@@ -75,4 +75,46 @@ export async function runCheck(formData: FormData) {
   const domain = normaliseDomain(String(formData.get("domain") ?? ""));
   if (!domain) redirect("/check?e=1");
   redirect(`/check/${domain}`);
+}
+
+
+/**
+ * Receive a correction.
+ *
+ * Forty-one rule pages, the footer and the agent docs all close on "wrong or
+ * stale? tell us", and every one of them pointed at corrections@ on a domain
+ * that publishes no MX. The address bounces. A reference whose whole claim is
+ * that it publishes its own errors had no way of being told about one.
+ *
+ * So this writes to a table we control. No account, no captcha, no email
+ * required from the sender — a correction is worth having from somebody who
+ * does not want to be written back to, and demanding an address to give one is
+ * how you stop receiving them.
+ */
+export async function submitCorrection(formData: FormData) {
+  const body = String(formData.get("body") ?? "").trim();
+  const slugRaw = String(formData.get("slug") ?? "").trim();
+  const pathRaw = String(formData.get("path") ?? "").trim();
+  const replyRaw = String(formData.get("reply_to") ?? "").trim().toLowerCase();
+
+  /* Long enough to be a claim, short enough not to be a paste of the page. */
+  if (body.length < 12) redirect("/corrections?sent=short");
+  if (body.length > 4000) redirect("/corrections?sent=long");
+  if (!hasDatabase()) redirect("/corrections?sent=err");
+
+  const replyTo = replyRaw && LOOKS_LIKE_EMAIL.test(replyRaw) ? replyRaw : null;
+  const slug = /^[a-z0-9-]{1,120}$/.test(slugRaw) ? slugRaw : null;
+  const path = pathRaw.startsWith("/") && pathRaw.length <= 200 ? pathRaw : null;
+
+  try {
+    await sql().query(
+      `insert into corrections (id, slug, path, body, reply_to)
+       values ($1, $2, $3, $4, $5)`,
+      [randomUUID(), slug, path, body, replyTo],
+    );
+  } catch {
+    redirect("/corrections?sent=err");
+  }
+
+  redirect("/corrections?sent=1");
 }

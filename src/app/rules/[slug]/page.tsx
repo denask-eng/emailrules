@@ -514,12 +514,12 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
         </p>
         <p className="mt-2">
           Wrong or stale?{" "}
-          <a
-            href={`mailto:${SITE.contact}?subject=Correction: ${rule.slug}`}
+          <Link
+            href={`/corrections?slug=${rule.slug}#report`}
             className="text-fg underline underline-offset-2"
           >
             Tell us
-          </a>
+          </Link>
           . Corrections publish with a date. Not legal advice.
         </p>
         <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1">

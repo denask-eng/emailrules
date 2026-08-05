@@ -164,7 +164,7 @@ export default async function EspPlatformPage({
         listed. {meta.name} ships far more than this; a builder getting a new toolbar is not a
         change to what is true about your programme. Missing something dated?{" "}
         <a
-          href="mailto:corrections@emailrules.today"
+          href="/corrections#report"
           className="text-fg underline underline-offset-3"
         >
           corrections@emailrules.today

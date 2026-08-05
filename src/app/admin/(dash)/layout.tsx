@@ -35,6 +35,12 @@ export default async function DashLayout({ children }: { children: React.ReactNo
             <span className="font-normal text-dim">admin</span>
           </Link>
           <nav className="ml-auto flex items-center gap-4 text-[13.5px] text-muted-fg">
+            {/* Corrections are the one queue that goes stale by being ignored,
+                so it gets a permanent slot rather than living at a URL you
+                have to remember. */}
+            <Link href="/admin/corrections" className="hover:text-fg">
+              Corrections
+            </Link>
             <Link href="/" className="hover:text-fg">
               View site
             </Link>

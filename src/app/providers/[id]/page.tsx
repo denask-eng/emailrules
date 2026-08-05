@@ -332,7 +332,7 @@ export default async function ProviderPage({ params }: { params: Promise<{ id: s
 
       <p className="mt-10 border-t pt-5 text-[13px] leading-relaxed text-dim">
         A quote wrong, a path moved, or something {p.name} has said that is missing here?{" "}
-        <a href={`mailto:${SITE.contact}`} className="underline underline-offset-3 hover:text-fg">
+        <a href="/corrections#report" className="underline underline-offset-3 hover:text-fg">
           {SITE.contact}
         </a>
         . Corrections are published and dated on{" "}

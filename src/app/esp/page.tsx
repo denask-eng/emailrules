@@ -145,7 +145,7 @@ export default async function EspIndex() {
         </Link>{" "}
         it belongs to. Shipped something we have missed, or got one wrong?{" "}
         <a
-          href="mailto:corrections@emailrules.today"
+          href="/corrections#report"
           className="text-fg underline underline-offset-3"
         >
           corrections@emailrules.today

@@ -388,7 +388,7 @@ export default async function TermPage({ params }: { params: Promise<{ term: str
             The rules
           </Link>
           <a
-            href={`mailto:${SITE.contact}?subject=Glossary: ${t.id}`}
+            href="/corrections#report"
             className="inline-flex h-11 items-center hover:text-fg hover:underline sm:h-auto"
           >
             Tell us this is wrong

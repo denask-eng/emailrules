@@ -228,7 +228,7 @@ export default function GlossaryPage() {
           <Link href="/check/headers" className="inline-flex h-11 items-center hover:text-fg hover:underline sm:h-auto">
             Read a real message
           </Link>
-          <a href={`mailto:${SITE.contact}?subject=Glossary: a word you are missing`} className="inline-flex h-11 items-center hover:text-fg hover:underline sm:h-auto">
+          <a href="/corrections#report" className="inline-flex h-11 items-center hover:text-fg hover:underline sm:h-auto">
             A word we are missing?
           </a>
         </p>

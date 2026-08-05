@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Ledger } from "@/components/home/ledger";
 import { buildFiveSets } from "@/components/home/five";
 import { LiveFigure } from "@/components/home/live-figure";
+import { IndexBand } from "@/components/home/index-band";
 import { OwnershipBar } from "@/components/graphics";
 
 export const revalidate = 900;
@@ -139,6 +140,12 @@ export default async function Home() {
             this page rendered. The caption says "a real reading", and this was
             the one place on the site where that was not literally true. */}
         <LiveFigure />
+
+        {/* What this site does that a compliance blog cannot: it measures the
+            industry daily and keeps the series. Two new measured surfaces
+            shipped and neither was reachable from the front door, which from
+            outside looked exactly like nothing had changed. */}
+        <IndexBand />
 
         <TrustStrip className="mt-10" />
 

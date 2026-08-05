@@ -207,7 +207,7 @@ export default async function Coverage() {
 
       <p className="mt-14 max-w-[64ch] text-[0.95rem] leading-relaxed text-muted-fg">
         A rule missing, or one of these wrong? Write to{" "}
-        <a href="mailto:corrections@emailrules.today" className="text-fg underline underline-offset-3">
+        <a href="/corrections#report" className="text-fg underline underline-offset-3">
           corrections@emailrules.today
         </a>
         . How pages are researched and verified is on{" "}

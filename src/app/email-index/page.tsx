@@ -342,7 +342,7 @@ export default async function IndexPage() {
           How we measure
         </Link>
         <a
-          href={`mailto:${SITE.contact}?subject=The Index`}
+          href="/corrections#report"
           className="underline underline-offset-3 hover:text-fg"
         >
           Tell us we are wrong

@@ -184,7 +184,7 @@ export default async function EspTruthPage() {
           How we measure
         </Link>
         <a
-          href={`mailto:${SITE.contact}?subject=ESP truth table`}
+          href="/corrections#report"
           className="underline underline-offset-3 hover:text-fg"
         >
           Tell us we are wrong

@@ -364,4 +364,37 @@ export const SCHEMA = `
   );
   create index if not exists esp_measurements_esp_idx
     on esp_measurements (esp, measured_on desc);
+
+  /* ── Corrections, received ─────────────────────────────────────────────
+     Forty-one rule pages, the footer, the changelog and the agent docs all
+     end on "wrong or stale? tell us" — and every one of them pointed at a
+     mailbox that does not exist, because this domain publishes no MX. A
+     reference whose entire claim is that it publishes its own errors could
+     not be told about one.
+
+     That is now an HTTP path that lands in a table we own, rather than a
+     mailto that depends on infrastructure we have not set up. Email can come
+     back later as a second door; the front one should not have been a
+     bounce. */
+  create table if not exists corrections (
+    id          text primary key,
+    /* The rule this is about, when the reader came from one. */
+    slug        text,
+    /* Where they were standing. Beats asking them to describe it. */
+    path        text,
+    body        text not null,
+    /* Optional: a correction is worth having even from someone who does not
+       want to be written back to. */
+    reply_to    text,
+    /* new | reading | published | declined */
+    status      text not null default 'new',
+    /* What we did, published on /corrections when the outcome is public. */
+    resolution  text,
+    created_at  timestamptz not null default now(),
+    resolved_at timestamptz
+  );
+  create index if not exists corrections_status_idx
+    on corrections (status, created_at desc);
+  create index if not exists corrections_slug_idx
+    on corrections (slug, created_at desc);
 `;

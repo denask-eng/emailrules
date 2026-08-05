@@ -180,7 +180,7 @@ export default async function AgentsPage() {
           your own reference: the value here is that somebody named is accountable for them, and
           stripping that removes the thing that makes them checkable. Corrections to{" "}
           <a
-            href={`mailto:${SITE.contact}`}
+            href="/corrections#report"
             className="font-medium text-accent underline underline-offset-2"
           >
             {SITE.contact}

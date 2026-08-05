@@ -160,7 +160,7 @@ export default async function Changed() {
         Built for people who ship email and do not have time to reverse-engineer our tags. Wrong or
         stale?{" "}
         <a
-          href="mailto:corrections@emailrules.today"
+          href="/corrections#report"
           className="text-fg underline underline-offset-3"
         >
           corrections@emailrules.today

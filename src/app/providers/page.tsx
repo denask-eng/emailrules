@@ -120,7 +120,7 @@ export default function ProvidersIndex() {
       <p className="mt-10 border-t pt-5 text-[13px] leading-relaxed text-dim">
         A provider missing, a quote wrong, or a delisting path that has moved?{" "}
         <a
-          href={`mailto:${SITE.contact}`}
+          href="/corrections#report"
           className="underline underline-offset-3 hover:text-fg"
         >
           {SITE.contact}

@@ -81,7 +81,7 @@ export default async function Methodology() {
           </h2>
           <p className="m-0 text-[0.96rem] leading-relaxed">
             Send them to{" "}
-            <a href={`mailto:${SITE.contact}`}>{SITE.contact}</a>. Corrections are published in the
+            <Link href="/corrections#report">tell us on the corrections page</Link>. Corrections are published in the
             page history with a date and a credit to whoever caught it. If we got something wrong,
             the record of being wrong stays visible. Published corrections are collected at{" "}
             <Link href="/corrections">/corrections</Link>.
