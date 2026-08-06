@@ -132,7 +132,7 @@ async function Nav() {
             href="/check/message"
             className={cn(
               buttonVariants({ size: "sm" }),
-              "h-10 rounded-full px-3 text-[12.5px] font-medium sm:h-8 sm:px-3.5",
+              "h-10 rounded-full px-3.5 text-[12.5px] font-semibold shadow-[0_1px_2px_rgb(20_20_16/0.12)] sm:h-8.5 sm:px-4 sm:text-[13px]",
             )}
           >
             {/* Points at the message rather than the domain. The button on

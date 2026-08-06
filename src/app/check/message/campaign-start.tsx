@@ -74,18 +74,32 @@ export function CampaignStart() {
     <form onSubmit={submit} className="mt-8 rounded-2xl border bg-card p-5 shadow-[var(--lift)] sm:p-7">
       <fieldset>
         <legend className="text-[15px] font-semibold">1. Sending platform</legend>
-        <label className="mt-4 block">
-          <span className="sr-only">Sending platform</span>
-          <select
-            required
-            value={esp}
-            onChange={(event) => setEsp(event.target.value as CampaignEsp)}
-            className="min-h-13 w-full rounded-xl border border-input bg-bg px-4 text-[15px] outline-none focus:border-accent focus:ring-3 focus:ring-accent/15"
-          >
-            <option value="">Choose your ESP</option>
-            {ESPS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        </label>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {ESPS.map((option) => {
+            const selected = esp === option.value;
+            return (
+              <label
+                key={option.value}
+                className={cn(
+                  "pressable inline-flex min-h-11 cursor-pointer items-center rounded-full border px-4 text-[13.5px]",
+                  "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-accent/35",
+                  selected
+                    ? "border-fg bg-fg font-medium text-bg"
+                    : "border-border bg-bg text-muted-fg hover:border-input hover:bg-muted hover:text-fg",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="sending-platform"
+                  className="sr-only"
+                  checked={selected}
+                  onChange={() => setEsp(option.value)}
+                />
+                {option.label}
+              </label>
+            );
+          })}
+        </div>
       </fieldset>
 
       <fieldset className="mt-7 border-t pt-6">
@@ -97,8 +111,11 @@ export function CampaignStart() {
               <label
                 key={geo.value}
                 className={cn(
-                  "inline-flex min-h-11 cursor-pointer items-center rounded-full border px-4 text-[13.5px]",
-                  selected ? "border-fg bg-fg text-bg" : "border-border bg-bg text-muted-fg hover:border-input",
+                  "pressable inline-flex min-h-11 cursor-pointer items-center rounded-full border px-4 text-[13.5px]",
+                  "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-accent/35",
+                  selected
+                    ? "border-fg bg-fg font-medium text-bg"
+                    : "border-border bg-bg text-muted-fg hover:border-input hover:bg-muted hover:text-fg",
                 )}
               >
                 <input type="checkbox" className="sr-only" checked={selected} onChange={() => toggleGeo(geo.value)} />
@@ -111,28 +128,34 @@ export function CampaignStart() {
 
       <fieldset className="mt-7 border-t pt-6">
         <legend className="text-[15px] font-semibold">3. Gmail bulk-sender volume</legend>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           {[
             [true, "About 5,000+ a day to Gmail"],
             [false, "Below that or not sure"],
-          ].map(([value, label]) => (
-            <label
-              key={String(value)}
-              className={cn(
-                "flex min-h-12 cursor-pointer items-center rounded-xl border px-4 text-[13.5px]",
-                gmailBulk === value ? "border-accent bg-accent-soft text-fg" : "border-border bg-bg text-muted-fg",
-              )}
-            >
-              <input
-                type="radio"
-                name="gmail-volume"
-                className="mr-3 accent-[var(--accent)]"
-                checked={gmailBulk === value}
-                onChange={() => setGmailBulk(value as boolean)}
-              />
-              {String(label)}
-            </label>
-          ))}
+          ].map(([value, label]) => {
+            const selected = gmailBulk === value;
+            return (
+              <label
+                key={String(value)}
+                className={cn(
+                  "pressable inline-flex min-h-11 cursor-pointer items-center rounded-full border px-4 text-[13.5px]",
+                  "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-accent/35",
+                  selected
+                    ? "border-fg bg-fg font-medium text-bg"
+                    : "border-border bg-bg text-muted-fg hover:border-input hover:bg-muted hover:text-fg",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="gmail-volume"
+                  className="sr-only"
+                  checked={selected}
+                  onChange={() => setGmailBulk(value as boolean)}
+                />
+                {String(label)}
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 

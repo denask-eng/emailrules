@@ -25,7 +25,7 @@ export default async function TrustPage() {
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <p className="label">Trust</p>
-      <h1 className="mt-3 font-serif text-[clamp(2.5rem,7vw,4.8rem)] leading-[0.98] tracking-[-0.04em]">
+      <h1 className="mt-3 text-[clamp(2.5rem,7vw,4.8rem)] leading-[1.04]">
         How a finding earns its place.
       </h1>
 

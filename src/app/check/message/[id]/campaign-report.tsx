@@ -168,7 +168,7 @@ export function CampaignReport({ check, shared = false }: { check: MessageCheck;
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <p className="label text-accent">{shared ? "Redacted campaign report" : check.fromDomain ?? "Campaign report"}</p>
-      <h1 className="mt-3 font-serif text-[clamp(2.4rem,7vw,4.4rem)] leading-[0.98] tracking-[-0.04em]">
+      <h1 className="mt-3 text-[clamp(2.4rem,7vw,4.4rem)] leading-[1.04]">
         {open.length > 0 ? `${open.length} ${open.length === 1 ? "thing needs" : "things need"} attention.` : "No high-confidence issue was found."}
       </h1>
       <p className="mt-5 text-[14px] leading-relaxed text-muted-fg">

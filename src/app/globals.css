@@ -111,8 +111,8 @@
   }
 
   h1, h2, h3, h4 { margin: 0; text-wrap: balance; }
-  h1 { letter-spacing: -0.042em; line-height: 1.02; font-weight: 600; }
-  h2 { letter-spacing: -0.03em; line-height: 1.12; font-weight: 600; }
+  h1 { letter-spacing: -0.045em; line-height: 1.04; font-weight: 650; }
+  h2 { letter-spacing: -0.032em; line-height: 1.12; font-weight: 650; }
   h3 { letter-spacing: -0.018em; font-weight: 600; }
 
   a { color: inherit; }
@@ -298,6 +298,35 @@
   /* Chip / pill press feel */
   .pressable:active {
     transform: scale(0.97);
+  }
+
+  /* The product, framed. One chrome for every screenshot-of-ourselves:
+     the homepage report demo and any future in-page product capture. */
+  .app-frame {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow:
+      0 1px 2px rgb(20 20 16 / 0.05),
+      0 24px 64px -24px rgb(20 20 16 / 0.22);
+    overflow: hidden;
+  }
+  .app-frame-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-2);
+  }
+  .app-frame-dot { width: 9px; height: 9px; border-radius: 999px; background: var(--input); }
+
+  /* Soft ground behind the hero demo so the frame reads as an object on a
+     desk, not a border on a document. Tint only — no gradient text, no glass. */
+  .hero-band {
+    background:
+      radial-gradient(52rem 26rem at 50% 0%, color-mix(in oklch, var(--accent), transparent 94%), transparent 70%),
+      linear-gradient(to bottom, var(--bg), var(--bg-2));
   }
 }
 
@@ -556,10 +585,10 @@
      screen that this one is not theirs buys more trust than making them read
      to the end to find out. */
   .stop-box {
-    border-left: 3px solid var(--ok);
+    border: 1px solid color-mix(in oklch, var(--ok), transparent 72%);
     background: var(--ok-bg);
     padding: 0.85rem 1rem;
-    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    border-radius: var(--r-sm);
   }
 
   /* ---- B: the machine surface, shown ----------------------------------- */

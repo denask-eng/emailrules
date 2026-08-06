@@ -16,8 +16,11 @@ export default function MessageCheckPage() {
   const enabled = Boolean(inboundDomain());
   return (
     <div className="shell shell-tight py-12 sm:py-16">
-      <p className="label text-accent">Check a campaign</p>
-      <h1 className="mt-3 font-serif text-[clamp(2.5rem,7vw,4.5rem)] leading-[0.98] tracking-[-0.04em]">
+      <p className="inline-flex items-center gap-2 rounded-full border bg-card px-3.5 py-1.5 text-[12.5px] font-medium text-muted-fg">
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+        Check a campaign
+      </p>
+      <h1 className="mt-4 max-w-[16ch] text-[clamp(2.2rem,6vw,3.6rem)]">
         Send the campaign you actually plan to send.
       </h1>
 

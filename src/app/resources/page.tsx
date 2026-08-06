@@ -41,7 +41,7 @@ export default function ResourcesPage() {
     <div className="shell py-12 sm:py-16">
       <div className="max-w-[720px]">
         <p className="label">Resources</p>
-        <h1 className="mt-3 font-serif text-[clamp(2.5rem,7vw,4.8rem)] leading-[0.98] tracking-[-0.04em]">
+        <h1 className="mt-3 text-[clamp(2.5rem,7vw,4.8rem)] leading-[1.04]">
           The deeper material behind the preflight.
         </h1>
       </div>

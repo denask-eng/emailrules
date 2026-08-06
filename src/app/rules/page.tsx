@@ -5,6 +5,7 @@ import { TOPICS, JURISDICTIONS } from "@/lib/types";
 import type { Topic, Jurisdiction } from "@/lib/types";
 import { EMPTY_AUDIENCE, parseAudienceParam } from "@/lib/audience";
 import { RuleFilter } from "@/components/rule-filter";
+import { GeoPicker } from "@/components/rules/geo-picker";
 import { OwnershipBar, JurisdictionMatrix } from "@/components/graphics";
 
 export const metadata: Metadata = {
@@ -110,18 +111,39 @@ export default async function RulesIndex({
 
       <RuleFilter rules={rules} initial={initial} />
 
-      {/* "Does this hit me?" answered without prose — and as a real table, so
-          a screen reader walks it and a crawler reads the relationships. */}
+      {/* "Does this hit me?" answered by a tap. The full table keeps living on
+          the page — collapsed — so a screen reader still walks it as a table
+          and a crawler still reads every relationship. */}
       <section className="mt-14">
-        <h2 className="text-[1.15rem] tracking-tight">Does this hit me?</h2>
-        <p className="mt-1.5 max-w-[56ch] text-[13.5px] leading-relaxed text-muted-fg">
-          Rules down, countries across. Find your column and read down it.
-        </p>
-        <JurisdictionMatrix
-          rules={rules}
-          geos={geos.map((g) => g.j)}
-          className="mt-4"
+        <h2 className="text-[1.35rem] tracking-tight">Does this hit me?</h2>
+        <GeoPicker
+          geos={geos.map((g) => ({ j: g.j, label: g.label, n: g.n }))}
+          rules={rules.map((r) => ({
+            slug: r.slug,
+            title: r.title,
+            jurisdictions: r.jurisdictions,
+            upcoming: r.status === "upcoming",
+            from: r.status === "upcoming" && r.effectiveDate ? `From ${fmtDate(r.effectiveDate)}` : null,
+          }))}
         />
+        <details className="faq-item group mt-6 border-t pt-4">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 outline-none marker:content-none focus-visible:bg-muted/60 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1 text-[14px] text-muted-fg">
+              Compare every country at once
+            </span>
+            <span
+              aria-hidden
+              className="num shrink-0 text-[13px] text-dim transition-transform duration-300 ease-out group-open:rotate-45"
+            >
+              +
+            </span>
+          </summary>
+          <div className="faq-body">
+            <div className="pt-3">
+              <JurisdictionMatrix rules={rules} geos={geos.map((g) => g.j)} />
+            </div>
+          </div>
+        </details>
       </section>
 
       {/*

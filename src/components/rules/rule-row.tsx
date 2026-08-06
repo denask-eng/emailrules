@@ -20,33 +20,29 @@ import { FRESHNESS_LABEL, IMPACT_LABEL, freshness, impactOf } from "@/lib/rule-s
  */
 const OWN: Record<
   Ownership,
-  { word: string; mark: string; rail: string; title: string; body: string }
+  { word: string; mark: string; title: string; body: string }
 > = {
   yours: {
     word: "Yours",
     mark: "border-accent bg-accent text-accent-fg",
-    rail: "border-accent",
     title: "text-[16.5px] font-semibold text-fg",
     body: "text-muted-fg",
   },
   shared: {
     word: "Shared",
-    mark: "border-fg/40 text-fg",
-    rail: "border-fg/20",
+    mark: "border-fg/35 bg-card text-fg",
     title: "text-[15.5px] font-semibold text-fg",
     body: "text-muted-fg",
   },
   esp: {
     word: "Handled",
-    mark: "border-transparent text-dim",
-    rail: "border-transparent",
+    mark: "border-border-soft bg-muted text-dim",
     title: "text-[14.5px] font-medium text-muted-fg",
     body: "text-dim",
   },
   context: {
     word: "FYI",
-    mark: "border-transparent text-dim",
-    rail: "border-transparent",
+    mark: "border-border-soft bg-muted text-dim",
     title: "text-[14.5px] font-medium text-muted-fg",
     body: "text-dim",
   },
@@ -80,15 +76,14 @@ export function RuleRow({ rule, compact = false }: { rule: Rule; compact?: boole
     >
       <div
         className={cn(
-          "grid gap-x-6 gap-y-2 border-l-2 pr-1 pl-3.5 sm:grid-cols-[7rem_1fr] sm:pl-5",
+          "grid gap-x-6 gap-y-2 px-1 sm:grid-cols-[6.5rem_1fr] sm:px-2",
           compact ? "py-3.5" : "py-5",
-          o.rail,
         )}
       >
         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 sm:block">
           <span
             className={cn(
-              "label inline-flex items-center rounded-sm border px-1.5 py-[3px]",
+              "label inline-flex items-center rounded-full border px-2 py-[3px]",
               o.mark,
             )}
           >

@@ -34,7 +34,7 @@ function Waiting({ session }: { session: CampaignSession }) {
   return (
     <div className="shell shell-tight py-12 sm:py-16">
       <p className="label text-accent">Private campaign check</p>
-      <h1 className="mt-3 font-serif text-[clamp(2.4rem,7vw,4.2rem)] leading-[0.98] tracking-[-0.04em]">
+      <h1 className="mt-3 text-[clamp(2.4rem,7vw,4.2rem)] leading-[1.04]">
         Send the real test now.
       </h1>
       <p className="mt-5 text-[14px] leading-relaxed text-muted-fg">
