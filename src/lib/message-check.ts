@@ -6,6 +6,7 @@ import { sql, hasDatabase } from "./db";
 import { unfoldHeaders, type HeaderCheckError } from "./header-check";
 import { checkHeaders } from "./header-check-live";
 import { extractContent, messageFindings, verdictSentence } from "./message-rules";
+import { campaignReputationFindings } from "./campaign-blocklist";
 import { getRule } from "./rules";
 import type { EspApplicability, Ownership } from "./types";
 import {
@@ -200,9 +201,14 @@ export async function runMessageCheck(
   const live = await checkHeaders(raw);
   if (!live.ok) return live;
   const content = extractContent(raw);
+  /* Reputation runs alongside the header work: a listing spam-folders a clean
+     message, and it is the half of deliverability that follows the domain
+     rather than the ESP, so it belongs in the campaign report. */
+  const reputation = await campaignReputationFindings(live.fromDomain);
   const rawFindings = [
     ...live.findings,
     ...messageFindings({ headers: unfoldHeaders(raw), facts: live.facts, content }),
+    ...reputation,
   ].sort((left, right) => SEVERITY_ORDER[left.severity] - SEVERITY_ORDER[right.severity]);
   const findings = await enrichFindings(rawFindings, context);
   return {
