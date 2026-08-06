@@ -849,6 +849,50 @@ test("a newline smuggled into a webhook header value cannot forge a header", () 
   assert.deepEqual(facts.dkim, []);
 });
 
+test("an RFC 2047 encoded List-Unsubscribe still yields its HTTPS URI", () => {
+  /* Klaviyo via SendGrid, exactly as delivered: the whole value is a chain of
+     encoded words, angle brackets included, folded across five lines. */
+  const raw = [
+    "From: Elle <hello@beyondbody.me>",
+    "List-Unsubscribe: =?us-ascii?Q?=3Chttps=3A=2F=2Fmanage=2Ekmail-lists=2Ecom=2Fsubscriptions=2Funsubscribe=3Fa=3DT4?=",
+    " =?us-ascii?Q?h3Xv&c=3D01J3J7HHMMDX21VFPCS9PXCDPM&k=3D50d?=",
+    " =?us-ascii?Q?1e560a569d5081b33f2916144bb96&se=3Ddenmot?=",
+    " =?us-ascii?Q?o73%40gmail=2Ecom&m=3DUZLqb5&r=3D01KPWT64C2QS?=",
+    " =?us-ascii?Q?1T6ZR413Y1HF2B&e=3D75jHgirMJvb=3E?=",
+    "List-Unsubscribe-Post: List-Unsubscribe=One-Click",
+  ].join("\n");
+  const facts = extractFacts(unfoldHeaders(raw));
+
+  assert.equal(facts.listUnsubscribe.uris.length, 1);
+  assert.equal(facts.listUnsubscribe.hasHttps, true);
+  assert.ok(
+    facts.listUnsubscribe.uris[0].startsWith(
+      "https://manage.kmail-lists.com/subscriptions/unsubscribe?a=T4h3Xv",
+    ),
+  );
+  assert.equal(facts.listUnsubscribePost, "List-Unsubscribe=One-Click");
+});
+
+test("Resend's structured list field becomes the two real headers again", () => {
+  /* The parsed message shape replaces both RFC 8058 headers with this JSON
+     string. The rebuilt block must not read as "no one-click headers". */
+  const raw = rebuildHeaderBlock({
+    from: "Brand <hello@brand.com>",
+    list: '{"unsubscribe":{"url":"https://manage.kmail-lists.com/subscriptions/unsubscribe"},"unsubscribe-post":{"name":"List-Unsubscribe=One-Click"}}',
+  });
+  const facts = extractFacts(unfoldHeaders(raw));
+
+  assert.deepEqual(facts.listUnsubscribe.uris, [
+    "https://manage.kmail-lists.com/subscriptions/unsubscribe",
+  ]);
+  assert.equal(facts.listUnsubscribe.hasHttps, true);
+  assert.equal(facts.listUnsubscribePost, "List-Unsubscribe=One-Click");
+
+  /* A `list` value that is not the structured shape stays an ordinary header. */
+  const odd = rebuildHeaderBlock({ list: "weekly-digest" });
+  assert.equal(odd, "list: weekly-digest");
+});
+
 test("header shapes other than an object are all accepted", () => {
   const fromArray = rebuildHeaderBlock([
     { name: "From", value: "Brand <hello@brand.com>" },

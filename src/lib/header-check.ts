@@ -260,14 +260,41 @@ function parseAuthenticationResults(value: string): AuthenticationFacts {
   };
 }
 
+/**
+ * RFC 2047 encoded-words, decoded in place.
+ *
+ * Klaviyo-via-SendGrid ships List-Unsubscribe as a chain of `=?us-ascii?Q?…?=`
+ * words, so the angle brackets around the URI arrive as `=3C` and `=3E` and a
+ * literal-text scan sees no URI at all — a checker-side miss this codebase has
+ * paid for once already. Whitespace between two encoded words is transparent
+ * per the RFC and is dropped. Kept local: message-rules imports this module,
+ * so the decoder there cannot be imported back without a cycle.
+ */
+function decodeRfc2047(value: string): string {
+  return value.replace(
+    /=\?[^?\s]+\?([bBqQ])\?([^?\s]*)\?=(\s+(?==\?[^?\s]+\?[bBqQ]\?))?/g,
+    (whole, encoding: string, payload: string) => {
+      try {
+        if (encoding.toLowerCase() === "b") return Buffer.from(payload, "base64").toString("utf8");
+        return payload
+          .replace(/_/g, " ")
+          .replace(/=([0-9A-Fa-f]{2})/g, (_hex, pair: string) =>
+            String.fromCharCode(parseInt(pair, 16)),
+          );
+      } catch {
+        return whole;
+      }
+    },
+  );
+}
+
 function unsubscribeUris(headers: HeaderField[]): string[] {
   const uris: string[] = [];
 
   for (const header of headers.filter((candidate) => candidate.lower === "list-unsubscribe")) {
-    const bracketed = [...header.value.matchAll(/<([^<>]+)>/g)].map((match) => match[1].trim());
-    const candidates = bracketed.length
-      ? bracketed
-      : header.value.split(",").map((part) => part.trim());
+    const value = decodeRfc2047(header.value);
+    const bracketed = [...value.matchAll(/<([^<>]+)>/g)].map((match) => match[1].trim());
+    const candidates = bracketed.length ? bracketed : value.split(",").map((part) => part.trim());
     uris.push(...candidates.filter(Boolean));
   }
 

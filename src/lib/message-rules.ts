@@ -219,8 +219,36 @@ export function rebuildHeaderBlock(headers: unknown): string {
   if (typeof headers === "string") return headers;
 
   const lines: string[] = [];
+
+  /* Resend's parsed shape strips List-Unsubscribe and List-Unsubscribe-Post
+     and hands back a structured `list` field instead — as a JSON string.
+     Left as-is, a message with a perfect RFC 8058 pair reads as having
+     neither header. Reconstituted here so the fallback path cannot invent
+     that finding; the raw download, when it works, never comes through here. */
+  const pushListField = (value: unknown): boolean => {
+    let parsed: unknown = value;
+    if (typeof value === "string") {
+      try {
+        parsed = JSON.parse(value);
+      } catch {
+        return false;
+      }
+    }
+    if (!parsed || typeof parsed !== "object") return false;
+    const record = parsed as Record<string, Record<string, unknown> | undefined>;
+    const uris = [record.unsubscribe?.url, record.unsubscribe?.mailto]
+      .filter((uri): uri is string => typeof uri === "string" && Boolean(uri.trim()))
+      .map((uri) => `<${uri.trim()}>`);
+    const post = record["unsubscribe-post"];
+    if (!uris.length && !post) return false;
+    if (uris.length) lines.push(`List-Unsubscribe: ${uris.join(", ")}`);
+    if (post) lines.push("List-Unsubscribe-Post: List-Unsubscribe=One-Click");
+    return true;
+  };
+
   const push = (name: unknown, value: unknown) => {
     if (typeof name !== "string" || !name.trim()) return;
+    if (name.trim().toLowerCase() === "list" && pushListField(value)) return;
     const text =
       typeof value === "string" ? value : value === null || value === undefined ? "" : String(value);
     /* A newline inside a header value is header injection, and this block is

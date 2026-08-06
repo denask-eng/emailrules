@@ -36,7 +36,34 @@ const MAX_WEBHOOK_BYTES = 1024 * 1024;
 /** A campaign the parser cares about fits well inside this. */
 const MAX_PART_CHARS = 512 * 1024;
 
+/** The wire message, headers and all MIME parts included. */
+const MAX_RAW_BYTES = 4 * 1024 * 1024;
+
 const RECEIVING_ENDPOINT = "https://api.resend.com/emails/receiving";
+
+/**
+ * The message as it crossed the wire, when Resend offers it for download.
+ *
+ * The parsed summary is NOT equivalent: it replaces List-Unsubscribe and
+ * List-Unsubscribe-Post with a structured `list` field and guts
+ * DKIM-Signature to its first tag — which had this checker telling a sender
+ * with a perfect RFC 8058 pair that no one-click headers were present. The
+ * raw download is always preferred; the rebuilt summary is the fallback.
+ */
+async function downloadRawMessage(raw: unknown): Promise<string | null> {
+  const url =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>).download_url : null;
+  if (typeof url !== "string" || !/^https:\/\//.test(url)) return null;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const text = await response.text();
+    if (!text.trim() || text.length > MAX_RAW_BYTES) return null;
+    return text;
+  } catch {
+    return null;
+  }
+}
 
 interface ReceivedEvent {
   type?: unknown;
@@ -147,12 +174,15 @@ export async function POST(request: Request) {
       headers?: unknown;
       text?: unknown;
       html?: unknown;
+      raw?: unknown;
     };
-    const raw = composeMessage({
-      headers: message.headers,
-      text: cap(message.text),
-      html: cap(message.html),
-    });
+    const raw =
+      (await downloadRawMessage(message.raw)) ??
+      composeMessage({
+        headers: message.headers,
+        text: cap(message.text),
+        html: cap(message.html),
+      });
 
     await markSessionStatus(id, "processing");
     const result = await runMessageCheck(raw, session.context);
