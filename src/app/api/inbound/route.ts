@@ -185,7 +185,7 @@ export async function POST(request: Request) {
       });
 
     await markSessionStatus(id, "processing");
-    const result = await runMessageCheck(raw, session.context);
+    const result = await runMessageCheck(raw, session.context, { checkInbox: true });
     if (!result.ok) {
       await markSessionStatus(id, "failed", "message_parse_failed");
       return acknowledge(`message ${emailId} produced no findings: ${result.error}`);

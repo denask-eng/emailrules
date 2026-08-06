@@ -72,7 +72,7 @@ export type Alignment = "strict" | "relaxed" | "none";
    with base64 images inline runs to a megabyte or two, and everything past
    this ceiling is untrusted input we have no reason to hold. */
 export const MAX_MESSAGE_BYTES = 2 * 1024 * 1024;
-const RECEIVER_GROUND_TRUTH = "A receiver's Authentication-Results is the ground truth.";
+const RECEIVER_GROUND_TRUTH = "Where a receiver recorded its own verdict, that verdict wins.";
 
 const RULE = {
   gmail: "gmail-bulk-sender-requirements",
@@ -404,7 +404,20 @@ function bestAlignment(values: Alignment[]): Alignment {
   return "none";
 }
 
-export function analyzeHeaders(raw: string): HeaderAnalysis {
+export interface AnalyzeOptions {
+  /**
+   * True when this message was sent to one of our one-time check addresses.
+   *
+   * The check inbox takes delivery on Amazon SES, so every message checked
+   * that way carries `Authentication-Results: amazonses.com; …`. A sender who
+   * just pressed send in Klaviyo reads "SPF=pass at amazonses.com" and asks
+   * what Amazon is doing in their pipeline — the honest answer is that it is
+   * our side of the wire, and the report has to say so itself.
+   */
+  checkInbox?: boolean;
+}
+
+export function analyzeHeaders(raw: string, options: AnalyzeOptions = {}): HeaderAnalysis {
   if (new TextEncoder().encode(raw).byteLength > MAX_MESSAGE_BYTES) {
     return { ok: false, error: "too-large" };
   }
@@ -420,11 +433,13 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
   const dkimEvidence = facts.dkim.map((signature) => `DKIM-Signature: ${signature.raw}`).join("\n");
 
   if (facts.auth) {
+    const receiver = facts.auth.authservId;
     findings.push({
       severity: "info",
-      title: `${facts.auth.authservId} supplied the receiver verdict`,
-      detail:
-        "Authentication-Results is the receiving system's recorded result and the ground truth, so it takes precedence over the alignment inference below.",
+      title: `${receiver} received this message; it did not send it`,
+      detail: options.checkInbox
+        ? `Your platform sent this message and ${receiver} is where it landed: our check inbox takes delivery on Amazon SES, so that name belongs to the receiving side, not to your sending setup. What it recorded on arrival outranks anything we work out ourselves.`
+        : `Authentication-Results is written by the mail server that received this message — the inbox side, not the sender. What it recorded on arrival outranks anything we work out ourselves.`,
       rule: RULE.outlook,
       term: "headers",
       evidence: `Authentication-Results: ${facts.auth.raw}`,
@@ -437,8 +452,10 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
     ) => {
       findings.push({
         severity: authSeverity(method.result),
-        title: `${label}=${method.result} at ${facts.auth!.authservId}`,
-        detail: `This is ${facts.auth!.authservId}'s recorded ${label} result, not our inference.`,
+        title: `${label}=${method.result} on arrival`,
+        detail: options.checkInbox
+          ? `Recorded by ${receiver}, the server our check inbox receives on — the receiving side of this message, not your sending platform, and not our inference.`
+          : `Recorded by ${receiver}, the server that received this message. This is its own ${label} result, not our inference.`,
         rule,
         term: label.toLowerCase(),
         evidence: method.raw,
@@ -455,9 +472,9 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
   } else {
     findings.push({
       severity: "info",
-      title: "No receiver verdict was pasted",
+      title: "This message carries no receiver verdict",
       detail: inferred(
-        "There is no Authentication-Results header, so everything below is inferred, not a receiver's verdict.",
+        "There is no Authentication-Results header, so every finding here is our own reading of the message, not a receiver's verdict.",
       ),
       rule: RULE.dkimAlignment,
     });
@@ -476,7 +493,7 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
   if (fromHeaders.length > 1) {
     findings.push({
       severity: "warn",
-      title: `${fromHeaders.length} From headers were pasted`,
+      title: `This message has ${fromHeaders.length} From headers`,
       detail: inferred("The first From header is used. Multiple From headers make alignment ambiguous."),
       rule: RULE.dkimAlignment,
       evidence: fromHeaders.map((header) => `From: ${header.value}`).join("\n"),
@@ -498,10 +515,12 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
     dkimAlignment = "none";
     findings.push({
       severity: "fail",
-      title: "No DKIM-Signature header is present",
+      title: "This message is not DKIM-signed",
       detail: inferred(
-        "This pasted message carries no DKIM signature, so DKIM contributes nothing to DMARC.",
+        "There is no DKIM-Signature header, so nothing in this message carries your domain's signature and DKIM contributes nothing to DMARC.",
       ),
+      mondayMorning:
+        "Open your platform's domain or authentication settings and finish DKIM setup for your From domain, then send a fresh test to a new check address.",
       rule: RULE.gmail,
     });
   } else {
@@ -514,9 +533,9 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       findings.push({
         severity: "info",
         title: `${facts.dkim.length} DKIM signatures are present`,
-        detail: facts.dkim
+        detail: `Normal for ESP sends: platforms sign with their own domain alongside yours, and DMARC counts whichever signature aligns with From. Here: ${facts.dkim
           .map((signature) => `d=${signature.d ?? "(missing)"} / s=${signature.s ?? "(missing)"}`)
-          .join("; "),
+          .join("; ")}.`,
         rule: RULE.dkimAlignment,
         evidence: dkimEvidence,
       });
@@ -578,6 +597,7 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
           detail: inferred(
             `DKIM is present but signed by ${signedBy}, not ${facts.fromDomain}; DMARC gets nothing from it.`,
           ),
+          mondayMorning: `Add and verify ${facts.fromDomain} as a sending domain in your platform so DKIM signs with d=${facts.fromDomain}, then re-send a test.`,
           rule: RULE.dkimAlignment,
           evidence: dkimEvidence,
         });
@@ -654,6 +674,8 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       severity: "fail",
       title: "Neither SPF nor DKIM aligns with From",
       detail: inferred("The message has no aligned identifier for DMARC to use."),
+      mondayMorning:
+        "Verify your From domain in your sending platform so DKIM signs as that domain — that one change gives DMARC an aligned identifier to pass on.",
       rule: RULE.outlook,
     });
   } else if (

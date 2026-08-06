@@ -119,12 +119,19 @@ export function findingDetailForContext(
   return `${detail} ${GMAIL_SUB_BULK_CONTEXT}`;
 }
 
+/**
+ * A fail or warn shows its own curated action or none at all. Falling back to
+ * the finding's detail printed the same paragraph twice on the exact cards
+ * where a reader needs a next step, and falling back to the rule's standing
+ * routine can hand a broken campaign a "Nothing to do" written for the pass
+ * case. Passes and info keep the rule routine — that is where it fits.
+ */
 export function firstActionForFinding(
   finding: Pick<Finding, "severity" | "detail" | "mondayMorning">,
   ruleAction?: string,
 ): string | null {
   if (finding.mondayMorning) return finding.mondayMorning;
-  if (finding.severity === "fail" || finding.severity === "warn") return finding.detail;
+  if (finding.severity === "fail" || finding.severity === "warn") return null;
   return ruleAction ?? null;
 }
 

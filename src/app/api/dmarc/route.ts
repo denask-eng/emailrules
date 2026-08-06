@@ -20,7 +20,8 @@ function back(error: string): Response {
 }
 
 export async function POST(request: Request) {
-  const form = await request.formData();
+  const form = await request.formData().catch(() => null);
+  if (!form) return back("Enter the domain your mail comes from.");
   const raw = String(form.get("domain") ?? "").trim().toLowerCase();
 
   /* People paste what they have: a URL, an address, a trailing dot. Take the

@@ -7,6 +7,7 @@ import {
   analyzeHeaders,
   orgDomainGuess,
   type Alignment,
+  type AnalyzeOptions,
   type HeaderCheckError,
   type HeaderFacts,
 } from "./header-check";
@@ -80,17 +81,19 @@ function dnsFailure(name: string, code: string | null, rule: string): Finding | 
   if (code === "TIMEOUT") {
     return {
       severity: "info",
-      title: `DNS lookup timed out for ${name}`,
-      detail: "DNS lookup timed out, inconclusive. Try the check again before changing anything.",
+      title: "A DNS lookup timed out on our side",
+      detail: `We ran out of time waiting for ${name}. That is our lookup failing, not proof of anything about your records — run the check again before changing anything.`,
       rule,
+      evidence: `${name}: lookup timed out`,
     };
   }
   if (code === "ENOTFOUND" || code === "ENODATA") return null;
   return {
     severity: "info",
-    title: `DNS lookup failed for ${name}`,
-    detail: `The resolver returned ${code}, so this lookup is inconclusive.`,
+    title: "A DNS lookup did not complete",
+    detail: `Our lookup for ${name} came back with ${code}, so this check is inconclusive — that is between us and the resolver, not a verdict on your records.`,
     rule,
+    evidence: `${name}: ${code}`,
   };
 }
 
@@ -106,9 +109,13 @@ async function checkSelector(selector: string, domain: string): Promise<Finding[
     return [
       {
         severity: "warn",
-        title: `DKIM key ${name} is no longer published`,
-        detail: "The selector's key is gone; sends signed with it today would fail.",
+        title: `DKIM key ${name} is not published`,
+        detail:
+          "This message is signed with a key that has no DNS record right now. If the key really is gone, sends signed with it are failing DKIM today — check the domain settings in your sending platform, then run this check again.",
+        mondayMorning:
+          "Open your sending platform's domain settings and compare the DKIM records it asks for against what your DNS actually serves; re-add the missing one, then re-run this check.",
         rule: DKIM_RULE,
+        evidence: `${name} TXT: no record found (NXDOMAIN)`,
       },
     ];
   }
@@ -145,9 +152,13 @@ async function checkSelector(selector: string, domain: string): Promise<Finding[
     return [
       {
         severity: "warn",
-        title: `DKIM key ${name} is no longer published`,
-        detail: "The selector's key is gone; sends signed with it today would fail.",
+        title: `DKIM key ${name} is not published`,
+        detail:
+          "This message is signed with a key that has no DNS record right now. If the key really is gone, sends signed with it are failing DKIM today — check the domain settings in your sending platform, then run this check again.",
+        mondayMorning:
+          "Open your sending platform's domain settings and compare the DKIM records it asks for against what your DNS actually serves; re-add the missing one, then re-run this check.",
         rule: DKIM_RULE,
+        evidence: `${name} TXT: empty answer`,
       },
     ];
   }
@@ -215,8 +226,11 @@ async function ruleTitles(findings: Finding[]): Promise<Record<string, string>> 
   return Object.fromEntries(entries.filter((entry): entry is readonly [string, string] => Boolean(entry)));
 }
 
-export async function checkHeaders(raw: string): Promise<HeaderCheckResult> {
-  const analysed = analyzeHeaders(raw);
+export async function checkHeaders(
+  raw: string,
+  options: AnalyzeOptions = {},
+): Promise<HeaderCheckResult> {
+  const analysed = analyzeHeaders(raw, options);
   if (!analysed.ok) return analysed;
 
   const completeSignatures = analysed.facts.dkim.filter(

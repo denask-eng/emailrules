@@ -1,4 +1,4 @@
-import { checkAddress, checkBlocklists } from "@/lib/blocklist-check";
+import { checkAddress, checkBlocklists, reverseAddress } from "@/lib/blocklist-check";
 import { checkDomain, normaliseDomain } from "@/lib/dns-check";
 import { runMessageCheck } from "@/lib/message-check";
 import { getAllRules, getChangelog, getRule, fmtDate } from "@/lib/rules";
@@ -161,6 +161,12 @@ async function callTool(name: string, args: Record<string, unknown>) {
 
     case "check_ip": {
       const address = String(args.address ?? "").trim();
+      /* Refuse before querying: checkAddress returns an empty hit list for an
+         address it cannot reverse, and an empty hit list here reads as a
+         clean verdict from a check that never ran. */
+      if (!reverseAddress(address)) {
+        return text("Not an IP address. Pass a single IPv4 or IPv6 address, e.g. 167.89.80.92.");
+      }
       const { hits, reports } = await checkAddress(address);
       if (!reports.length) return text("Could not reach any blocklist just now.");
       return text({

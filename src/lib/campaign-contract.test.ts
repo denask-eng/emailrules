@@ -80,7 +80,9 @@ test("campaign applicability evaluates ESP, geography and Gmail volume", () => {
 test("failed findings never inherit a contradictory generic first action", () => {
   const detail = "List-Unsubscribe is present without List-Unsubscribe-Post.";
   const generic = "Nothing, if you are on a mainstream ESP.";
-  assert.equal(firstActionForFinding({ severity: "fail", detail }, generic), detail);
+  /* No curated action means no action cell — never the detail restated, and
+     never a pass-flavored routine on a failing card. */
+  assert.equal(firstActionForFinding({ severity: "fail", detail }, generic), null);
   assert.equal(
     firstActionForFinding({ severity: "fail", detail, mondayMorning: "Add the missing header." }, generic),
     "Add the missing header.",

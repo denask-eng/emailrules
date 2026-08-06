@@ -50,24 +50,32 @@ function FindingCard({ finding, index }: { finding: CampaignFinding; index: numb
       </div>
       <h2 className="mt-5 text-[1.2rem] leading-snug font-semibold">{finding.title}</h2>
       <dl className="mt-5 grid gap-5 text-[14px] leading-relaxed">
-        <div>
-          <dt className="label">What was observed</dt>
-          <dd className="mt-1.5 break-words text-muted-fg">{finding.observed}</dd>
-        </div>
+        {finding.observed && finding.observed !== finding.title ? (
+          <div>
+            <dt className="label">What was observed</dt>
+            <dd className="mt-1.5 break-words text-muted-fg">{finding.observed}</dd>
+          </div>
+        ) : null}
         <div>
           <dt className="label">Why it matters</dt>
           <dd className="mt-1.5 text-muted-fg">{finding.why}</dd>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <dt className="label">Owner</dt>
-            <dd className="mt-1.5">{campaignOwnerLabel(finding.owner)}</dd>
+        {finding.owner || finding.firstAction ? (
+          <div className="grid gap-5 sm:grid-cols-2">
+            {finding.owner ? (
+              <div>
+                <dt className="label">Owner</dt>
+                <dd className="mt-1.5">{campaignOwnerLabel(finding.owner)}</dd>
+              </div>
+            ) : null}
+            {finding.firstAction ? (
+              <div>
+                <dt className="label">First action</dt>
+                <dd className="mt-1.5">{finding.firstAction}</dd>
+              </div>
+            ) : null}
           </div>
-          <div>
-            <dt className="label">First action</dt>
-            <dd className="mt-1.5">{finding.firstAction ?? "Review the evidence before changing the campaign."}</dd>
-          </div>
-        </div>
+        ) : null}
       </dl>
       {finding.source ? (
         <p className="mt-5 border-t pt-4 text-[12.5px] leading-relaxed text-dim">
@@ -105,6 +113,7 @@ export function CampaignReport({ check, shared = false }: { check: MessageCheck;
   const [filter, setFilter] = useState<Filter>("open");
   const [share, setShare] = useState<{ token: string; path: string } | null>(null);
   const [busy, setBusy] = useState<"share" | "recheck" | "revoke" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const open = useMemo(() => prioritize(check.findings), [check.findings]);
   const unknown = useMemo(() => check.findings.filter((finding) => finding.evidenceState === "could_not_determine"), [check.findings]);
   const shown = filter === "open" ? open : filter === "unknown" ? unknown : check.findings;
@@ -123,14 +132,23 @@ export function CampaignReport({ check, shared = false }: { check: MessageCheck;
 
   async function shareReport() {
     setBusy("share");
+    setActionError(null);
     try {
       const response = await fetch(`/api/reports/${check.reportToken}/share`, { method: "POST" });
       const body = (await response.json()) as { token?: string; path?: string };
       if (response.ok && body.token && body.path) {
         setShare({ token: body.token, path: body.path });
-        await navigator.clipboard.writeText(`${window.location.origin}${body.path}`);
         track("campaign-report-shared");
+        /* Clipboard access can be denied without the share being any less
+           real — the link below still shows either way. */
+        await navigator.clipboard
+          .writeText(`${window.location.origin}${body.path}`)
+          .catch(() => undefined);
+      } else {
+        setActionError("The share link could not be created. Try again in a moment.");
       }
+    } catch {
+      setActionError("The share link could not be created. Try again in a moment.");
     } finally {
       setBusy(null);
     }
@@ -153,13 +171,18 @@ export function CampaignReport({ check, shared = false }: { check: MessageCheck;
 
   async function recheck() {
     setBusy("recheck");
+    setActionError(null);
     try {
       const response = await fetch(`/api/check-sessions/${check.reportToken}/recheck`, { method: "POST" });
       const body = (await response.json()) as { token?: string };
       if (response.ok && body.token) {
         track("campaign-recheck-started");
         router.push(`/check/message/${body.token}`);
+      } else {
+        setActionError("A new check address could not be created. Try again in a moment.");
       }
+    } catch {
+      setActionError("A new check address could not be created. Try again in a moment.");
     } finally {
       setBusy(null);
     }
@@ -169,10 +192,17 @@ export function CampaignReport({ check, shared = false }: { check: MessageCheck;
     <div className="shell shell-tight py-12 sm:py-16">
       <p className="label text-accent">{shared ? "Redacted campaign report" : check.fromDomain ?? "Campaign report"}</p>
       <h1 className="mt-3 text-[clamp(2.4rem,7vw,4.4rem)] leading-[1.04]">
-        {open.length > 0 ? `${open.length} ${open.length === 1 ? "thing needs" : "things need"} attention.` : "No high-confidence issue was found."}
+        {open.length > 0
+          ? `${open.length} ${open.length === 1 ? "thing needs" : "things need"} attention.`
+          : unknown.length > 0
+            ? "Nothing needs attention in what we could read."
+            : "Nothing needs attention."}
       </h1>
       <p className="mt-5 text-[14px] leading-relaxed text-muted-fg">
-        Checked {fmtDate(check.createdAt.slice(0, 10))} · {check.context ? espLabel(check.context.esp) : "context not supplied"} · {check.context?.geographies.join(", ") ?? "geography not supplied"} · {check.context?.gmailBulk ? "Gmail bulk volume" : "below or unsure on Gmail bulk volume"}
+        Checked {fmtDate(check.createdAt.slice(0, 10))} ·{" "}
+        {check.context
+          ? `${espLabel(check.context.esp)} · ${check.context.geographies.join(", ")} · ${check.context.gmailBulk ? "Gmail bulk volume (5,000+ a day)" : "under 5,000 a day to Gmail, or unsure"}`
+          : "pasted message · no campaign context supplied"}
       </p>
 
       <div className="mt-8 flex flex-wrap gap-2" role="group" aria-label="Report evidence">
@@ -190,7 +220,8 @@ export function CampaignReport({ check, shared = false }: { check: MessageCheck;
       <div className="mt-6 space-y-4">
         {shown.length > 0 ? shown.map((finding, index) => <FindingCard key={`${finding.rootCause}-${index}`} finding={finding} index={index} />) : (
           <div className="rounded-2xl border bg-ok-bg p-5 text-[14px] leading-relaxed text-muted-fg">
-            No high-confidence issue was found in the checks we could run.
+            Nothing needed attention in the checks that completed. Everything we read is under
+            “All evidence”; anything we could not read is under “Could not determine”.
           </div>
         )}
       </div>
@@ -200,15 +231,29 @@ export function CampaignReport({ check, shared = false }: { check: MessageCheck;
       </div>
 
       {!shared ? (
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <button type="button" disabled={Boolean(busy)} onClick={shareReport} className="min-h-12 rounded-xl bg-accent px-5 text-[14px] font-semibold text-accent-fg disabled:opacity-60">
-            {share ? "Share link copied" : busy === "share" ? "Creating share link…" : "Share report"}
-          </button>
-          <button type="button" disabled={Boolean(busy)} onClick={recheck} className="min-h-12 rounded-xl border bg-card px-5 text-[14px] font-semibold disabled:opacity-60">
-            {busy === "recheck" ? "Creating recheck…" : "Send updated campaign"}
-          </button>
-          {share ? <button type="button" disabled={Boolean(busy)} onClick={revoke} className="min-h-11 px-2 text-[13px] text-muted-fg underline underline-offset-3">Revoke share link</button> : null}
-        </div>
+        <>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <button type="button" disabled={Boolean(busy)} onClick={shareReport} className="min-h-12 rounded-xl bg-accent px-5 text-[14px] font-semibold text-accent-fg disabled:opacity-60">
+              {share ? "Share link copied" : busy === "share" ? "Creating share link…" : "Share report"}
+            </button>
+            {check.context ? (
+              <button type="button" disabled={Boolean(busy)} onClick={recheck} className="min-h-12 rounded-xl border bg-card px-5 text-[14px] font-semibold disabled:opacity-60">
+                {busy === "recheck" ? "Creating a new check address…" : "Re-check an updated send"}
+              </button>
+            ) : (
+              <Link href="/check/headers" className="inline-flex min-h-12 items-center rounded-xl border bg-card px-5 text-[14px] font-semibold">
+                Check an updated message
+              </Link>
+            )}
+            {share ? <button type="button" disabled={Boolean(busy)} onClick={revoke} className="min-h-11 px-2 text-[13px] text-muted-fg underline underline-offset-3">Revoke share link</button> : null}
+          </div>
+          {share ? (
+            <p className="num mt-3 text-[13px] break-all text-muted-fg">
+              {typeof window === "undefined" ? share.path : `${window.location.origin}${share.path}`}
+            </p>
+          ) : null}
+          {actionError ? <p className="mt-3 text-[13px] text-soon">{actionError}</p> : null}
+        </>
       ) : null}
 
       <p className="mt-8 text-[12.5px] text-dim">

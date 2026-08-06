@@ -11,11 +11,13 @@ export async function POST(request: Request) {
   if (!hasDatabase() || !inboundDomain()) {
     return Response.json({ error: "Campaign receiving is not available." }, { status: 503 });
   }
-  const length = Number(request.headers.get("content-length") ?? "0");
-  if (length > 16_384) return Response.json({ error: "Request too large." }, { status: 413 });
+  /* Measured on the body itself: content-length is client-supplied and a
+     chunked request simply omits it. */
   let body: unknown;
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (raw.length > 16_384) return Response.json({ error: "Request too large." }, { status: 413 });
+    body = JSON.parse(raw);
   } catch {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }

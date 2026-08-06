@@ -38,7 +38,7 @@ function Waiting({ session }: { session: CampaignSession }) {
         Send the real test now.
       </h1>
       <p className="mt-5 text-[14px] leading-relaxed text-muted-fg">
-        {espLabel(session.context.esp)} · {session.context.geographies.join(", ")} · {session.context.gmailBulk ? "Gmail bulk volume" : "below or unsure on Gmail bulk volume"}
+        {espLabel(session.context.esp)} · {session.context.geographies.join(", ")} · {session.context.gmailBulk ? "Gmail bulk volume (5,000+ a day)" : "under 5,000 a day to Gmail, or unsure"}
       </p>
       <SessionWait token={session.reportToken} address={address} expiresAt={session.receiveExpiresAt} initialStatus={session.status} />
       <p className="mt-5 text-[13px] leading-relaxed text-dim">

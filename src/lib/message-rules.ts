@@ -690,6 +690,8 @@ export function messageFindings(input: MessageInput): Finding[] {
         detail: declaresBulk
           ? "This message carries unsubscribe headers, so its sender is treating it as bulk marketing, and CAN-SPAM requires a valid physical postal address on it. None could be read from the text. An address that exists only inside an image does not count, because the text is all a filter or a screen reader ever sees."
           : "No physical postal address could be read from the text. CAN-SPAM requires one on commercial mail; a single message cannot prove this one is commercial, so this is flagged rather than failed. An address that exists only inside an image does not count.",
+        mondayMorning:
+          "Add your real mailing address to the footer as text, not as part of an image, and re-send a test.",
         rule: RULE.canSpam,
       });
     }

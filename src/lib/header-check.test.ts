@@ -149,6 +149,40 @@ test("Gmail-delivered headers expose the receiver verdict and facts", () => {
   assertPair(result.findings, "pass", "one-click-unsubscribe-rfc-8058");
 });
 
+test("the check inbox names its own receiver instead of blaming the sender's platform", () => {
+  const raw = `Authentication-Results: amazonses.com;
+ spf=pass (spfCheck: domain of send.brand.com designates 192.0.2.1 as permitted sender);
+ dkim=pass header.i=@brand.com;
+ dmarc=pass header.from=brand.com
+Return-Path: <bounce@send.brand.com>
+From: Brand <hello@brand.com>
+DKIM-Signature: v=1; d=brand.com; s=kl;
+ b=abcdefghijklmnopqrstuvwxyz
+Subject: Sent to a one-time check address`;
+
+  const inbox = analyzeHeaders(raw, { checkInbox: true });
+  if (!inbox.ok) assert.fail(`expected parsed headers, got ${inbox.error}`);
+  const role = inbox.findings.find((finding) =>
+    finding.title.includes("received this message; it did not send it"),
+  );
+  assert.ok(role, "the receiver-role finding is missing");
+  assert.match(role.detail, /our check inbox takes delivery on Amazon SES/);
+  const spf = inbox.findings.find((finding) => finding.title === "SPF=pass on arrival");
+  assert.ok(spf, "the SPF verdict finding is missing");
+  assert.match(spf.detail, /not your sending platform/);
+  assert.equal(
+    inbox.findings.some((finding) => finding.title.includes("at amazonses.com")),
+    false,
+    "no title may read as though amazonses.com were in the sending path",
+  );
+
+  const pasted = checked(raw);
+  const pastedSpf = pasted.findings.find((finding) => finding.title === "SPF=pass on arrival");
+  assert.ok(pastedSpf, "the pasted-flow SPF verdict finding is missing");
+  assert.match(pastedSpf.detail, /the server that received this message/);
+  assert.doesNotMatch(pastedSpf.detail, /our check inbox/);
+});
+
 test("the topmost Authentication-Results header is used", () => {
   const raw = `Authentication-Results: edge.example; dmarc=pass header.from=brand.com
 Authentication-Results: internal.example; dmarc=fail header.from=brand.com

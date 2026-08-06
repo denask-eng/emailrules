@@ -107,9 +107,9 @@ export function SessionWait({
         </div>
         <p className="mt-2 text-[13.5px] leading-relaxed text-muted-fg">
           {visibleStatus === "waiting" && "Send from the platform you actually use. Do not forward: forwarding rewrites the evidence."}
-          {visibleStatus === "received" && "The message is safely queued for deterministic parsing."}
-          {visibleStatus === "processing" && "Checking message structure, authentication evidence, unsubscribe, identity and measurement signals."}
-          {visibleStatus === "failed" && "No verdict was invented. Create a new check or paste the complete message source."}
+          {visibleStatus === "received" && "Your message arrived. We are reading it now."}
+          {visibleStatus === "processing" && "Checking how the message is built, who signed it, the unsubscribe headers and the tracking."}
+          {visibleStatus === "failed" && "We could not read that message, so we are not guessing at a verdict. Create a new check or paste the complete message source."}
           {visibleStatus === "expired" && "Mail sent now will not be processed. Create a new private address."}
         </p>
       </div>

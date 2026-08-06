@@ -183,7 +183,10 @@ async function enrichFindings(
       confidence,
       applicability,
       rootCause: finding.rule ?? `${finding.stage ?? "message"}:${finding.title.toLowerCase()}`,
-      observed: finding.evidence?.replace(/\s+/g, " ").trim() || finding.title,
+      /* Evidence only. Falling back to the title printed every card's heading
+         twice, once under "What was observed" — the report page hides the
+         section instead when there is nothing real to show. */
+      observed: finding.evidence?.replace(/\s+/g, " ").trim() ?? "",
       why: contextualDetail,
       owner: finding.ownership ?? rule?.ownership ?? null,
       firstAction: firstActionForFinding(finding, rule?.mondayMorning),
@@ -197,8 +200,9 @@ async function enrichFindings(
 export async function runMessageCheck(
   raw: string,
   context?: CampaignContext,
+  options: { checkInbox?: boolean } = {},
 ): Promise<MessageCheckOutcome> {
-  const live = await checkHeaders(raw);
+  const live = await checkHeaders(raw, options);
   if (!live.ok) return live;
   const content = extractContent(raw);
   /* Reputation runs alongside the header work: a listing spam-folders a clean
@@ -381,40 +385,54 @@ export async function createRecheckSession(
   return createCheckSession(parent.context, networkHash, parent.id);
 }
 
+/**
+ * Works for both doors. A session-backed report keys its share on the session
+ * id; a pasted report has no session, so its message_checks id serves as the
+ * key. loadMessageCheck is the gate either way — it only answers to the
+ * report token a session-backed report was given, never to its inbox id, so
+ * a share cannot be minted with a weaker credential than the report itself.
+ */
 export async function createShareReport(reportToken: string): Promise<string | null> {
-  const session = await loadCheckSession(reportToken);
-  if (!session || session.reportToken !== reportToken || !(await messageCheckExists(reportToken))) return null;
+  const check = await loadMessageCheck(reportToken);
+  if (!check) return null;
   const existing = (await sql()`
     select token from share_reports
-    where session_id = ${session.id} and revoked_at is null and expires_at > now()
+    where session_id = ${check.id} and revoked_at is null and expires_at > now()
     order by created_at desc limit 1
   `) as { token: string }[];
   if (existing[0]?.token) return existing[0].token;
   const token = newShareToken();
   const expires = new Date(Date.now() + RETENTION_DAYS * 86_400_000).toISOString();
-  await sql()`insert into share_reports (token, session_id, expires_at) values (${token}, ${session.id}, ${expires})`;
+  await sql()`insert into share_reports (token, session_id, expires_at) values (${token}, ${check.id}, ${expires})`;
   return token;
 }
 
 export async function loadSharedMessageCheck(token: string): Promise<MessageCheck | null> {
   if (!hasDatabase() || !isShareToken(token)) return null;
   const rows = (await sql()`
-    select cs.report_token
+    select sr.session_id, cs.report_token
     from share_reports sr
-    join check_sessions cs on cs.id = sr.session_id
+    left join check_sessions cs on cs.id = sr.session_id
     where sr.token = ${token} and sr.revoked_at is null and sr.expires_at > now()
     limit 1
-  `) as { report_token: string }[];
-  return rows[0]?.report_token ? loadMessageCheck(rows[0].report_token) : null;
+  `) as { session_id: string; report_token: string | null }[];
+  const row = rows[0];
+  return row ? loadMessageCheck(row.report_token ?? row.session_id) : null;
 }
 
 export async function revokeShareReport(token: string, reportToken: string): Promise<boolean> {
   if (!hasDatabase() || !isShareToken(token) || !isCheckId(reportToken)) return false;
+  /* The sessionless arm only matches when no session exists: for
+     session-backed shares the report token — never the inbox id — stays the
+     one credential that can revoke. */
   const rows = (await sql()`
     update share_reports sr set revoked_at = now()
-    from check_sessions cs
-    where sr.token = ${token} and sr.session_id = cs.id and cs.report_token = ${reportToken}
-      and sr.revoked_at is null
+    where sr.token = ${token} and sr.revoked_at is null
+      and (
+        exists (select 1 from check_sessions cs where cs.id = sr.session_id and cs.report_token = ${reportToken})
+        or (sr.session_id = ${reportToken}
+            and not exists (select 1 from check_sessions cs where cs.id = sr.session_id))
+      )
     returning sr.token
   `) as { token: string }[];
   return rows.length > 0;

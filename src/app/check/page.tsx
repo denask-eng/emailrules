@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
 import { AskBox, Surfaces } from "@/components/ask-box";
 import { LISTS } from "@/lib/blocklist-lists";
+import { SubscribeForm } from "@/components/subscribe-form";
 
 export const metadata: Metadata = {
   title: "Check my domain",
@@ -110,12 +109,7 @@ export default async function Check({
           daily, emailing you only when a record actually moves. Campaign preflight stays separate
           from published-DNS monitoring so neither can be mistaken for the other.
         </p>
-        <Link
-          href="/#subscribe"
-          className={cn(buttonVariants({ variant: "outline" }), "mt-5 h-10 rounded-[10px] px-5")}
-        >
-          Tell me when a rule moves
-        </Link>
+        <SubscribeForm compact className="mt-5" />
       </section>
     </div>
   );
