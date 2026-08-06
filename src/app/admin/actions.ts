@@ -28,12 +28,29 @@ function revalidateRule(slug: string) {
   revalidatePath("/rules");
   revalidatePath("/changed");
   revalidatePath("/sources");
+  revalidatePath("/trust");
   revalidatePath("/");
   revalidatePath("/llms.txt");
   revalidatePath("/admin");
 }
 
 async function write(rule: Rule) {
+  const versions = (await sql().query(
+    `select coalesce(max(version), 0)::int as version from rule_versions where slug = $1`,
+    [rule.slug],
+  )) as { version: number }[];
+  await sql().query(
+    `insert into rule_versions (slug, version, data, source_snapshot, detector_version, approved_by)
+     values ($1, $2, $3::jsonb, $4::jsonb, $5, $6)`,
+    [
+      rule.slug,
+      (versions[0]?.version ?? 0) + 1,
+      JSON.stringify(rule),
+      JSON.stringify(rule.sources),
+      "message-v1",
+      "admin",
+    ],
+  );
   await sql().query(
     `insert into rules (slug, data, updated_at) values ($1, $2::jsonb, now())
      on conflict (slug) do update set data = excluded.data, updated_at = now()`,

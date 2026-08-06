@@ -9,7 +9,7 @@
     "lint": "eslint",
     "admin:hash": "node scripts/admin-hash.mjs",
     "db:migrate": "dotenv -e .env.local -- tsx scripts/db-migrate.ts",
-    "test": "tsx --test src/lib/detect-input.test.ts src/lib/sending-platform.test.ts src/lib/header-check.test.ts src/lib/audience-esp.test.ts src/lib/subscriber-prefs.test.ts src/lib/esp-extract.test.ts src/lib/blocklist-check.test.ts src/lib/dmarc-report.test.ts src/lib/message-journey.test.ts src/lib/freshness.test.ts src/content/how-email-works.test.ts src/content/providers.test.ts src/content/sources.test.ts"
+    "test": "tsx --test src/lib/campaign-contract.test.ts src/lib/detect-input.test.ts src/lib/sending-platform.test.ts src/lib/header-check.test.ts src/lib/audience-esp.test.ts src/lib/subscriber-prefs.test.ts src/lib/esp-extract.test.ts src/lib/blocklist-check.test.ts src/lib/dmarc-report.test.ts src/lib/message-journey.test.ts src/lib/freshness.test.ts src/content/how-email-works.test.ts src/content/providers.test.ts src/content/sources.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

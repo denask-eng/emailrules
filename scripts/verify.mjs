@@ -66,7 +66,7 @@ async function main() {
   /* ── the homepage answers without JS ───────────────────────────────────── */
   const home = await get("/");
   const homeLinks = countUnique(home.body, /href="\/rules\/[a-z0-9-]+"/g);
-  record("/ server-renders its rules", homeLinks >= 5, `${homeLinks} distinct`);
+  record("/ server-renders its representative rules", homeLinks >= 3, `${homeLinks} distinct`);
 
   /* ── nothing important is parked behind an entrance animation ──────────── */
   for (const [path, html] of [

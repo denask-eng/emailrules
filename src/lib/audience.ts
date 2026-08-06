@@ -1,6 +1,6 @@
 /**
  * Audience filters for the rules index.
- * Role-first; geo + ESP fine-tune. URL + localStorage.
+ * Explicit ESP, geography and Gmail-volume context. URL + localStorage.
  *
  * ESP matching uses Rule.esp (EspApplicability) — durable, not string-guessing on provider.
  */
@@ -36,7 +36,7 @@ export const EMPTY_AUDIENCE: Audience = {
 };
 
 /** Bump when shape changes so stale localStorage does not lie. */
-export const STORAGE_KEY = "emailrules.audience.v4";
+export const STORAGE_KEY = "emailrules.audience.v5";
 export const ONBOARD_KEY = "emailrules.onboarded.v2";
 
 /** Tools people actually pick — not a vendor catalog of 40. */
@@ -288,17 +288,10 @@ export function parseAudienceParam(search: string): Audience | null {
   if (role) {
     const p = ROLE_PRESETS.find((x) => x.id === role);
     if (p) {
-      return normalizeAudience({
-        ...p.audience,
-        onlyMine: next.onlyMine || p.audience.onlyMine,
-        eu: next.eu || p.audience.eu,
-        us: next.us || p.audience.us,
-        ca: next.ca || p.audience.ca,
-        uk: next.uk || p.audience.uk,
-        au: next.au || p.audience.au,
-        gmailBulk: next.gmailBulk || p.audience.gmailBulk,
-        esp: next.esp || p.audience.esp,
-      });
+      /* A role may reorder results, but it must never invent geography,
+         volume or ESP applicability. Those are factual context and stay
+         explicit in the URL. */
+      next.role = p.audience.role;
     }
     if (
       role === "newbie" ||
@@ -391,17 +384,8 @@ export function readStoredAudience(): Audience {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) return normalizeAudience(JSON.parse(raw) as Partial<Audience>);
-    /* migrate v3 */
-    const legacy = window.localStorage.getItem("emailrules.audience.v3");
-    if (legacy) {
-      const n = normalizeAudience(JSON.parse(legacy) as Partial<Audience> & { klaviyo?: boolean });
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(n));
-      } catch {
-        /* */
-      }
-      return n;
-    }
+    /* v5 intentionally does not migrate role presets: older presets silently
+       supplied geography and Gmail volume, which are facts we now ask for. */
   } catch {
     /* */
   }

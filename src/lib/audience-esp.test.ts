@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  espLabel,
   matchesEspSelection,
   resolveEspApplicability,
   matchesAudience,
@@ -14,6 +15,11 @@ test("resolveEspApplicability prefers explicit esp over provider", () => {
     resolveEspApplicability({ esp: ["mailchimp"], provider: "Klaviyo" }),
     ["mailchimp"],
   );
+});
+
+test("ESP enum values have reader-facing labels", () => {
+  assert.equal(espLabel("klaviyo"), "Klaviyo");
+  assert.equal(espLabel("sfmc"), "Salesforce Marketing Cloud");
 });
 
 test("legacy provider Klaviyo becomes klaviyo product scope", () => {

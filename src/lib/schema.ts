@@ -17,6 +17,21 @@ export const SCHEMA = `
   );
   create index if not exists rules_updated_at_idx on rules (updated_at desc);
 
+  /* Immutable snapshots behind the mutable current rule pointer. Admin saves
+     are human approval; old reports and corrections can retain the exact
+     source and interpretation used at the time. */
+  create table if not exists rule_versions (
+    slug             text not null,
+    version          int not null,
+    data             jsonb not null,
+    source_snapshot  jsonb not null,
+    detector_version text not null default 'message-v1',
+    approved_at      timestamptz not null default now(),
+    approved_by      text not null default 'admin',
+    primary key (slug, version)
+  );
+  create index if not exists rule_versions_approved_idx on rule_versions (slug, approved_at desc);
+
   create table if not exists subscribers (
     email       text primary key,
     created_at  timestamptz not null default now(),
@@ -111,6 +126,38 @@ export const SCHEMA = `
     verdict     text not null
   );
   create index if not exists message_checks_expires_idx on message_checks (expires_at);
+
+  /* A campaign check exists before an address is exposed. The receiving alias,
+     private report token and any later share token are separate credentials.
+     Raw campaign content never lands in this table. */
+  create table if not exists check_sessions (
+    id                 text primary key,
+    report_token       text not null unique,
+    parent_id          text,
+    created_at         timestamptz not null default now(),
+    receive_expires_at timestamptz not null,
+    completed_at       timestamptz,
+    status             text not null default 'waiting',
+    context            jsonb not null,
+    network_hash       text,
+    failure_code       text
+  );
+  create index if not exists check_sessions_report_token_idx on check_sessions (report_token);
+  create index if not exists check_sessions_expiry_idx on check_sessions (receive_expires_at);
+  create index if not exists check_sessions_rate_idx on check_sessions (network_hash, created_at desc)
+    where network_hash is not null;
+
+  /* Redacted report access is revocable and never reuses the receiving alias
+     or private result credential. */
+  create table if not exists share_reports (
+    token       text primary key,
+    session_id  text not null,
+    created_at  timestamptz not null default now(),
+    expires_at  timestamptz not null,
+    revoked_at  timestamptz
+  );
+  create index if not exists share_reports_session_idx on share_reports (session_id, created_at desc);
+  create index if not exists share_reports_expiry_idx on share_reports (expires_at);
 
   /* One row per watched ESP changelog page.
 
@@ -231,6 +278,8 @@ export const SCHEMA = `
   );
   create index if not exists rule_source_watch_checked_idx
     on rule_source_watch (last_checked_at nulls first);
+  alter table rule_source_watch add column if not exists review_interval_days int not null default 30;
+  alter table rule_source_watch add column if not exists next_review_at timestamptz;
 
   /* A cited page moved. Queued for a person, never published by a machine. */
   create table if not exists rule_source_changes (

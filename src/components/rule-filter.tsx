@@ -18,7 +18,6 @@ import {
   STORAGE_KEY,
   AUDIENCE_CHIPS,
   ESP_OPTIONS,
-  ROLE_PRESETS,
   audienceActive,
   audienceToSearch,
   matchesAudience,
@@ -143,17 +142,6 @@ export function RuleFilter({ rules, initial }: { rules: Rule[]; initial: Audienc
     [apply],
   );
 
-  const pickRole = (preset: (typeof ROLE_PRESETS)[number]) => {
-    const already = a.role === preset.audience.role;
-    apply(already ? EMPTY_AUDIENCE : preset.audience);
-    /* The answer is below the question, so take the reader to it. */
-    if (already) return;
-    const el = results.current;
-    if (!el) return;
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
-  };
-
   const boost = useCallback((topic: string) => roleTopicBoost(topic, a.role), [a.role]);
 
   const shown = useMemo(
@@ -163,12 +151,6 @@ export function RuleFilter({ rules, initial }: { rules: Rule[]; initial: Audienc
   const top = useMemo(() => topForYou(shown, 5, boost), [shown, boost]);
   const topSlugs = useMemo(() => new Set(top.map((r) => r.slug)), [top]);
   const rest = useMemo(() => shown.filter((r) => !topSlugs.has(r.slug)), [shown, topSlugs]);
-
-  /* Work still on a person, then the reassurance. Both stay on the page. */
-  const needsAPerson = (r: Rule) =>
-    r.ownership === "yours" || r.ownership === "shared" || r.status === "upcoming";
-  const restOpen = rest.filter(needsAPerson);
-  const restDone = rest.filter((r) => !needsAPerson(r));
 
   const count = briefCounts(shown);
   const filtered = audienceActive(a);
@@ -203,37 +185,22 @@ export function RuleFilter({ rules, initial }: { rules: Rule[]; initial: Audienc
 
   return (
     <>
-      {/* One question on arrival. Everything else is opt-in, below, and closed. */}
-      <section aria-labelledby="role-question" className="border-t border-fg/12 pt-9 sm:pt-11">
+      <section aria-labelledby="context-question" className="border-t border-fg/12 pt-9 sm:pt-11">
         <h2
-          id="role-question"
+          id="context-question"
           className="text-[clamp(1.4rem,3.4vw,1.9rem)] font-semibold tracking-tight"
         >
-          What kind of email work do you do?
+          Which rules apply to this send?
         </h2>
         <p className="mt-2.5 max-w-[52ch] text-[15px] leading-relaxed text-muted-fg">
-          One tap opens the five that matter — not all <span className="num">{rules.length}</span>.
-          Tap the same chip again to go back to everything.
+          Choose the tool, recipient geographies and Gmail volume explicitly. Emailrules will not
+          infer them from a job title.
         </p>
-        <div className="mt-6 flex flex-wrap gap-2.5">
-          {ROLE_PRESETS.map((p) => (
-            <Chip
-              key={p.id}
-              on={a.role === p.audience.role}
-              onClick={() => pickRole(p)}
-              title={p.blurb}
-              className="text-[14.5px]"
-            >
-              {p.label}
-            </Chip>
-          ))}
-        </div>
       </section>
 
-      {/* Closed by default, and honest about its own state while closed. */}
-      <details className="faq-item group mt-7 rounded-xl border bg-card">
+      <details open className="faq-item group mt-7 rounded-2xl border bg-card">
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-3 outline-none marker:content-none focus-visible:bg-muted/60 [&::-webkit-details-marker]:hidden">
-          <span className="shrink-0 text-[13.5px] font-medium">Refine</span>
+            <span className="shrink-0 text-[13.5px] font-medium">Campaign context</span>
           {/* Narrow screens get the state, not the descriptor — the state is the point. */}
           <span className="min-w-0 flex-1 truncate text-[13px] text-muted-fg">
             <span className="hidden sm:inline">email tool, where you send — </span>
@@ -425,30 +392,11 @@ export function RuleFilter({ rules, initial }: { rules: Rule[]; initial: Audienc
               </div>
             </section>
 
-            {restOpen.length > 0 ? (
-              <section className="mt-12">
-                <h2 className="text-[1.05rem] font-semibold tracking-tight">
-                  The rest that still needs a person
-                </h2>
-                <p className="mt-1 text-[13.5px] text-muted-fg">
-                  <span className="num">{restOpen.length}</span> more, lower urgency. Skim when you
-                  have time.
-                </p>
-                <ul className="mt-4 list-none border-t p-0">
-                  {restOpen.map((r) => (
-                    <RuleRow key={r.slug} rule={r} />
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            {/* Reassurance, not homework — present, indexable, and folded away. */}
-            {restDone.length > 0 ? (
+            {rest.length > 0 ? (
               <details className="faq-item group mt-10 border-t pt-4">
                 <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 outline-none marker:content-none focus-visible:bg-muted/60 [&::-webkit-details-marker]:hidden">
                   <span className="min-w-0 flex-1 text-[14px] text-muted-fg">
-                    <span className="num font-medium text-fg">{restDone.length}</span> more your
-                    email tool already handles, or that change nothing today
+                    <span className="num font-medium text-fg">{rest.length}</span> more matching rules
                   </span>
                   <span
                     aria-hidden
@@ -460,12 +408,12 @@ export function RuleFilter({ rules, initial }: { rules: Rule[]; initial: Audienc
                 <div className="faq-body">
                   <div>
                     <p className="max-w-[58ch] pt-2 pb-3 text-[13px] leading-relaxed text-dim">
-                      Kept on the shelf because &ldquo;already covered&rdquo; is a real answer, and
-                      the day someone asks, you want the dated page. Nothing here is on your desk.
+                      Lower-priority and already-handled evidence stays available without turning
+                      the first screen into a list of every possible warning.
                     </p>
                     <ul className="list-none border-t border-border-soft p-0">
-                      {restDone.map((r) => (
-                        <RuleRow key={r.slug} rule={r} compact />
+                      {rest.map((r) => (
+                        <RuleRow key={r.slug} rule={r} />
                       ))}
                     </ul>
                   </div>

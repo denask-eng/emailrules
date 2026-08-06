@@ -668,6 +668,8 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       title: "List-Unsubscribe is not one-click",
       detail:
         "List-Unsubscribe is present without List-Unsubscribe-Post, so this is not RFC 8058 one-click unsubscribe.",
+      mondayMorning:
+        "Ask your ESP administrator why this delivered campaign omitted List-Unsubscribe-Post: List-Unsubscribe=One-Click, and do not send it until both headers arrive together.",
       rule: RULE.oneClick,
       evidence: unsubscribeEvidence,
     });
@@ -681,6 +683,8 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       title: "List-Unsubscribe-Post has no List-Unsubscribe to act on",
       detail:
         "List-Unsubscribe-Post is present without a List-Unsubscribe header, so there is no URI for a receiver to POST to. RFC 8058 needs both headers; either one alone does nothing.",
+      mondayMorning:
+        "Ask your ESP administrator why this delivered campaign omitted List-Unsubscribe, and do not send it until an HTTPS unsubscribe URI arrives alongside List-Unsubscribe-Post.",
       rule: RULE.oneClick,
       evidence: unsubscribeEvidence,
     });
@@ -689,6 +693,8 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       severity: "warn",
       title: "One-click unsubscribe has no HTTPS URI",
       detail: "RFC 8058 requires an HTTPS URI; mailto alone is not one-click unsubscribe.",
+      mondayMorning:
+        "Configure the delivered List-Unsubscribe header to include an HTTPS URI; mailto alone cannot satisfy RFC 8058.",
       rule: RULE.oneClick,
       evidence: unsubscribeEvidence,
     });
@@ -703,6 +709,8 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       title: "One-click unsubscribe cannot be read from a forwarded message",
       detail:
         "No List-Unsubscribe headers are present, but this message reached us as a forward, and forwarding removes them — Gmail strips both. That means their absence here proves nothing about the campaign as it was sent. To have this checked, send the campaign straight from your platform to the address on the check page rather than forwarding a copy you received.",
+      mondayMorning:
+        "Send the original campaign directly from your platform to a fresh check address; a forwarded copy cannot prove whether one-click headers were attached.",
       rule: RULE.oneClick,
       evidence: `forwarded: ${facts.forwarded.signals.join(", ")}`,
     });
@@ -712,6 +720,8 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
       title: "No one-click unsubscribe headers are present",
       detail:
         "They are required for bulk mail. Transactional mail is exempt, and headers alone cannot tell us which this is.",
+      mondayMorning:
+        "Confirm whether this is bulk marketing mail. If it is, ask your ESP administrator why the delivered campaign omitted both one-click unsubscribe headers before sending.",
       rule: RULE.oneClick,
     });
   }

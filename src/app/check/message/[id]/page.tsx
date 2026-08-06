@@ -1,348 +1,54 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Panel } from "@/components/bits";
-import { CopyField } from "@/components/copy-field";
-import { FindingList, FindingTally, type FindingOwnership } from "@/components/findings";
-import { MessageJourney } from "@/components/message-journey";
-import { Track } from "@/components/track";
-import { Instrument } from "@/components/instrument";
-import { type Row } from "@/components/domain-record";
-import type { Finding } from "@/lib/dns-check";
-import { toJourney } from "@/lib/message-journey";
-import { SubscribeForm } from "@/components/subscribe-form";
-import { buttonVariants } from "@/components/ui/button";
-import { fmtDate } from "@/lib/format";
+import { CampaignReport } from "./campaign-report";
+import { SessionWait } from "./session-wait";
+import { espLabel } from "@/lib/audience";
 import {
-  inboundDomain,
   inboxAddress,
   isCheckId,
+  loadCheckSession,
   loadMessageCheck,
-  ruleMetaFor,
-  RETENTION_DAYS,
-  type MessageCheck,
+  type CampaignSession,
 } from "@/lib/message-check";
 import { SITE } from "@/lib/site";
-import { cn } from "@/lib/utils";
-import { Arrival } from "./arrival";
 
-/* One URL, two states. Waiting and resolved are the same page because the
-   address, the wait and the share link are the same thing — a refresh cannot
-   lose the result and a shared link cannot point at a different one. */
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  if (!isCheckId(id)) return { title: "Message check" };
-
+  if (!isCheckId(id)) return { title: "Campaign report", robots: { index: false, follow: false } };
   const check = await loadMessageCheck(id);
-  const title = check
-    ? `${check.fromDomain ?? "A message"} — what this campaign reveals`
-    : "Waiting for your message";
-  const description = check
-    ? `${check.verdict} Every finding names the dated rule it comes from and whose job it is. Findings, never a score.`
-    : "Send one real campaign to a one-time address and read what the message itself reveals.";
-
+  const title = check ? `${check.fromDomain ?? "Campaign"} preflight` : "Waiting for campaign";
   return {
     title,
-    description,
+    description: check ? "Prioritized campaign findings with evidence, an owner, a first action and dated primary sources." : "A private one-time campaign receiving session.",
     robots: { index: false, follow: false },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: `${SITE.url}/check/message/${id}`,
-      siteName: SITE.name,
-    },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: { type: "website", title, url: `${SITE.url}/check/message/${id}`, siteName: SITE.name },
   };
 }
 
-function Waiting({ id }: { id: string }) {
-  const address = inboxAddress(id);
-  const configured = Boolean(inboundDomain());
-
+function Waiting({ session }: { session: CampaignSession }) {
+  const address = inboxAddress(session.id);
+  if (!address) notFound();
   return (
     <div className="shell shell-tight py-12 sm:py-16">
-      <p className="label">Waiting for one message</p>
-      <h1 className="mt-3 text-[clamp(1.7rem,4.6vw,2.5rem)]">Leave this page open.</h1>
-
-      {configured && address ? (
-        <>
-          <p className="mt-5 max-w-[64ch] text-[1.02rem] leading-relaxed text-muted-fg">
-            Send one real campaign to the address below, from the platform you actually send with.
-            A forward will not do it: forwarding rewrites the headers and strips the evidence.
-          </p>
-
-          <Panel className="mt-7 p-5 sm:p-6">
-            <CopyField
-              label="Send one email to"
-              value={address}
-              valueClassName="text-[clamp(0.95rem,3.4vw,1.3rem)]"
-            />
-            <p className="mt-4 max-w-[58ch] text-[0.88rem] leading-relaxed text-dim">
-              Single use. The first message to arrive becomes the result and later ones are ignored,
-              so this link cannot be overwritten by anyone you share it with.
-            </p>
-            <Arrival id={id} />
-          </Panel>
-
-          <p className="mt-5 text-[0.9rem] text-muted-fg">
-            <Link
-              href={`/check/message/${id}`}
-              className="text-fg underline decoration-1 underline-offset-3"
-            >
-              Check for it now
-            </Link>{" "}
-            if you have JavaScript off — this page reloads itself when the message lands.
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="mt-5 max-w-[64ch] text-[1.02rem] leading-relaxed text-muted-fg">
-            The inbound address is not switched on yet, so there is nothing here to send to. We are
-            not going to print an address that quietly discards your campaign.
-          </p>
-          <Link
-            href="/check/headers"
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "mt-6 h-10 rounded-[10px] px-5 font-semibold",
-            )}
-          >
-            Paste a whole message instead
-          </Link>
-          <p className="mt-3 max-w-[62ch] text-[0.9rem] leading-relaxed text-dim">
-            Same engine, same findings, same result page. It just asks you for the message source
-            rather than accepting the message.
-          </p>
-        </>
-      )}
-
-      <section className="mt-14 border-t pt-10">
-        <h2 className="text-[1.15rem]">While you are here — what we keep</h2>
-        <p className="mt-3 max-w-[64ch] text-[0.95rem] leading-relaxed text-muted-fg">
-          The findings, the From domain and two dates. Not the body, not the subject, not the
-          address you send from, not the raw headers. The message is read in memory and dropped, and
-          the resulting link expires after <span className="num">{RETENTION_DAYS}</span> days.
-        </p>
-      </section>
-    </div>
-  );
-}
-
-/**
- * The reading, built from what the findings already quote.
- *
- * The raw headers are deliberately never stored — that promise is on the page
- * two sections down — so this cannot re-read the message. It does not need to:
- * the authentication findings each carry the receiver's own recorded line, and
- * those lines are the reading. Anything without a quotable value stays in the
- * findings list below rather than being invented into a row here.
- */
-function messageReadout(check: MessageCheck): Row[] {
-  const tone = (s: Finding["severity"]): Row["tone"] =>
-    s === "fail" ? "bad" : s === "warn" ? "warn" : s === "pass" ? "ok" : "dim";
-
-  const out: Row[] = [];
-  if (check.fromDomain) {
-    out.push({ key: "FROM", value: check.fromDomain, tone: "ok", note: "the visible sender" });
-  }
-
-  /* Keyed off the leading token of the receiver's own line, so a renamed
-     finding cannot silently relabel a record. */
-  const label = (evidence: string): string | null => {
-    const head = evidence.trim().toLowerCase();
-    if (head.startsWith("spf=")) return "SPF";
-    if (head.startsWith("dkim=")) return "DKIM";
-    if (head.startsWith("dmarc=")) return "DMARC";
-    if (head.startsWith("return-path:")) return "RETURN";
-    if (head.startsWith("list-unsubscribe")) return "UNSUB";
-    return null;
-  };
-
-  const seen = new Set<string>();
-  for (const f of check.findings) {
-    if (!f.evidence) continue;
-    const key = label(f.evidence);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push({
-      key,
-      value: f.evidence.replace(/\s+/g, " ").trim(),
-      tone: tone(f.severity),
-      /* Short enough for the fixed note column. "recorded by the receiver"
-         clipped mid-word, which on a panel whose whole claim is that it quotes
-         things verbatim is the worst possible place to truncate. */
-      note: f.severity === "pass" ? "receiver's own" : undefined,
-    });
-  }
-
-  return out;
-}
-
-async function Result({ check }: { check: MessageCheck }) {
-  const meta = await ruleMetaFor(check.findings);
-  const ruleTitles = Object.fromEntries(
-    Object.entries(meta).map(([slug, rule]) => [slug, rule.title]),
-  );
-  const ownership: Record<string, FindingOwnership> = Object.fromEntries(
-    Object.entries(meta).map(([slug, rule]) => [
-      slug,
-      { ownership: rule.ownership, mondayMorning: rule.mondayMorning },
-    ]),
-  );
-  const journey = toJourney(check.findings);
-  const checkedOn = check.createdAt.slice(0, 10);
-  const expiresOn = check.expiresAt.slice(0, 10);
-
-  /* Anything a person would act on. `info` here is overwhelmingly "a message
-     cannot show this", which is honest and is not a task — printing it at the
-     same weight as a missing unsubscribe header is what made this page read as
-     undifferentiated. */
-  const needsYou = check.findings.filter(
-    (f) => f.severity === "fail" || f.severity === "warn",
-  );
-  const cannotShow = check.findings.filter((f) => f.severity === "info").length;
-
-  return (
-    <div className="shell shell-tight py-12 sm:py-16">
-      {/* The domain is the label, the finding is the headline. The reader knows
-          which domain they asked about; what they do not know is whether
-          anything is wrong, and that used to be the smallest text up here. */}
-      {/* Same instrument as the domain check, because it is the same kind of
-          object: one reading, taken at one moment, quoted rather than
-          summarised. The verdict used to sit on cream above an eight-stop
-          diagram and read as an article about a campaign. */}
-      <Instrument
-        domain={check.fromDomain ?? "the message you sent"}
-        checkedAt={fmtDate(checkedOn)}
-        headline={check.verdict}
-        sub={
-          needsYou.length
-            ? undefined
-            : "Every check this message could answer, it answered."
-        }
-        meta={[
-          `${check.findings.length} checks run`,
-          needsYou.length ? `${needsYou.length} need you` : "none need you",
-          `${cannotShow} a message cannot show`,
-          "no score, ever",
-        ]}
-        readout={messageReadout(check)}
-        readoutLabel="read off the message, quoted verbatim"
-      />
-
-      {/* The answer, before the map of how we got to it.
-          This page used to open on the eight-stop diagram and then print every
-          stop expanded — the two real findings at the same weight as five
-          notes saying a message cannot show this, about two thousand pixels of
-          it. A reader who has just sent a campaign wants the two things, and
-          the journey is a good second question, not the first one. */}
-      {needsYou.length ? (
-        <section className="mt-10">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-            {/* No count here. The verdict above already carries it, and two
-                numbers in two sizes reads as two different answers. */}
-            <h2 className="text-[1.35rem] tracking-tight">What needs you</h2>
-            <p className="num text-[12px] text-dim">
-              read off the message · {check.findings.length - needsYou.length} more passed
-            </p>
-          </div>
-          <FindingList findings={needsYou} ruleTitles={ruleTitles} ownership={ownership} />
-        </section>
-      ) : (
-        <section className="mt-10 rounded-xl border bg-ok-bg px-5 py-6">
-          <h2 className="text-[1.15rem] tracking-tight">Nothing on this message needs you.</h2>
-          <p className="mt-2 max-w-[58ch] text-[0.95rem] leading-relaxed text-muted-fg">
-            Every check this message can answer, it answered. What a single message cannot show is
-            in the journey below, and it is worth reading once.
-          </p>
-        </section>
-      )}
-
-      {/* The map, folded. Still complete, still indexable, no longer the wall
-          somebody has to scroll past to reach their answer. */}
-      <details className="faq-item group mt-10 border-t pt-5">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 outline-none marker:content-none focus-visible:bg-muted/60 [&::-webkit-details-marker]:hidden">
-          <span className="min-w-0 flex-1">
-            <span className="text-[1.02rem] font-medium">The whole journey, stop by stop</span>
-            <span className="mt-1 block max-w-[58ch] text-[13.5px] leading-relaxed text-muted-fg">
-              All {check.findings.length} findings in the order they happened to the message,
-              including the {cannotShow} a single message cannot answer and why.
-            </span>
-          </span>
-          <span
-            aria-hidden
-            className="num shrink-0 text-[13px] text-dim transition-transform duration-300 ease-out group-open:rotate-45"
-          >
-            +
-          </span>
-        </summary>
-        <div className="faq-body">
-          <div className="pt-2">
-            <Track stops={journey.stops} className="mt-6" />
-            <FindingTally findings={check.findings} />
-            <MessageJourney journey={journey} ruleTitles={ruleTitles} ownership={ownership} />
-          </div>
+      <p className="label text-accent">Private campaign check</p>
+      <h1 className="mt-3 font-serif text-[clamp(2.4rem,7vw,4.2rem)] leading-[0.98] tracking-[-0.04em]">
+        Send the real test now.
+      </h1>
+      <p className="mt-5 text-[14px] leading-relaxed text-muted-fg">
+        {espLabel(session.context.esp)} · {session.context.geographies.join(", ")} · {session.context.gmailBulk ? "Gmail bulk volume" : "below or unsure on Gmail bulk volume"}
+      </p>
+      <SessionWait token={session.reportToken} address={address} expiresAt={session.receiveExpiresAt} initialStatus={session.status} />
+      <p className="mt-5 text-[13px] leading-relaxed text-dim">
+        Privacy: no remote images, no opened links and no rendered campaign HTML. The report stores normalized findings, not the campaign body.
+      </p>
+      {session.status === "failed" || session.status === "expired" ? (
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href="/check/message" className="inline-flex min-h-11 items-center rounded-xl bg-accent px-4 text-[13px] font-semibold text-accent-fg">Create a new address</Link>
+          <Link href="/check/headers" className="inline-flex min-h-11 items-center rounded-xl border px-4 text-[13px] font-semibold">Paste message source</Link>
         </div>
-      </details>
-
-      <div className="mt-9 rounded-xl border bg-bg-2 p-5 text-[0.92rem] leading-relaxed text-muted-fg">
-        <b className="text-fg">What this proves, and what it does not.</b> We read the signature; we
-        do not recompute its cryptography — only a receiver can do that against the message it
-        accepted. Consent findings are read from the message, so they can only ever be about what
-        the message shows. Where your recipients are is the fact that decides whether the French and
-        Italian rules apply to you, and no message carries it.
-      </div>
-
-      <div className="mt-4 rounded-xl border p-5 text-[0.92rem] leading-relaxed text-muted-fg">
-        <b className="text-fg">What we kept.</b> The findings above, the From domain and these two
-        dates. No body, no subject, no recipient, no raw headers — nothing that would make this
-        table worth stealing. This link stops working on{" "}
-        <span className="num">{fmtDate(expiresOn)}</span>, which is why it is honest to call it
-        temporary.
-      </div>
-
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Link
-          href="/check/message"
-          className={cn(buttonVariants({ variant: "outline" }), "h-10 rounded-[10px] px-5")}
-        >
-          Check another message
-        </Link>
-        {check.fromDomain ? (
-          <Link
-            href={`/check/${check.fromDomain}`}
-            className={cn(buttonVariants(), "h-10 rounded-[10px] px-5 font-medium")}
-          >
-            Now check what {check.fromDomain} publishes
-          </Link>
-        ) : (
-          <Link href="/rules" className={cn(buttonVariants(), "h-10 rounded-[10px] px-5 font-medium")}>
-            See which rules are yours
-          </Link>
-        )}
-      </div>
-
-      {check.fromDomain ? (
-        <section
-          className="mt-12 rounded-xl border bg-card p-5 sm:p-6"
-          style={{ boxShadow: "var(--lift)" }}
-        >
-          <h2 className="text-[15px] font-semibold">Watch this domain</h2>
-          <p className="mt-1.5 max-w-[54ch] text-[13.5px] leading-relaxed text-muted-fg">
-            One email if authentication DNS for {check.fromDomain} actually changes. Same list as
-            rule alerts — one inbox, one promise.
-          </p>
-          <div className="mt-4">
-            <SubscribeForm defaultDomain={check.fromDomain} compact />
-          </div>
-        </section>
       ) : null}
     </div>
   );
@@ -351,7 +57,8 @@ async function Result({ check }: { check: MessageCheck }) {
 export default async function MessageResult({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!isCheckId(id)) notFound();
-
-  const check = await loadMessageCheck(id);
-  return check ? <Result check={check} /> : <Waiting id={id} />;
+  const [check, session] = await Promise.all([loadMessageCheck(id), loadCheckSession(id)]);
+  if (check?.reportToken === id) return <CampaignReport check={check} />;
+  if (!session || session.reportToken !== id) notFound();
+  return <Waiting session={session} />;
 }

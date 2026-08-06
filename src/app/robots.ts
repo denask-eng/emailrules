@@ -33,7 +33,11 @@ export default function robots(): MetadataRoute.Robots {
          /dmarc itself. A results URL is a credential: it is never linked from
          anywhere crawlable, carries noindex, and is kept out of here too,
          because one of those three failing should not be enough. */
-      { userAgent: "*", allow: "/", disallow: ["/api/", "/admin", "/domain", "/dmarc/"] },
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/api/", "/admin", "/domain", "/dmarc/", "/check/message/", "/email-index", "/esp-truth", "/connect"],
+      },
       ...aiAgents.map((ua) => ({ userAgent: ua, allow: "/" })),
     ],
     sitemap: `${SITE.url}/sitemap.xml`,

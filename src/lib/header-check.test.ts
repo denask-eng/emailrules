@@ -362,6 +362,20 @@ ${fixture.headers}`);
   }
 });
 
+test("a one-click failure carries remediation for the observed missing header", () => {
+  const result = checked(`From: hello@brand.com
+Return-Path: <hello@brand.com>
+DKIM-Signature: v=1; d=brand.com; s=main
+List-Unsubscribe: <https://brand.com/unsubscribe/123>`);
+  const finding = result.findings.find(
+    (item) => item.rule === "one-click-unsubscribe-rfc-8058" && item.severity === "fail",
+  );
+
+  assert.ok(finding);
+  assert.match(finding.mondayMorning ?? "", /omitted List-Unsubscribe-Post/);
+  assert.doesNotMatch(finding.mondayMorning ?? "", /Nothing, if/);
+});
+
 test("no DKIM-Signature is a Gmail requirement failure", () => {
   const raw = `From: hello@brand.com
 Return-Path: <hello@brand.com>

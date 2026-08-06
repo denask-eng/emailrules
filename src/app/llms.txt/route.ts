@@ -84,7 +84,8 @@ ${t.rules
 
 - [Full index](${SITE.url}/rules)
 - [Changelog](${SITE.url}/changed)
-- [Published corrections](${SITE.url}/corrections)
+- [Sources, method, coverage, freshness and corrections](${SITE.url}/trust)
+- [Educational and infrastructure resources](${SITE.url}/resources)
 - [Check a domain's authentication](${SITE.url}/check)
 - [Check a received header for alignment](${SITE.url}/check/headers)
 - [Check a whole message against the rules](${SITE.url}/check/message)

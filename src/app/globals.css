@@ -27,8 +27,8 @@
   --ok: #0f6b3f;
   --ok-bg: #eef8f2;
 
-  --r: 12px;
-  --r-sm: 9px;
+  --r: 16px;
+  --r-sm: 14px;
 
   --sans: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont,
     "Segoe UI", Inter, Helvetica, Arial, sans-serif;
@@ -93,7 +93,10 @@
 @layer base {
   * { border-color: var(--border); }
 
-  html { scroll-padding-top: 4.25rem; }
+  html {
+    overflow-x: clip;
+    scroll-padding-top: 4.25rem;
+  }
 
   body {
     background: var(--bg);
@@ -155,7 +158,7 @@
     color: var(--dim);
   }
 
-  .shell { width: 100%; max-width: 1040px; margin-inline: auto; padding-inline: 20px; }
+  .shell { width: 100%; max-width: 1180px; margin-inline: auto; padding-inline: 20px; }
   .shell-tight { max-width: 720px; }
   @media (min-width: 768px) { .shell { padding-inline: 28px; } }
 

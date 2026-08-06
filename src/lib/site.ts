@@ -1,14 +1,14 @@
 export const SITE = {
   name: "emailrules.today",
   /** Used in <title> suffix and OG */
-  tagline: "What's true about email. Right now.",
+  tagline: "Campaign preflight before you send.",
   description:
-    "What’s true about email right now: bulk inbox rules, consent by country, auth, measurement. Human-verified, primary sources, whose job it is, what to do Monday. No placement scores, no seed tests, no ESP affiliate.",
+    "Send one real campaign and get up to five prioritized technical, compliance and measurement findings, each with an owner, first action and dated primary source. No spam score.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://emailrules.today",
   locale: "en",
   /** Shown in the footer and in llms.txt so citations have a human owner */
   maintainer:
-    "Human-verified by someone who ships email — not a content farm, not a seed-score shop.",
+    "Human-verified rules behind a real-message campaign preflight.",
   contact: "corrections@emailrules.today",
 } as const;
 
@@ -57,16 +57,8 @@ export const AUTHOR = {
  */
 export const NAV = [
   { href: "/rules", label: "Rules" },
-  { href: "/how-email-works", label: "How email works", at: "min-[620px]", flag: true },
-  { href: "/changed", label: "What changed", short: "Changed", at: "min-[440px]" },
-  /* The census is the most linkable thing on this site and it was reachable
-     only from the footer. It takes the widest slot rather than displacing
-     anything: below 900px the header is already full, and a link nobody can
-     read is worse than a link in the footer. */
-  { href: "/blocklists", label: "Blocklists", at: "min-[900px]" },
-  /* /providers held this slot for a day and lost it. Permanent navigation is
-     for the things nobody else has; that corpus currently restates published
-     documentation, so it lives in the footer until it measures something. */
+  { href: "/changed", label: "Changes", at: "min-[520px]" },
+  { href: "/trust", label: "Trust", at: "min-[680px]" },
 ] as const;
 
 /**
@@ -77,36 +69,22 @@ export const NAV = [
  */
 export const FOOTER_NAV = [
   {
-    title: "The shelf",
+    title: "Product",
     links: [
+      { href: "/check/message", label: "Check campaign" },
       { href: "/rules", label: "Rules" },
-      { href: "/changed", label: "What changed" },
-      { href: "/sources", label: "Sources" },
-      { href: "/how-email-works", label: "How email works" },
-      { href: "/esp", label: "Your platform" },
-      { href: "/providers", label: "Mailbox providers" },
-      { href: "/blocklists", label: "Blocklist census" },
-      { href: "/email-index", label: "Authentication index" },
-      { href: "/esp-truth", label: "ESP truth table" },
-      { href: "/freshness", label: "How old is this shelf" },
-      { href: "/coverage", label: "Coverage map" },
-      { href: "/embed", label: "Embed the check" },
+      { href: "/changed", label: "Changes" },
+      { href: "/trust", label: "Trust" },
     ],
   },
   {
-    title: "About this site",
+    title: "Resources",
     links: [
-      { href: "/methodology", label: "Methodology" },
-      /* The machine interface was reachable from nowhere. An agent finds it by
-         convention; a person deciding whether to trust one needs to see it. */
+      { href: "/resources", label: "All resources" },
+      { href: "/how-email-works", label: "How email works" },
+      { href: "/providers", label: "Mailbox providers" },
+      { href: "/blocklists", label: "Blocklists" },
       { href: "/agents", label: "For agents (MCP)" },
-      { href: "/corrections", label: "Corrections" },
-      { href: "/start", label: "How to use this site" },
-      { href: "/connect", label: "Connect roadmap" },
-      /* /llms.txt is deliberately NOT linked here. The file stays and still
-         does its job — assistants find it by convention at the root, no link
-         required — but a footer that advertises a machine-readable manifest
-         reads as developer tooling rather than a publication with an author. */
     ],
   },
 ] as const;

@@ -1,4 +1,4 @@
-import { isCheckId, messageCheckExists } from "@/lib/message-check";
+import { isCheckId, loadCheckSession, messageCheckExists } from "@/lib/message-check";
 
 /**
  * Has the message landed yet?
@@ -14,8 +14,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!isCheckId(id)) return Response.json({ ready: false }, { status: 400 });
 
   try {
+    const session = await loadCheckSession(id);
+    const ready = await messageCheckExists(id);
     return Response.json(
-      { ready: await messageCheckExists(id) },
+      { ready, status: ready ? "complete" : session?.status ?? "waiting" },
       { headers: { "cache-control": "no-store" } },
     );
   } catch {

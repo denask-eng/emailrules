@@ -176,6 +176,7 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
           {rule.status === "upcoming" ? "Starts " : "In force "}
           {fmtDate(rule.effectiveDate)}
         </span>
+        <span className="num text-[12px] text-dim">Verified {fmtDate(rule.lastVerified)}</span>
       </div>
 
       <h1 className="mt-4 text-[clamp(1.75rem,4.8vw,2.55rem)] font-semibold tracking-tight">
@@ -272,7 +273,7 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
                     text={tldr}
                   />
 
-                  <p className="label mt-8">Plain English</p>
+                  <p className="label mt-8">Emailrules interpretation</p>
                   <Explained as="p" className="mt-2 text-[1.05rem] leading-relaxed text-fg" text={plain} />
 
                   <div className="mt-5 border-l-2 border-accent/40 pl-4">
@@ -368,7 +369,7 @@ export default async function RulePage({ params }: { params: Promise<{ slug: str
                 </p>
 
                 <div className="mt-8">
-                  <h3 className="text-[13px] font-semibold tracking-wide uppercase">The exact position</h3>
+                  <h3 className="text-[13px] font-semibold tracking-wide uppercase">Source fact</h3>
                   <Explained
                     as="p"
                     className="mt-2 text-[15px] leading-relaxed text-muted-fg"

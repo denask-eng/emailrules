@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStats, fmtDate } from "@/lib/rules";
-import { SITE } from "@/lib/site";
 import { SectionHead } from "@/components/bits";
 
 export const metadata: Metadata = {

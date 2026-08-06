@@ -46,6 +46,12 @@ async function main() {
        on conflict (slug) do update set data = excluded.data, updated_at = now()`,
       [rule.slug, JSON.stringify(rule)],
     );
+    await sql.query(
+      `insert into rule_versions (slug, version, data, source_snapshot, detector_version, approved_by)
+       select $1, 1, $2::jsonb, $3::jsonb, 'message-v1', 'migration'
+       where not exists (select 1 from rule_versions where slug = $1)`,
+      [rule.slug, JSON.stringify(rule), JSON.stringify(rule.sources)],
+    );
     n += 1;
   }
 

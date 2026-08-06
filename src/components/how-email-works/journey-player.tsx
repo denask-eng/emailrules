@@ -67,7 +67,7 @@ const LOG: Record<string, Line[]> = {
   ],
   react: [
     { t: "14:02  open — Apple MPP proxy fetch (a machine?)", tone: "dim" },
-    { t: "14:03  click → /pricing (a human)", tone: "ok" },
+    { t: "14:03  click → /collection (a human)", tone: "ok" },
     { t: "0 complaints · 1 unsubscribe", tone: "dim" },
   ],
   count: [

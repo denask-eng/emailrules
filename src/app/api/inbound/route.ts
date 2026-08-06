@@ -1,6 +1,8 @@
 import {
   checkIdFromAddress,
+  claimCheckSession,
   composeMessage,
+  markSessionStatus,
   runMessageCheck,
   saveMessageCheck,
 } from "@/lib/message-check";
@@ -124,6 +126,12 @@ export async function POST(request: Request) {
     .find((candidate): candidate is string => Boolean(candidate));
   if (!id) return acknowledge("no recipient matched a one-time check or reporting address");
 
+  /* A syntactically valid local part is not authority to process a message.
+     The session must exist, still be inside its 30-minute receive window and
+     still be waiting. The atomic claim also enforces first-message-wins. */
+  const session = await claimCheckSession(id);
+  if (!session) return acknowledge("check address was unknown, expired, or already used");
+
   try {
     /* The webhook is metadata only. Content comes from the API, over a
        connection we authenticate, rather than from the request body. */
@@ -131,6 +139,7 @@ export async function POST(request: Request) {
       headers: { authorization: `Bearer ${process.env.RESEND_API_KEY ?? ""}` },
     });
     if (!response.ok) {
+      await markSessionStatus(id, "failed", "message_fetch_failed");
       return acknowledge(`could not read message ${emailId}: ${response.status}`);
     }
 
@@ -145,12 +154,17 @@ export async function POST(request: Request) {
       html: cap(message.html),
     });
 
-    const result = await runMessageCheck(raw);
-    if (!result.ok) return acknowledge(`message ${emailId} produced no findings: ${result.error}`);
+    await markSessionStatus(id, "processing");
+    const result = await runMessageCheck(raw, session.context);
+    if (!result.ok) {
+      await markSessionStatus(id, "failed", "message_parse_failed");
+      return acknowledge(`message ${emailId} produced no findings: ${result.error}`);
+    }
 
     const stored = await saveMessageCheck(id, result);
     return acknowledge(stored ? `check ${id} stored` : `check ${id} already had a result`);
   } catch (error) {
+    await markSessionStatus(id, "failed", "processing_failed");
     console.error("[inbound] failed while checking a received message:", error);
     return acknowledge("check failed");
   }

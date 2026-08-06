@@ -9,15 +9,15 @@ import {
 } from "@/lib/email-index";
 import { INDEX_SECTORS, INDEX_ROSTER } from "@/content/index-roster";
 import { fmtDate } from "@/lib/format";
-import { SITE } from "@/lib/site";
 import { Signal } from "@/components/signal";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "The Email Authentication Index",
+  title: "Experimental Email Authentication Index",
   description:
     "The authentication posture of the internet's better-known senders, measured from public DNS every day and kept. DMARC policy, SPF strictness, DKIM and BIMI across ecommerce, software, media, retail, travel, finance and marketplaces — with the roster published in full and every percentage carrying its denominator.",
   alternates: { canonical: "/email-index" },
+  robots: { index: false, follow: false },
 };
 
 /* A day-old reading is still today's answer until the morning sweep runs. */

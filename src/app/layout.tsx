@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 import { SITE, NAV, FOOTER_NAV } from "@/lib/site";
 import { Byline, AuthorJsonLd } from "@/components/byline";
-import { SiteFaq } from "@/components/site-faq";
 import { Search } from "@/components/search";
 import { GLOSSARY_AZ } from "@/content/how-email-works";
 import { getAllRules } from "@/lib/rules";
@@ -116,9 +115,8 @@ async function Nav() {
               href={n.href}
               className={cn(
                 "inline-flex h-11 items-center gap-1.5 rounded-lg px-1.5 text-[13px] whitespace-nowrap text-muted-fg hover:bg-muted/80 hover:text-fg sm:h-auto sm:px-2.5 sm:py-1.5",
-                "at" in n && n.at === "min-[440px]" && "hidden min-[440px]:inline-flex",
-                "at" in n && n.at === "min-[620px]" && "hidden min-[620px]:inline-flex",
-                "at" in n && n.at === "min-[900px]" && "hidden min-[900px]:inline-flex",
+                "at" in n && n.at === "min-[520px]" && "hidden min-[520px]:inline-flex",
+                "at" in n && n.at === "min-[680px]" && "hidden min-[680px]:inline-flex",
               )}
             >
               {n.label}
@@ -157,15 +155,14 @@ async function Nav() {
 
 function Footer() {
   return (
-    <footer className="border-t bg-bg py-14">
+    <footer className="border-t bg-bg py-10">
       <div className="shell grid gap-12 md:grid-cols-[1fr_1fr]">
         <div>
           <div className="mb-3 text-[14.5px] font-semibold tracking-[-0.035em]">
             emailrules<span className="text-accent">.today</span>
           </div>
           <p className="mb-6 max-w-[44ch] text-[13.5px] leading-relaxed text-muted-fg">
-            {SITE.maintainer} Independent: no tracking pixels sold, no seed tests, no ESP affiliate.
-            Email only. A curated shelf with sources — not a fake encyclopedia.
+            {SITE.maintainer} No placement score, legal certification, seed test or ESP affiliate.
           </p>
           <Byline />
         </div>
@@ -227,7 +224,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <main id="main-content" tabIndex={-1} className="flex-1">
           {children}
         </main>
-        <SiteFaq />
         <Footer />
         {/* The only instrumentation on this site, and the only one it will get.
             First-party page counts, no cookie, no cross-site identifier — a site

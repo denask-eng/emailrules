@@ -69,7 +69,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   } catch {
     return Bare("Findings, not a score");
   }
-  if (!check) return Bare("Waiting for a message");
+  if (!check || check.reportToken !== id) return Bare("Waiting for a message");
 
   const count = (severity: Severity) =>
     check.findings.filter((finding) => finding.severity === severity).length;

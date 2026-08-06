@@ -19,6 +19,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE.url, lastModified: newest, changeFrequency: "daily", priority: 1 },
     { url: `${SITE.url}/rules`, lastModified: newest, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE.url}/changed`, lastModified: newest, changeFrequency: "daily", priority: 0.9 },
+    { url: `${SITE.url}/trust`, lastModified: newest, changeFrequency: "weekly", priority: 0.85 },
+    { url: `${SITE.url}/freshness`, lastModified: newest, changeFrequency: "daily", priority: 0.7 },
+    { url: `${SITE.url}/coverage`, lastModified: newest, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${SITE.url}/sources`, lastModified: newest, changeFrequency: "weekly", priority: 0.5 },
+    { url: `${SITE.url}/methodology`, lastModified: newest, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE.url}/corrections`, lastModified: newest, changeFrequency: "weekly", priority: 0.5 },
+    { url: `${SITE.url}/resources`, lastModified: newest, changeFrequency: "monthly", priority: 0.75 },
     { url: `${SITE.url}/start`, lastModified: newest, changeFrequency: "monthly", priority: 0.85 },
     { url: `${SITE.url}/check`, lastModified: newest, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE.url}/check/headers`, lastModified: newest, changeFrequency: "monthly", priority: 0.8 },
@@ -56,11 +63,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
        Indexable because it is a genuine primary source: nobody else publishes
        which of these zones can still answer. */
     { url: `${SITE.url}/blocklists`, lastModified: newest, changeFrequency: "daily", priority: 0.8 },
-    { url: `${SITE.url}/email-index`, lastModified: newest, changeFrequency: "daily", priority: 0.8 },
-    { url: `${SITE.url}/freshness`, lastModified: newest, changeFrequency: "daily", priority: 0.7 },
     /* The setup page only. A results URL is a credential and is noindex. */
     { url: `${SITE.url}/dmarc`, lastModified: newest, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${SITE.url}/coverage`, lastModified: newest, changeFrequency: "weekly", priority: 0.75 },
     { url: `${SITE.url}/how-email-works`, lastModified: newest, changeFrequency: "monthly", priority: 0.75 },
     /* One URL per word. Not thin content: each carries the artefact, the
        failure mode, whose job it is and the dated rule behind it — and "what
@@ -73,10 +77,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     })),
     { url: `${SITE.url}/brief`, lastModified: newest, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${SITE.url}/connect`, lastModified: newest, changeFrequency: "monthly", priority: 0.45 },
-    { url: `${SITE.url}/corrections`, lastModified: newest, changeFrequency: "weekly", priority: 0.5 },
-    { url: `${SITE.url}/sources`, lastModified: newest, changeFrequency: "weekly", priority: 0.5 },
-    { url: `${SITE.url}/methodology`, lastModified: newest, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE.url}/agents`, lastModified: newest, changeFrequency: "monthly", priority: 0.5 },
     ...(Object.keys(JURISDICTIONS) as Jurisdiction[])
       .filter((j) => rules.some((r) => r.jurisdictions.includes(j)))
